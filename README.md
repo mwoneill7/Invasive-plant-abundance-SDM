@@ -1,0 +1,2 @@
+# Invasive-plant-abundance-SDM
+This repository contains the workflow of data preparation and analysis for my research on invasive plant distributions. This research is conducted for the completion of my Masters of Science in Natural Resources at the University of New Hampshire (expected May 2018, project title: Spatial patterns in terrestrial invasive plant abundance in the contiguous United States). This workflow focuses on preparation for species distribution modeling.
