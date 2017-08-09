@@ -3,13 +3,11 @@
 ##   created 6/5/2017
 #    last modified: 8/9/2017
 
-
 setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
 
 edd <- read.table("file:///C:/Users/mwone/Documents/EDDMapS data/EDDMaps_plants_10_18_2016.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 ## All plant points from EDDMapS, delivered from Rebekah Wallace to Bethany Bradley on October 18, 2016
-
 
 head(edd)
 
@@ -51,16 +49,16 @@ summary(as.factor(edd$validInfestedArea))
 ## ensure that all records were classified as valid or not valid abundance data
 
 ### update species names (via USDA codes)
-sp.list <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/Raw/speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T)
+edd.list <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/Raw/speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T)
 ## download scientific name to USDA code file, compiled manually by Ceara, completed June 1, 2017
 
 ## list of species in USDA-sp name file
-spp <- as.list(sp.list$eddmap_species[!is.na(sp.list$eddmap_species)])
+spp <- as.list(edd.list$eddmap_species[!is.na(edd.list$eddmap_species)])
 
 for (sp in spp){
   length(edd$ScientificName[is.na(edd$invasivecover)])
   
-  edd$USDAcode[edd$ScientificName == sp] <- sp.list$USDA_code[sp.list$eddmap_species == sp & !is.na(sp.list$eddmap_species)]
+  edd$USDAcode[edd$ScientificName == sp] <- edd.list$USDA_code[edd.list$eddmap_species == sp & !is.na(edd.list$eddmap_species)]
   print(sp)  
 }
 
@@ -135,8 +133,8 @@ for (sp in spp){
 #      
 #      
 #      
-#      ## out of potential absences, check if the reporter (or if NULL, the organization) uses the negative column
-#      edd$ReporterFULLName <- paste(edd$ReporterFName, edd$ReporterLName, sep = " ")
+      ## out of potential absences, check if the reporter (or if NULL, the organization) uses the negative column
+      edd$ReporterFULLName <- paste(edd$ReporterFName, edd$ReporterLName, sep = " ")
 #      ## make a reporter full name field by pasting FName and LName
 #      
 #      length(edd$ReporterFULLName[edd$ReporterFULLName == "NULL NULL"])
@@ -229,7 +227,16 @@ for (sp in spp){
 #                        (edd$potential.absence == 1 & edd$contradiction == 0 & edd$negUse == 0) |
 #                        (edd$potential.absence == 1 & edd$contradiction == 0 & edd$negUse == 1 & edd$negUse2 == 0)] <- 1
 
-write.csv(edd, "eddmaps_prepped.csv", row.names = F)
+
+##### merge subspecies #####
+edd$USDAcodeUNMERGED <- edd$USDAcode
+
+ssp <- read.table("Products/subspecies.csv",  header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+
+for (i in 1:length(ssp$usda.code)){
+  edd$USDAcode[edd$USDAcodeUNMERGED == ssp$usda.code[i]] <- ssp$usda.lump[i]
+  print(i)
+}
 
 
 ## prep coordinate fields
@@ -250,23 +257,40 @@ edd$Longitude_N[edd$Longitude_N > 0 & edd$ReporterOrg == "Fairfax County Park Au
   -1*edd$Longitude_N[edd$Longitude_N > 0 & edd$ReporterOrg == "Fairfax County Park Authority, VA"]
 
 
+
+
+
+
+
 library(rgdal)
-coordinates(edd) <- c(46,45) ## specifies long, lat, CHANGE NUMBERS
+eddUSA <- edd[!is.na(edd$USDAcode) & edd$USDAcode != "" & !is.na(edd$Longitude_N) & !is.na(edd$Latitude_N) & edd$Longitude_N < -65 & edd$Longitude_N > -130 & edd$Latitude_N > 20 & edd$Latitude_N <55 & (edd$validInfestedArea == 1 | edd$negative == 1), ]
 
 
+coordinates(eddUSA) <- c(47,46) ## specifies long, lat, CHANGE NUMBERS
+
+
+
+#all of EDDMapS is supposed to be nad83/wgs84
 EPSG <- make_EPSG() ## creates library of EPSG codes to help assign proj4string
 EPSG[grepl("WGS 84$", EPSG$note) == TRUE, ] ## search for WGS 84 --> 4326
-
-#assume that all EDDMapS data is wgs??
-proj4string(edd) <- CRS("+init=epsg:4326")
+proj4string(eddUSA) <- CRS("+init=epsg:4326")
 
 ## check to see points on states file
 ## load contiguous US shape file
-
 states = readOGR(dsn = "Raw/states", layer = "US_states")
 proj4string(states) ## wgs84
 ## transform states to same proj4string as eddmaps
 states2 <- spTransform(states, "+init=epsg:4326")
-edd_US  <- edd[states2, ] ## clip edd_US to L48
 plot(states2) ## plot eddmaps onto US
-plot(edd_US, pch=20, add=T)
+plot(eddUSA, pch=20, add=T)
+eddUSA  <- eddUSA[states2, ] ## clip edd_US to L48
+plot(eddUSA, pch=20, add=T, col="purple")
+
+
+#### bring back into dataframe.format
+eddUSA <-data.frame(eddUSA)
+
+eddUSA$optional <- NULL
+
+write.csv(eddUSA, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_09_2017.csv", row.names = F)
+

@@ -50,7 +50,8 @@ writeRaster(bio1_3, filename = "C:/Users/mwone/Google Drive/WorkingFolder/Predic
 ######################
 ### reading in fishnet
 
-fishnet = readOGR(dsn = "Fishnet", layer = "fishnet")
+fishnet = readOGR(dsn = "Raw/Fishnet", layer = "fishnet")
+plot(fishnet)
 #plot(fishnet, add=T)
 #plot(buffer3, col="red", add=T)
 #proj4string(fishnet)
