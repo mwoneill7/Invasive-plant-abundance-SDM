@@ -7,7 +7,7 @@ library(rgeos)
 library(rgdal)
 library(raster)
 
-setwd("C:/Users/mwone/Google Drive/WorkingFolder/Predictors/")
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
 states = readOGR(dsn = "states", layer = "US_states")
 proj4string(states)
 
@@ -37,71 +37,50 @@ buffer3 <- SpatialPolygonsDataFrame(states.buffer3t, data=fill.in.data) #, proj4
 writeOGR(buffer3, dsn = "clipped/buffer3km", layer = "buffer3", driver = "ESRI Shapefile")
 
 
-bio1_3 <- mask(crop(bio_1, states.buffer3t), states.buffer3t)
+############################################### 
+######### loop through all bio layers #########
+###############################################
 
+clim.list <- list.files("Raw/climate_data/") ## list of all files in Raw climate data folder
+                                             ## one for each climate model, each with the 19 variables within
 
-## writeout bio1_3
-writeRaster(bio1_3, filename = "C:/Users/mwone/Google Drive/WorkingFolder/Predictors/clipped/bio1_3.asc",format= "ascii", overwrite=T)
+for (j in 1:length(clim.list)) { ## iterate through each climate model
 
-
-
-
-
-######################
-### reading in fishnet
-
-fishnet = readOGR(dsn = "Raw/Fishnet", layer = "fishnet")
-plot(fishnet)
-#plot(fishnet, add=T)
-#plot(buffer3, col="red", add=T)
-#proj4string(fishnet)
-#proj4string(bio1_3)
-#fishnet.t <- spTransform(fishnet, proj4string(buffer3))
-#
-#fishnet_sub <- fishnet.t[buffer3,]
-#plot(fishnet_sub, add=T, col="blue")
-#
-#
-#
-##So to get all ID's
-#state48<- states[48, ]
-#plot(state48)
-#fishnet.t <- spTransform(fishnet, proj4string(state48))
-#
-#fishnet_sub <- fishnet.t[state48,]
-#plot(fishnet_sub, add=T, col="green")
-#fishnet_sub <- mask(fishnet.t, state48)
-
-#################### loop through all bio layers
-setwd("C:/Users/mwone/Google Drive/WorkingFolder/Predictors/")
-
-Clim.list <- list.files("climate_data/")
-
-for (j in 1:length(clim.list)) {
-
-  bio.list<- list.files("bio/")
-  bio.list <- bio.list[1:19]
+  model.folder.path <- paste("Raw/climate_data", clim.list[j], sep="/") 
+  ## look within the climate model of the iteration, and   
+  bio.list <- list.files(model.folder.path) ## list all of the variables
+  bio.list <- bio.list[1:19] ## exlude the metadata files after the 19 bioclimate variables
   
-  for (i in 1:length(bio.list)){
+  clipped.model.folder.path <-paste("Products/clipped_climate_data", clim.list[j], sep="/")
+  dir.create(clipped.model.folder.path) ## creates a new folder to place the clipped data for the model of the iteration
+
+  for (i in 1:length(bio.list)){ ## loop through each climate variable within the model of the iteration
     
-    file.in <- paste(clim.list[j], bio.list[i], sep="/")
-    dir.create(paste("climate_data_clipped", clim.list[j], sep="/"))
-    file.out <- paste("climate_data_clipped", paste(clim.list[j],(paste(bio.list[i], "asc", sep=".")), sep="/"), sep = "/")
+    file.in <- paste(model.folder.path, bio.list[i], sep="/") 
+    ## paste together the full file name to bring it into R
+
+    file.out <- paste(clipped.model.folder.path, (paste(bio.list[i], "asc", sep=".")), sep="/")
+    ## create filepath for clipped data within the new folder, to export from R
   
-    bio.i <- raster(file.in)
+    bio.i <- raster(file.in) ## read in file as raster
     
-    bio.i <- mask(crop(bio.i, states.buffer3t), states.buffer3t)
+    bio.i <- mask(crop(bio.i, states.buffer3t), states.buffer3t) 
+    ## crop raster to extent of united states, and then clip(mask) to the buffer
     
-    writeRaster(bio.i, file.out, format= "ascii")
+    writeRaster(bio.i, file.out, format= "ascii") ## write out raster as an ESRI raster
    
-    #clean out garbage
-    rm(bio.i)  
-    
-    print(i)
+  print(i) ## keep track of place within model
     
   }
   
-  print(clim.list[j])
+  print(clim.list[j]) ## keep track of model within entire loop
 }
 
 
+
+
+##########################
+### reading in fishnet ###
+##########################
+fishnet = readOGR(dsn = "Raw/Fishnet", layer = "fishnet")
+plot(fishnet)

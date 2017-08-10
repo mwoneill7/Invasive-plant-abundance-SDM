@@ -121,10 +121,9 @@ for (i in 1:length(ed.list)){
   no.abs <- length(edd.abs$USDAcode[!is.na(edd.abs$USDAcode)])
   ## number of records, exluding NA rows
   
-  ## subset all records that have valid infested area, but its unusually large (>20)
-  edd.big <-  edd.abun[edd.abun$USDAcode == ed.list[i] & (edd.abun$infestedAreaInAcres > 20 | edd.abun$ReporterFULLName == "US Army Corps of Engineers Ombil Database"), ]
-  no.big <- length(edd.big$USDAcode[edd.big$USDAcode == 1])
-  ## number of records, exluding NA rows
+  ## subset all records that have valid infested area,
+  no.big <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode) & (edd.abun$infestedAreaInAcres > 20 | edd.abun$ReporterFULLName == "US Army Corps of Engineers Ombil Database") ])
+  ## number of records thats are unusually large (>20) or reported by the large-value reporter, exluding NA rows
   
   ## compiles all of this info into dataframe, matching format of template
   ed.listing.i <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, L48, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
@@ -134,6 +133,9 @@ for (i in 1:length(ed.list)){
   print(i) ## keeps track of place
   
 }
+
+
+head(usda.list)
 
 ed.listing <- ed.listing[ed.listing$usda.code != "TEMPLATE", ] ## removes template rows
 ed.listing <- ed.listing[!is.na(ed.listing$usda.code),] ## removes NA rows
@@ -172,12 +174,32 @@ for (i in 1:length(no.ipaus)){ ## loop through those species
 aqua <- read.table("Products/aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 ## list of aquatic species that haven't been eliminated yet
 
+ed.listing$Aquatic <- 0
+
 for (i in 1:length(aqua$usda.code)){ ## loop through aquatics
   ed.listing$Aquatic[ed.listing$usda.code == aqua$usda.code[i]] <- 1 ## flag any matches
   print(i) ## keep place
 }
 
-summary(edd.list$Aquatic)
+summary(as.factor(ed.listing$Aquatic))
+
+## flag species I know I can't use
+ed.listing$potential.use <- 1 ## default is that I can use them, then remove them based on certain criteria
+
+ed.listing$potential.use[ed.listing$Aquatic == 1 | ## can't use aquatics
+                        (ed.listing$state + ed.listing$ipaus + ed.listing$federal + ed.listing$other) < 1 |
+                          ## can't use species that haven't been recognized as problematic
+                        (ed.listing$no.abs + ed.listing$no.abun < 20) | ed.listing$no.abun < 15 |
+                          ## data deficient
+                        (ed.listing$nativity == "N") ] <- 0  
+                          ## can't use native plants
 
 
+ed.listing$not.enough.reasonable.values <- 0
+ed.listing$not.enough.reasonable.values[(ed.listing$no.abs + ed.listing$no.abun - ed.listing$no.big < 20) | 
+                                        (ed.listing$no.abun - ed.listing$no.big < 15)] <- 1
 
+write.csv(ed.listing, "Products/SpeciesList08_10_2017.csv", row.names = F)
+#### output file
+#### manual work to follow; i.e.
+#### where nativity = N/A manually assign nativity using MoBot, etc.

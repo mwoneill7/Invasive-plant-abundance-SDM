@@ -229,21 +229,23 @@ for (sp in spp){
 
 
 ##### merge subspecies #####
+      
 edd$USDAcodeUNMERGED <- edd$USDAcode
+## keep a copy of the column before merging, so that I can go back if necessary
 
 ssp <- read.table("Products/subspecies.csv",  header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+## lists subspecies with the species they are to be merged into
 
-for (i in 1:length(ssp$usda.code)){
+for (i in 1:length(ssp$usda.code)){ ## loop through subspecific codes in my data
   edd$USDAcode[edd$USDAcodeUNMERGED == ssp$usda.code[i]] <- ssp$usda.lump[i]
+  ## reassign to lumped species-level code
   print(i)
 }
 
 
-## prep coordinate fields
+## prep coordinate fields; rgdal requires numeric coordinates
 edd$Latitude_N <- as.numeric(edd$Latitude_Decimal)
 edd$Longitude_N <- as.numeric(edd$Longitude_Decimal)
-summary(edd$Latitude_N)
-summary(edd$Longitude_N)
 
 summary(edd1$Latitude_N)
 summary(edd1$Longitude_N)
@@ -252,19 +254,14 @@ summary(edd1$Longitude_N)
 edd[edd$Longitude_N > 0 & edd$validInfestedArea == 1 & !is.na(edd$USDAcode), ] 
 #### one has a positive Longitude but is reported by Fairfax County Park Authority, VA
 #### Switching sign will place it in Fairfax.
- 
 edd$Longitude_N[edd$Longitude_N > 0 & edd$ReporterOrg == "Fairfax County Park Authority, VA"] <-  
   -1*edd$Longitude_N[edd$Longitude_N > 0 & edd$ReporterOrg == "Fairfax County Park Authority, VA"]
 
 
-
-
-
-
-
+## for spatial data
 library(rgdal)
 eddUSA <- edd[!is.na(edd$USDAcode) & edd$USDAcode != "" & !is.na(edd$Longitude_N) & !is.na(edd$Latitude_N) & edd$Longitude_N < -65 & edd$Longitude_N > -130 & edd$Latitude_N > 20 & edd$Latitude_N <55 & (edd$validInfestedArea == 1 | edd$negative == 1), ]
-
+## removes records I know that I won't use (no coords, no USDA code, not absence data or valid infested area data)
 
 coordinates(eddUSA) <- c(47,46) ## specifies long, lat, CHANGE NUMBERS
 
