@@ -7,145 +7,162 @@ setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
 
 #### eddmaps species list (all species with infested area downloaded from EDDMAPS October 2016)
 edd.list <- read.table("Raw/speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
-edd.list$edd <- 1
+edd.list$edd <- 1## to mark that this species was on the edd.list (for upcoming merges)
 
 
 #### list of species from the occurence-based hotspots analysis (Allen and Bradley 2016)
 occ.list <- read.table("C:/Users/mwone/Google Drive/NSF_GSS_shared/Hotspots_and_Abundance/occ_data_with_2017_codes.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
-occ.list$occ <- 1
+occ.list$occ <- 1 ## to mark that this species was on the occurence-based hotspots analysis (for upcoming merges)
 head(occ.list)
 
 #### USDA federal/State listings (Downloaded from PLANTS 5/30/2017)
 usda.list <- read.table("Raw/PLANTS.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 usda.list$usdaCHK <- 1
-#### subsets plants with federal and state listing status, not other invasive plant lists available in USDA database
-head(usda.list)
+head(usda.list) ## to mark that this species was in the PLANTS database (for upcoming merges)
 
+#### nativity is only listed on first species name for a species code, AND
+#### nativity for each place (canada, alaska, etc) is lumped into one messy field, SO
+#### extract all rows with each of the three possibilities (I, N, I/N)
 plants.i  <- usda.list[grep("L48(I)",   usda.list$Native.Status, fixed=TRUE), ]
 plants.n  <- usda.list[grep("L48(N)",   usda.list$Native.Status, fixed=TRUE), ]
 plants.in <- usda.list[grep("L48(I,N)", usda.list$Native.Status, fixed=TRUE), ]
+
+### make a cleaner nativity column for L48 based on what their L48 status is
 plants.i$L48  <- "I"
 plants.n$L48  <- "N"
 plants.in$L48 <- "I/N"
+
+### bind rows back into a single dataframe
 plants.nativity <- rbind(plants.i, plants.n, plants.in)
 head(plants.nativity)
 
 #### IPAUS species list (Downloaded in 2014; database last updated May 2012)
 ipa.list <- read.table("Raw/ipa2.csv", header = T, sep = ",", 
                        stringsAsFactors = F, quote= "\"", comment.char= "", strip.white = T)
-ipa.list$IPA <- 1
+ipa.list$IPA <- 1 ## marks that the species appeared on IPA for (upcoming merge) 
 head(ipa.list)
 
 
-
-## full eddmaps data download from 
+## prepped eddmaps database (see eddmaps_prep.R) 
 edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_09_2017.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
+ed.list <- as.list(unique(edd$USDAcode)) ## list of all usda-codes in prepped file
 
 
-ed.list <- as.list(unique(edd$USDAcode))
 
-usda.code <- "TEMPLATE"
-scientific.name <- "TEMPLATE"
-comment <- "TEMPLATE"
-state   <- -99
-federal <- -99
-other   <- -99
-ipaus   <- -99
-hotspot <- -9
-nativity<- "TEMPLATE"
-usdaCHK <- -99
-no.abs  <- -99
-no.abun <- -99
-no.big <- -99
+## create template dataframe for a master file with info for each species
+usda.code <- "TEMPLATE" ## for usda code
+scientific.name <- "TEMPLATE" ## for accepted scientific name (plants)
+comment <- "TEMPLATE" ## pulls any comments from the eddmaps-usdacode-conversion file
+state   <- -99 ## state status?
+federal <- -99 ## federal status
+other   <- -99 ## listed by another source? (Weeds of the U.S.; PLANTS)
+ipaus   <- -99 ## listed on ipaus?
+hotspot <- -99 ## was this plant in the occurence hotspot analysis (Allen and Bradley 2016)
+nativity<- "TEMPLATE" ## nativity of plant in L48
+usdaCHK <- -99 ## doublt check that usda code is in PLANTS database
+no.abs  <- -99 ## number of absence points
+no.abun <- -99 ## number of points with valid infested area
+no.big <- -99  ## number of those observations
 
 ed.listing <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, nativity, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
+## make template object
 
-
+# loops through list of all species with usda codes in prepped database
 for (i in 1:length(ed.list)){
+  
   scientific.name <- edd.list$PLANTS_species[edd.list$USDA_code == ed.list[i]][1]
+  ## pulls accepted scientific name (PLANTS) for usdacode
+  
   comment <- edd.list$Comment[edd.list$USDA_code == ed.list[i]][1]
-  usda.code <- ed.list[i]
-  usda.i <- usda.list[usda.list$Accepted.Symbol == ed.list[i],]
-  usda.i <- usda.i[!is.na(usda.i$Accepted.Symbol), ]
+  ## pulls comments from eddmaps-usda conversion file
+  
+  usda.code <- ed.list[i] ## pulls usda code of iteration
+  
+  usda.i <- usda.list[usda.list$Accepted.Symbol == ed.list[i],] ## subsets usda database for all synonyms of usda code
+  usda.i <- usda.i[!is.na(usda.i$Accepted.Symbol), ] ## removes nonsence rows
   
   
-  # the length of where any are not NULL is > 0, then listing =1    
+  ## if any of the synonyms (subset of usda database) have state listing, then state = 1    
   if (length(usda.i$Accepted.Symbol[usda.i$State.Noxious.Status != ""]) > 0) {
     state <- 1} else {state <- 0}
-  
+ 
+  ## if any of the synonyms (subset of usda database) have federal listing, then federal = 1 
   if (length(usda.i$Accepted.Symbol[usda.i$Federal.Noxious.Status == "NW"]) > 0) {
     federal <- 1} else  {federal <- 0}
   
+  ## if any of the synonyms (subset of usda database) have any other listing (invasive), then other = 1 
   if (length(usda.i$Accepted.Symbol[usda.i$Invasive != ""]) > 0) {
     other <- 1}  else {other <- 0}
   
+  ## if species appears on ipa, then ipaus=1
   if (length(ipa.list$habit[ipa.list$USDA_code_2017 == ed.list[i]]) > 0) {
     ipaus <- 1}  else {ipaus <- 0}
 
+  ## if species appears on hotspots list (2016) then hotspot = 1
   if (length(occ.list$habit[occ.list$NewCode == ed.list[i]]) > 0){
     hotspot <- 1} else {hotspot <- 0}
 
+  ## if the species is in the nativity object (i.e. if usda provided an L48 nativity)
   if(length(plants.nativity$L48[plants.nativity$Accepted.Symbol == ed.list[i]]) > 0) {
     L48 <- plants.nativity$L48[plants.nativity$Accepted.Symbol == ed.list[i]] 
-  } else {L48 = "N/A"}
+  } else {L48 = "N/A"} ## if species is not in nativity object, then usda did not provide nativity
   
   if(length(usda.i$Accepted.Symbol[usda.i$usdaCHK == 1]) > 0) {
-    usdaCHK <- 1} else {usdaCHK <- 0}
+    usdaCHK <- 1} else {usdaCHK <- 0} ## verify that species was in PLANTS
   
-    
+  ## subset all records for species of iteration with valid infested area
   edd.abun <- edd[edd$USDAcode == ed.list[i] & edd$validInfestedArea == 1, ]
   no.abun <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode)])
+  ## number of records, exluding NA rows
   
+  ## subset all records for species of iteration with negative=1
   edd.abs <- edd[edd$USDAcode == ed.list[i] & edd$negative == 1, ]
   no.abs <- length(edd.abs$USDAcode[!is.na(edd.abs$USDAcode)])
+  ## number of records, exluding NA rows
   
-  edd.big <-  edd[edd$USDAcode == ed.list[i] & (edd$infestedAreaInAcres > 20 | edd$ReporterFULLName == "US Army Corps of Engineers Ombil Database"), ]
+  ## subset all records that have valid infested area, but its unusually large (>20)
+  edd.big <-  edd.abun[edd.abun$USDAcode == ed.list[i] & (edd.abun$infestedAreaInAcres > 20 | edd.abun$ReporterFULLName == "US Army Corps of Engineers Ombil Database"), ]
   no.big <- length(edd.big$USDAcode[edd.big$USDAcode == 1])
+  ## number of records, exluding NA rows
   
+  ## compiles all of this info into dataframe, matching format of template
   ed.listing.i <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, L48, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
   names(ed.listing.i) <- c("scientific.name", "usda.code", "comment", "state", "federal", "other", "ipaus", "hotspot", "no.abun", "no.abs", "no.big", "nativity", "usdaCHK") ## "no.abun", "no.abs", "usdaCHK")  
-  ed.listing <- rbind(ed.listing, ed.listing.i)
+  ed.listing <- rbind(ed.listing, ed.listing.i) ## concatenate row from iteration to template (and rows from past iterations)
   
-  print(i)
+  print(i) ## keeps track of place
   
 }
 
-ed.listing <- ed.listing[ed.listing$usda.code != "TEMPLATE", ]
-ed.listing <- ed.listing[!is.na(ed.listing$usda.code),]
+ed.listing <- ed.listing[ed.listing$usda.code != "TEMPLATE", ] ## removes template rows
+ed.listing <- ed.listing[!is.na(ed.listing$usda.code),] ## removes NA rows
 unique(ed.listing$usda.code)
 summary(ed.listing)
 head(ed.listing)
 
-
-
-
-
-
 ## ensure that synonyms are checked in ipa.list
 
+## extract all species in eddmaps that were not on ipaus, to check synonyms
 no.ipaus <- ed.listing$scientific.name[ed.listing$ipaus == 0]
 
-for (i in 1:length(no.ipaus)){
+for (i in 1:length(no.ipaus)){ ## loop through those species
+  ## extract list of synonyms
   list.i <- usda.list$Scientific.Name[usda.list$Accepted.Symbol == ed.listing$usda.code[ed.listing$scientific.name == no.ipaus[i]]]
-  a <- 0
+  a <- 0 ## this will tally all of the synonyms on the IPA; reset to zero for each new set of synonyms
   
-  for (j in 1:length(list.i)){
-    a.j  <- length(ipa.list$scientific_name[ipa.list$scientific_name == list.i[j]])
-    a <- a + a.j
+  for (j in 1:length(list.i)){ ## loop through synonyms
+    a.j  <- length(ipa.list$scientific_name[ipa.list$scientific_name == list.i[j]]) 
+    ## if the synonym is in ipaus, then a.j will equal 1, otherwise it will equal zero
+    a <- a + a.j ## adds whether or not synonym was in IPA (yes=1, no=0)
     }
   
-  if (a > 0) {
-    ed.listing$ipaus2[ed.listing$scientific.name == no.ipaus[i]] <- 1
-  }
-  print(i)
+  if (a > 0) { ## if any of the synonyms were on ipaus
+    ed.listing$ipaus[ed.listing$scientific.name == no.ipaus[i]] <- 1
+  } ## then reassign ipaus to a 1
+  
+  print(i) ## keep track of place
 }
-
-
-## two spp that are on ipaus were not in ipaus file, so i'm entering their ipaus status manually
-ed.listing$ipaus[!is.na(ed.listing$ipaus2) & ed.listing$ipaus2 == 1] <- 1
-ed.listing[ed.listing$state == 0 & ed.listing$federal == 0 & ed.listing$hotspot == 1 & ed.listing$other == 0 & ed.listing$ipaus == 0, ]
-ed.listing$ipaus[ed.listing$scientific.name == "Centaurea x moncktonii"] <- 1
 
 
 #######################################################################
@@ -153,10 +170,11 @@ ed.listing$ipaus[ed.listing$scientific.name == "Centaurea x moncktonii"] <- 1
 #######################################################################
 
 aqua <- read.table("Products/aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+## list of aquatic species that haven't been eliminated yet
 
-for (i in 1:length(aqua$usda.code)){
-  ed.listing$Aquatic[ed.listing$usda.code == aqua$usda.code[i]] <- 1
-  print(i)
+for (i in 1:length(aqua$usda.code)){ ## loop through aquatics
+  ed.listing$Aquatic[ed.listing$usda.code == aqua$usda.code[i]] <- 1 ## flag any matches
+  print(i) ## keep place
 }
 
 summary(edd.list$Aquatic)
