@@ -63,9 +63,11 @@ nativity<- "TEMPLATE" ## nativity of plant in L48
 usdaCHK <- -99 ## doublt check that usda code is in PLANTS database
 no.abs  <- -99 ## number of absence points
 no.abun <- -99 ## number of points with valid infested area
-no.big <- -99  ## number of those observations
+no.big <- -99  ## number of those observations with unusually high infested area
+min.abun <- -99 ## minimum non-zero infested area value
+max.abun <- -99 ## maximum infested area value, excluding unusually high ones
 
-ed.listing <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, nativity, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
+ed.listing <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, min.abun, max.abun, nativity, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
 ## make template object
 
 # loops through list of all species with usda codes in prepped database
@@ -122,12 +124,16 @@ for (i in 1:length(ed.list)){
   ## number of records, exluding NA rows
   
   ## subset all records that have valid infested area,
-  no.big <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode) & (edd.abun$infestedAreaInAcres > 20 | edd.abun$ReporterFULLName == "US Army Corps of Engineers Ombil Database") ])
+  no.big <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode) & (edd.abun$infestedAreaInAcres > 20 | edd.abun$ReporterFULLName == "US Army Corps of Engineers Ombil Database")]) 
   ## number of records thats are unusually large (>20) or reported by the large-value reporter, exluding NA rows
   
+  min.abun <- min(edd.abun$infestedAreaInAcres[!is.na(edd.abun$USDAcode)]) ## minimum non-zero abundance
+  max.abun <- max(edd.abun$infestedAreaInAcres[!is.na(edd.abun$USDAcode) & edd.abun$infestedAreaInAcres < 20 & edd.abun$ReporterFULLName != "US Army Corps of Engineers Ombil Database"])
+  ## maximum infested area, excluding unusually large values and excluding large-value reporter
+  
   ## compiles all of this info into dataframe, matching format of template
-  ed.listing.i <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, L48, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
-  names(ed.listing.i) <- c("scientific.name", "usda.code", "comment", "state", "federal", "other", "ipaus", "hotspot", "no.abun", "no.abs", "no.big", "nativity", "usdaCHK") ## "no.abun", "no.abs", "usdaCHK")  
+  ed.listing.i <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, min.abun, max.abun, L48, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
+  names(ed.listing.i) <- c("scientific.name", "usda.code", "comment", "state", "federal", "other", "ipaus", "hotspot", "no.abun", "no.abs", "no.big", "min.abun", "max.abun", "nativity", "usdaCHK") ## "no.abun", "no.abs", "usdaCHK")  
   ed.listing <- rbind(ed.listing, ed.listing.i) ## concatenate row from iteration to template (and rows from past iterations)
   
   print(i) ## keeps track of place
@@ -194,7 +200,7 @@ ed.listing$potential.use[ed.listing$Aquatic == 1 | ## can't use aquatics
                         (ed.listing$nativity == "N") ] <- 0  
                           ## can't use native plants
 
-
+### flag records where there is enough data right now, but if large values are removed, there may not be.
 ed.listing$not.enough.reasonable.values <- 0
 ed.listing$not.enough.reasonable.values[(ed.listing$no.abs + ed.listing$no.abun - ed.listing$no.big < 20) | 
                                         (ed.listing$no.abun - ed.listing$no.big < 15)] <- 1
