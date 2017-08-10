@@ -8,34 +8,37 @@ library(rgdal)
 library(raster)
 
 setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
-states = readOGR(dsn = "states", layer = "US_states")
+states = readOGR(dsn = "states", layer = "US_states") ## read in US shapefile
 proj4string(states)
 
-#states.buffer <- gBuffer(states, byid=F, id=NULL, width = .2, quadsegs = 8, capStyle = "ROUND", joinStyle = "ROUND")
 
+## rgeos expects projected coordinates for buffers, so I need to transform it
 EPSG <- make_EPSG() ## creates library of EPSG codes to help assign proj4string
 EPSG[grepl("WGS 84$", EPSG$note) == TRUE, ] ## search for WGS 84, #4326
 EPSG[grepl("Albers", EPSG$note) == TRUE, ] ## try Conus Albers, NAD83; 5070
-EPSG[grepl("5070", EPSG$code) == TRUE, ] ## Conus ALbers
+EPSG[grepl("5070", EPSG$code) == TRUE, ] ## Conus Albers
 
-states.t <- spTransform(states, "+init=epsg:5070")
+states.t <- spTransform(states, "+init=epsg:5070") ## transform to Conus Albers
 
 states.buffer3 <- gBuffer(states.t, byid=F, id=NULL, width = 3000, quadsegs = 8, capStyle = "ROUND", joinStyle = "ROUND")
+## US with 3km buffer
 
+## transform buffer to proj4string of the bioclimatic data
+states.buffer3t <- spTransform(states.buffer3, proj4string(raster("Raw/climate_data/current/bio_1")))
 
-######## transform buffer to proj4string of the bioclimatic data
-bio_1 <- raster("Raw/climate_data/current/bio_1")
+## convert to SpatialPolygonsDataframe so that buffer can be written out
+fill.in.data <- data.frame("fill in data") ## filler data to make up dataframe component
 
-states.buffer3t <- spTransform(states.buffer3, proj4string(bio_1))
-rm(bio_1) ## clear up space
-
-fill.in.data <- data.frame("fill in data")
 row.names(fill.in.data) <- sapply(slot(states.buffer3t, "polygons"), function(x) slot(x, "ID")) 
+## row names have to match the ID of the polygon
 
-buffer3 <- SpatialPolygonsDataFrame(states.buffer3t, data=fill.in.data) #, proj4string= states.buffer3t@proj4string)
+buffer3 <- SpatialPolygonsDataFrame(states.buffer3t, data=fill.in.data) 
+## combine polygon and dataframe into spatial dataframe
 
 writeOGR(buffer3, dsn = "clipped/buffer3km", layer = "buffer3", driver = "ESRI Shapefile")
-plot(bio_1)
+## write out as ESRI shapefile
+
+
 
 ############################################### 
 ######### loop through all bio layers #########
