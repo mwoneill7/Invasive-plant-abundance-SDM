@@ -1,13 +1,13 @@
-## Prepping climate data
-## Mitch O'Neill
-## created: 8/8/2017
-## last modified: 8/8/2017
+#### Prepping climate data
+###  Mitch O'Neill
+##   created: 8/8/2017
+#    last modified: 8/8/2017
 
 library(rgeos)
 library(rgdal)
 library(raster)
 
-setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
+setwd("C:/Users/mwone/Documents/geodata")
 states = readOGR(dsn = "states", layer = "US_states") ## read in US shapefile
 proj4string(states)
 
@@ -24,7 +24,7 @@ states.buffer3 <- gBuffer(states.t, byid=F, id=NULL, width = 3000, quadsegs = 8,
 ## US with 3km buffer
 
 ## transform buffer to proj4string of the bioclimatic data
-states.buffer3t <- spTransform(states.buffer3, proj4string(raster("Raw/climate_data/current/bio_1")))
+states.buffer3t <- spTransform(states.buffer3, proj4string(raster("climate_data/current/bio_1")))
 
 ## convert to SpatialPolygonsDataframe so that buffer can be written out
 fill.in.data <- data.frame("fill in data") ## filler data to make up dataframe component
@@ -44,17 +44,17 @@ writeOGR(buffer3, dsn = "clipped/buffer3km", layer = "buffer3", driver = "ESRI S
 ######### loop through all bio layers #########
 ###############################################
 
-clim.list <- list.files("Raw/climate_data/") ## list of all files in Raw climate data folder
+clim.list <- list.files("climate_data/") ## list of all files in Raw climate data folder
                                              ## one for each climate model, each with the 19 variables within
 
 for (j in 1:length(clim.list)) { ## iterate through each climate model
 
-  model.folder.path <- paste("Raw/climate_data", clim.list[j], sep="/") 
+  model.folder.path <- paste("climate_data", clim.list[j], sep="/") 
   ## look within the climate model of the iteration, and   
   bio.list <- list.files(model.folder.path) ## list all of the variables
   bio.list <- bio.list[1:19] ## exlude the metadata files after the 19 bioclimate variables
   
-  clipped.model.folder.path <-paste("Products/clipped_climate_data", clim.list[j], sep="/")
+  clipped.model.folder.path <-paste("clipped_climate_data", clim.list[j], sep="/")
   dir.create(clipped.model.folder.path) ## creates a new folder to place the clipped data for the model of the iteration
 
   for (i in 1:length(bio.list)){ ## loop through each climate variable within the model of the iteration
@@ -80,10 +80,37 @@ for (j in 1:length(clim.list)) { ## iterate through each climate model
 }
 
 
-
+plot(bio.i)
 
 ##########################
 ### reading in fishnet ###
 ##########################
-fishnet = readOGR(dsn = "Raw/Fishnet", layer = "fishnet")
+fishnet = readOGR(dsn = "Fishnet", layer = "fishnet")
 plot(fishnet)
+
+
+##########################################
+######### assessing correlations #########
+##########################################
+
+bio.list<- list.files("clipped_climate_data/current", full.names =T) 
+## lists all 19 climate rasters in the climate data to be used for fitting
+
+bio.stack <- stack(bio.list) ## creates an object with each of the nine rasters stacked
+proj4string(bio.stack) <- proj4string(raster("climate_data/current/bio_1")) 
+## assigns reference info based the files where these files came from 
+
+bio.stackM <- as.matrix(bio.stack) ## converts the stacked object into a matrix statistical analysis
+
+corr.matrix <- corr.test(as.matrix(bio.stackM), y = NULL, use = "pairwise", method="spearman", adjust="bonferroni", alpha=.05, ci=F)
+## matrix of spearman's correlation of the 19 variables, p-value adjusted using Bonferroni correction
+
+write.csv(data.frame(corr.matrix$p), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/p.vals.csv") 
+## export p-values in a table format
+write.csv(data.frame(corr.matrix$r), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/corr.vals.csv") 
+## export correlation coefficients in a table format
+
+
+###################################################################################
+
+
