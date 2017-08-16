@@ -6,7 +6,7 @@
 setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
 
 #### eddmaps species list (all species with infested area downloaded from EDDMAPS October 2016)
-edd.list <- read.table("Raw/speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+edd.list <- read.table("speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 edd.list$edd <- 1## to mark that this species was on the edd.list (for upcoming merges)
 
 
@@ -16,7 +16,7 @@ occ.list$occ <- 1 ## to mark that this species was on the occurence-based hotspo
 head(occ.list)
 
 #### USDA federal/State listings (Downloaded from PLANTS 5/30/2017)
-usda.list <- read.table("Raw/PLANTS.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+usda.list <- read.table("PLANTS.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 usda.list$usdaCHK <- 1
 head(usda.list) ## to mark that this species was in the PLANTS database (for upcoming merges)
 
@@ -37,7 +37,7 @@ plants.nativity <- rbind(plants.i, plants.n, plants.in)
 head(plants.nativity)
 
 #### IPAUS species list (Downloaded in 2014; database last updated May 2012)
-ipa.list <- read.table("Raw/ipa2.csv", header = T, sep = ",", 
+ipa.list <- read.table("ipa2.csv", header = T, sep = ",", 
                        stringsAsFactors = F, quote= "\"", comment.char= "", strip.white = T)
 ipa.list$IPA <- 1 ## marks that the species appeared on IPA for (upcoming merge) 
 head(ipa.list)
@@ -177,7 +177,7 @@ for (i in 1:length(no.ipaus)){ ## loop through those species
 #######################      FLAG AQUATICS     ########################
 #######################################################################
 
-aqua <- read.table("Products/aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+aqua <- read.table("aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 ## list of aquatic species that haven't been eliminated yet
 
 ed.listing$Aquatic <- 0
@@ -205,7 +205,7 @@ ed.listing$not.enough.reasonable.values <- 0
 ed.listing$not.enough.reasonable.values[(ed.listing$no.abs + ed.listing$no.abun - ed.listing$no.big < 20) | 
                                         (ed.listing$no.abun - ed.listing$no.big < 15)] <- 1
 
-write.csv(ed.listing, "Products/SpeciesList08_10_2017.csv", row.names = F)
+write.csv(ed.listing, "SpeciesList08_10_2017.csv", row.names = F)
 #### output file
 #### manual work to follow; i.e.
 #### where nativity = N/A manually assign nativity using MoBot, etc.

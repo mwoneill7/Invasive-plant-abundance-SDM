@@ -49,7 +49,7 @@ summary(as.factor(edd$validInfestedArea))
 ## ensure that all records were classified as valid or not valid abundance data
 
 ### update species names (via USDA codes)
-edd.list <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/Raw/speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T)
+edd.list <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T)
 ## download scientific name to USDA code file, compiled manually by Ceara, completed June 1, 2017
 
 ## list of species in USDA-sp name file
@@ -265,8 +265,6 @@ eddUSA <- edd[!is.na(edd$USDAcode) & edd$USDAcode != "" & !is.na(edd$Longitude_N
 
 coordinates(eddUSA) <- c(47,46) ## specifies long, lat, CHANGE NUMBERS
 
-
-
 #all of EDDMapS is supposed to be nad83/wgs84
 EPSG <- make_EPSG() ## creates library of EPSG codes to help assign proj4string
 EPSG[grepl("WGS 84$", EPSG$note) == TRUE, ] ## search for WGS 84 --> 4326
@@ -274,7 +272,7 @@ proj4string(eddUSA) <- CRS("+init=epsg:4326")
 
 ## check to see points on states file
 ## load contiguous US shape file
-states = readOGR(dsn = "Raw/states", layer = "US_states")
+states = readOGR(dsn = "states", layer = "US_states")
 proj4string(states) ## wgs84
 ## transform states to same proj4string as eddmaps
 states2 <- spTransform(states, "+init=epsg:4326")
