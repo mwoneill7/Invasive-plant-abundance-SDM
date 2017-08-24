@@ -1,7 +1,7 @@
 #### Full workflow for identifying absence data, presence data, dealing with spp names, etc.
 ###  Mitch O'Neill
 ##   created 6/5/2017
-#    last modified: 8/9/2017
+#    last modified: 8/22/2017
 
 setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
 
@@ -56,8 +56,7 @@ edd.list <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abund
 spp <- as.list(edd.list$eddmap_species[!is.na(edd.list$eddmap_species)])
 
 for (sp in spp){
-  length(edd$ScientificName[is.na(edd$invasivecover)])
-  
+ 
   edd$USDAcode[edd$ScientificName == sp] <- edd.list$USDA_code[edd.list$eddmap_species == sp & !is.na(edd.list$eddmap_species)]
   print(sp)  
 }
@@ -233,7 +232,7 @@ for (sp in spp){
 edd$USDAcodeUNMERGED <- edd$USDAcode
 ## keep a copy of the column before merging, so that I can go back if necessary
 
-ssp <- read.table("Products/subspecies.csv",  header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+ssp <- read.table("subspecies.csv",  header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 ## lists subspecies with the species they are to be merged into
 
 for (i in 1:length(ssp$usda.code)){ ## loop through subspecific codes in my data
@@ -247,8 +246,8 @@ for (i in 1:length(ssp$usda.code)){ ## loop through subspecific codes in my data
 edd$Latitude_N <- as.numeric(edd$Latitude_Decimal)
 edd$Longitude_N <- as.numeric(edd$Longitude_Decimal)
 
-summary(edd1$Latitude_N)
-summary(edd1$Longitude_N)
+summary(edd$Latitude_N)
+summary(edd$Longitude_N)
 ## note: 441 nulls
 
 edd[edd$Longitude_N > 0 & edd$validInfestedArea == 1 & !is.na(edd$USDAcode), ] 
@@ -257,35 +256,34 @@ edd[edd$Longitude_N > 0 & edd$validInfestedArea == 1 & !is.na(edd$USDAcode), ]
 edd$Longitude_N[edd$Longitude_N > 0 & edd$ReporterOrg == "Fairfax County Park Authority, VA"] <-  
   -1*edd$Longitude_N[edd$Longitude_N > 0 & edd$ReporterOrg == "Fairfax County Park Authority, VA"]
 
+library(rgdal) ## for spatial data
+eddUSA <- edd[!is.na(edd$Longitude_N) & !is.na(edd$Latitude_N) & edd$Longitude_N < -65 & edd$Longitude_N > -130 & edd$Latitude_N > 20 & edd$Latitude_N <55 & (edd$validInfestedArea == 1 | edd$negative == 1), ]
+## removes records I know that I won't use (no coords, coords way outside US, not absence data or valid infested area data)
 
-## for spatial data
-library(rgdal)
-eddUSA <- edd[!is.na(edd$USDAcode) & edd$USDAcode != "" & !is.na(edd$Longitude_N) & !is.na(edd$Latitude_N) & edd$Longitude_N < -65 & edd$Longitude_N > -130 & edd$Latitude_N > 20 & edd$Latitude_N <55 & (edd$validInfestedArea == 1 | edd$negative == 1), ]
-## removes records I know that I won't use (no coords, no USDA code, not absence data or valid infested area data)
-
-coordinates(eddUSA) <- c(47,46) ## specifies long, lat, CHANGE NUMBERS
+coordinates(eddUSA) <- c(48,47) ## specifies long, lat
 
 #all of EDDMapS is supposed to be nad83/wgs84
 EPSG <- make_EPSG() ## creates library of EPSG codes to help assign proj4string
 EPSG[grepl("WGS 84$", EPSG$note) == TRUE, ] ## search for WGS 84 --> 4326
 proj4string(eddUSA) <- CRS("+init=epsg:4326")
 
-## check to see points on states file
+## clip pts to L48
 ## load contiguous US shape file
 states = readOGR(dsn = "states", layer = "US_states")
 proj4string(states) ## wgs84
 ## transform states to same proj4string as eddmaps
 states2 <- spTransform(states, "+init=epsg:4326")
 plot(states2) ## plot eddmaps onto US
-plot(eddUSA, pch=20, add=T)
+plot(eddUSA, pch=20, add=T) ## plot points on top
 eddUSA  <- eddUSA[states2, ] ## clip edd_US to L48
-plot(eddUSA, pch=20, add=T, col="purple")
+plot(eddUSA, pch=20, add=T, col="purple") 
+## replot subsetted points in new color to ensure that it worked
 
 
 #### bring back into dataframe.format
 eddUSA <-data.frame(eddUSA)
-
+## remove meaningless column
 eddUSA$optional <- NULL
 
-write.csv(eddUSA, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_09_2017.csv", row.names = F)
+write.csv(eddUSA, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_22_2017.csv", row.names = F)
 
