@@ -40,12 +40,12 @@ writeOGR(buffer3, dsn = "clipped/buffer3km", layer = "buffer3", driver = "ESRI S
 
 
 
-############################################### 
-######### loop through all bio layers #########
-###############################################
+################################################################ 
+######### loop through all bio layers  and clip to L48 #########
+################################################################
 
 clim.list <- list.files("climate_data/") ## list of all files in Raw climate data folder
-                                             ## one for each climate model, each with the 19 variables within
+                                         ## one for each climate model, each with the 19 variables within
 
 for (j in 1:length(clim.list)) { ## iterate through each climate model
 
@@ -78,13 +78,6 @@ for (j in 1:length(clim.list)) { ## iterate through each climate model
   
   print(clim.list[j]) ## keep track of model within entire loop
 }
-
-##########################
-### reading in fishnet ###
-##########################
-fishnet = readOGR(dsn = "Fishnet", layer = "fishnet")
-plot(fishnet)
-
 
 #################################################
 ### Repeat clipping with all of North America ###
@@ -122,10 +115,6 @@ for (i in 1:length(bio.list)){ ## loop through each climate variable within the 
   
 }
 
-
-
-
-
 ##########################################
 ######### assessing correlations #########
 ##########################################
@@ -147,11 +136,45 @@ write.csv(data.frame(corr.matrix$p), "C:/Users/mwone/Google Drive/Invasive-plant
 write.csv(data.frame(corr.matrix$r), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/corr.vals.csv") 
 ## export correlation coefficients in a table format
 
-##############################################################
-######### repeat correlations with north america data ########
-##############################################################
+######################################################################################
+######################################################################################
+######################### JUST GRID CELLS WITH POINTS ################################
+######################################################################################
+######################################################################################
 
-bio.list<- list.files("clipped2_climate_data/current", full.names =T) 
+cellsWpts2 <- readOGR(dsn="cells_with_points2", layer = "cellsWpts2")
+## read in shapefile of all grid cells containing points (see points2grids)
+
+bio.list <- list.files("climate_data/current" ) ## list all of the variables
+bio.list <- bio.list[1:19] ## exlude the metadata files after the 19 bioclimate variables
+
+clipped.model.folder.path <- ("clipped4_climate_data" )
+dir.create(clipped.model.folder.path) ## creates a new folder to place the clipped data for the model of the iteration
+
+for (i in 1:length(bio.list)){ ## loop through each climate variable within the model of the iteration
+  
+  file.in <- paste("climate_data/current", bio.list[i], sep="/") 
+  ## paste together the full file name to bring it into R
+  
+  file.out <- paste(clipped.model.folder.path, (paste(bio.list[i], "asc", sep=".")), sep="/")
+  ## create filepath for clipped data within the new folder, to export from R
+  
+  bio.i <- raster(file.in) ## read in file as raster
+  
+  bio.i <- mask(crop(bio.i, cellsWpts2), cellsWpts2) 
+  ## crop raster to extent of united states, and then clip(mask) to the buffer
+  
+  writeRaster(bio.i, file.out, format= "ascii") ## write out raster as an ESRI raster
+  
+  print(i) ## keep track of place within model
+  
+}
+
+##########################################
+######### assessing correlations #########
+##########################################
+
+bio.list <- list.files("clipped4_climate_data/", full.names =T) 
 ## lists all 19 climate rasters in the climate data to be used for fitting
 
 bio.stack <- stack(bio.list) ## creates an object with each of the nine rasters stacked
@@ -163,19 +186,35 @@ bio.stackM <- as.matrix(bio.stack) ## converts the stacked object into a matrix 
 corr.matrix <- corr.test(bio.stackM, y = NULL, use = "pairwise", method="spearman", adjust="bonferroni", alpha=.05, ci=F)
 ## matrix of spearman's correlation of the 19 variables, p-value adjusted using Bonferroni correction
 
-write.csv(data.frame(corr.matrix$p), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/p.valsNA.csv") 
+write.csv(data.frame(corr.matrix$p), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/p.vals4.csv") 
 ## export p-values in a table format
-write.csv(data.frame(corr.matrix$r), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/corr.valsNA.csv") 
+write.csv(data.frame(corr.matrix$r), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/corr.vals4.csv") 
 ## export correlation coefficients in a table format
 
-
-
 ###################################################################################
-#### MESS ANALYSIS ################################################################
+###################################################################################
+############################### MESS ANALYSIS #####################################
+###################################################################################
 ###################################################################################
 
-library(dismo)
+library(dismo) ## needed for mess() function
 
+#### 2 potential lists
+## 2,3,5,6,8,9,12,15
+## 1,2,4,8,9,12,15
 
+## list of bioclimatic rasters (paired down to non-correlated and biologically relevent variables)
+bio.list <- c("bio_2.asc", "bio_3.asc", "bio_4.asc", "bio_5.asc", "bio_6.asc", "bio_8.asc", "bio_9.asc", "bio_12.asc",  "bio_12.asc")
+bio.list.ref <- paste("clipped4_climate_data", bio.list, sep="/") ## add in rest of file path for reference data (clipped to grid cells points) 
+bio.list.full <- paste("clipped2_climate_data", bio.list, sep="/")## add in rest of file path for variables in the predicted region
 
+bio.stack.ref <- stack(bio.list.ref)   ### stack reference rasters
+bio.stack.full <- stack(bio.list.full) ### stack prediction region rasters
+## bioclimatic variables of interest for all of North America
+ 
+reference <- as.matrix(bio.stack.ref)  ### make matrix version of stacked reference rasters  
 
+mess<- mess(bio.stack.full, reference, full=FALSE) 
+### MESS analysis of similarity of prediction region to the reference values
+
+writeRaster(mess, "mess.asc", format= "ascii") ### write out raster for analysis 
