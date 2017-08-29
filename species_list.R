@@ -209,3 +209,46 @@ write.csv(ed.listing, "SpeciesList08_10_2017.csv", row.names = F)
 #### output file
 #### manual work to follow; i.e.
 #### where nativity = N/A manually assign nativity using MoBot, etc.
+
+
+
+############################################################################
+########## add the number of unique grid cells to the master file ##########
+############################################################################
+
+edd2 <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_08_28_2017.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+
+ed.listing <- read.table("SpeciesList08_10_2017.csv", header = T, sep = ",", quote= "\"", 
+                        comment.char= "", stringsAsFactors = F, strip.white = T)
+
+for (i in 1:length(ed.listing$usda.code)){
+  
+## subset all records for species of iteration with valid infested area
+edd.abun <- edd2[edd2$usda == ed.listing$usda.code[i] & edd2$abundance > 0, ]
+ed.listing$no.abunG[ed.listing$usda.code == ed.listing$usda.code[i]] <- 
+  length(edd.abun$usda[!is.na(edd.abun$usda)])
+## number of records, exluding NA rows
+
+## subset all records for species of iteration with negative=1
+edd.abs <- edd2[edd2$usda == ed.listing$usda.code[i] & edd2$absence == 1, ]
+ed.listing$no.absG[ed.listing$usda.code == ed.listing$usda.code[i]] <- 
+  length(edd.abs$usda[!is.na(edd.abs$usda)])
+## number of records, exluding NA rows
+print(i)
+}
+
+### new potential use column using number of grrid cells rather than number of points
+ed.listing$potential.use2 <- 1 ## default is that I can use them, then remove them based on certain criteria
+
+ed.listing$potential.use2[ed.listing$Aquatic == 1 | ## can't use aquatics
+                           (ed.listing$state + ed.listing$ipaus + ed.listing$federal + ed.listing$other) < 1 |
+                           ## can't use species that haven't been recognized as problematic
+                           (ed.listing$no.absG + ed.listing$no.abunG < 20) | ed.listing$no.abunG < 15 |
+                           ## data deficient
+                           (ed.listing$nativity == "N") ] <- 0  
+                           ## can't use native plants
+
+
+write.csv(ed.listing, "SpeciesList08_28_1017.csv", row.names=F)
+## write out for later use
