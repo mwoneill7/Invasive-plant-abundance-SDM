@@ -1,7 +1,7 @@
 #### How to relate points to climate grid cells
 ###  Mitch O'Neill
 ##   created 8/18/2017
-#    last modified: 8/28/2017
+#    last modified: 9/12/2017
 
 setwd("C:/Users/mwone/Documents/geodata/")
 library(rgdal)
@@ -105,11 +105,12 @@ for (i in 1:length(sp.list)){ ## loop through all species
   for (j in 1:length(cell.ids)){ ## loop through all cells for that species
     cell.j <- spp.i[spp.i$cellID == cell.ids[j],] ## subset to all points in the cell of the iteration
     keep <- cell.j[cell.j$abundance == max(cell.j$abundance),] ## keep the max value
+    keep <- keep[1,] ## only want one record!
     edd2 <- rbind(edd2, keep) ## append the kept row to the master object
   }
   
 }
 
 edd2 <- edd2[edd2$usda != "TEMPLATE",] ## remove template row
-write.csv(edd2, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_08_28_2017.csv", row.names=F)
+write.csv(edd2, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_09_12_2017.csv", row.names=F)
 ## write out for later use
