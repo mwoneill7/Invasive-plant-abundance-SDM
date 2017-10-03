@@ -250,5 +250,91 @@ ed.listing$potential.use2[ed.listing$Aquatic == 1 | ## can't use aquatics
                            ## can't use native plants
 
 
-write.csv(ed.listing, "SpeciesList08_28_1017.csv", row.names=F)
+write.csv(ed.listing, "SpeciesList08_28_2017.csv", row.names=F)
 ## write out for later use
+
+masterList <- read.table("file:///C:/Users/mwone/Google Drive/NSF_GSS_shared/Hotspots_and_Abundance/master list.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+
+speciesList <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/SpeciesList08_28_1017.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+head(speciesList)
+head(masterList)
+
+traits <- data.frame(cbind(masterList$NewCode, masterList$habit, masterList$duration_final), stringsAsFactors=F)
+head(traits)
+
+colnames(traits)<-c("usda.code", "habit", "duration")
+traits$usda.code[1] <- "FEBR7"
+head(traits)
+
+spList <- merge(speciesList, traits, by="usda.code", all.x=T)
+
+write.csv(spList, "SpeciesList09_26_2017.csv", row.names=F)
+
+
+##################################################################################
+spList2 <- spList[spList$potential.use2 == 1,]
+
+
+spList2$habitF <- as.factor(spList2$habit)
+spList2$durationF <- as.factor(spList2$duration)
+summary(spList2$durationF)
+summary(spList2$habitF)
+
+spList2$both <- as.factor(paste(spList2$duration, spList2$habit, sep=" "))
+summary(spList2$both)
+
+hist(spList2$no.abunG, breaks=25, main="Histogram of number of grid cells", xlab= "no. of grid cells with record", ylab= "no. of species")
+
+summary(spList2$no.abunG)
+str(spList2$no.abs)
+length(spList2$no.absG[spList2$no.absG > 0]) # 48
+summary(spList2$no.absG[spList2$no.absG > 0])# 1-1,700; mean 326
+hist(spList2$no.absG[spList2$no.absG > 0], breaks=10)
+
+summary(spList2$no.absG[spList2$no.absG > 0]/(spList2$no.abunG[spList2$no.absG > 0]+ spList2$no.absG[spList2$no.absG > 0]))
+hist(spList2$no.absG[spList2$no.absG > 0]/(spList2$no.abunG[spList2$no.absG > 0]+ spList2$no.absG[spList2$no.absG > 0]))
+## absence heavy is a prob
+
+
+
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_09_12_2017.csv",  
+                  header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+## read in species list
+spp <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/SpeciesList08_28_2017.csv",  
+                  header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+sp.list <- spp$usda.code[spp$potential.use2 == 1] ## list of useable species
+
+edd <- edd[edd$usda %in% sp.list,] ## subset dataset to useable species
+coordinates(edd) <- c(7,8) ## set lat/lon
+proj4string(edd) <- CRS("+init=epsg:4326") ## assume wgs84 for all eddmaps data
+
+
+states <- readOGR(dsn="C:/Users/mwone/Documents/geodata/states", layer="US_states")
+states <- spTransform(states, proj4string(edd))
+plot(states)
+plot(edd, col="red", pch=19, cex=.3, add=T)
+plot(edd[edd$absence==1,], col="black", pch=19, cex=.3, add=T)
+
+proj4string(edd)
+plot(states)
+
+
+splist<- spp[spp$potential.use2 == 1,]
+splist$a <- (splist$no.abs-splist$no.absG)/splist$no.abs
+splist$p <- (splist$no.abun-splist$no.abunG)/splist$no.abun
+
+summary(splist$a)
+summary(splist$p)
+hist(splist$a)
+hist(splist$p)
+
+edd <- read.table("C:/Users/mwone/Documents/EddmapS data/eddmaps_prepped_08_22_2017.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+
+negs <- edd[edd$negative ==1,]
+negs <- negs[negs$USDAcode %in% sp.list,]
+summary(as.factor(negs$ReporterFULLName))
+negs$Comments[negs$Comments != "NULL"]
