@@ -232,30 +232,4 @@ write.csv(data.frame(corr.matrix$p), "C:/Users/mwone/Google Drive/Invasive-plant
 write.csv(data.frame(corr.matrix$r), "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/corr.vals4.csv") 
 ## export correlation coefficients in a table format
 
-###################################################################################
-###################################################################################
-############################### MESS ANALYSIS #####################################
-###################################################################################
-###################################################################################
 
-library(dismo) ## needed for mess() function
-
-#### 2 potential lists
-## 2,3,5,6,8,9,12,15
-## 1,2,4,8,9,12,15
-
-## list of bioclimatic rasters (paired down to non-correlated and biologically relevent variables)
-bio.list <- c("bio_2.asc", "bio_3.asc", "bio_4.asc", "bio_5.asc", "bio_6.asc", "bio_8.asc", "bio_9.asc", "bio_12.asc",  "bio_12.asc")
-bio.list.ref <- paste("clipped4_climate_data", bio.list, sep="/") ## add in rest of file path for reference data (clipped to grid cells points) 
-bio.list.full <- paste("clipped2_climate_data", bio.list, sep="/")## add in rest of file path for variables in the predicted region
-
-bio.stack.ref <- stack(bio.list.ref)   ### stack reference rasters
-bio.stack.full <- stack(bio.list.full) ### stack prediction region rasters
-## bioclimatic variables of interest for all of North America
- 
-reference <- as.matrix(bio.stack.ref)  ### make matrix version of stacked reference rasters  
-
-mess<- mess(bio.stack.full, reference, full=FALSE) 
-### MESS analysis of similarity of prediction region to the reference values
-
-writeRaster(mess, "mess.asc", format= "ascii") ### write out raster for analysis 
