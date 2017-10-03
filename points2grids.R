@@ -68,7 +68,7 @@ write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_28_2017
 
 
 ############### to skip the above code, run the following code: ###############
-edd <- read.table("C:/Users/mwone/Documents/eddapS data/eddmaps_prepped_08_28_2017.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("C:/Users/mwone/Documents/EddmapS data/eddmaps_prepped_08_28_2017.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 cellsWpts <- readOGR(dsn="cells_with_points", layer = "cellsWpts")
 tab <- read.table("overlayTable.csv", header=T, sep=",", stringsAsFactors = F)
