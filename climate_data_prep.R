@@ -11,7 +11,6 @@ setwd("C:/Users/mwone/Documents/geodata")
 states = readOGR(dsn = "states", layer = "US_states") ## read in US shapefile
 proj4string(states)
 
-
 ## rgeos expects projected coordinates for buffers, so I need to transform it
 EPSG <- make_EPSG() ## creates library of EPSG codes to help assign proj4string
 EPSG[grepl("WGS 84$", EPSG$note) == TRUE, ] ## search for WGS 84, #4326
