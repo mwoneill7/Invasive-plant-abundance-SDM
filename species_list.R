@@ -338,3 +338,6 @@ negs <- edd[edd$negative ==1,]
 negs <- negs[negs$USDAcode %in% sp.list,]
 summary(as.factor(negs$ReporterFULLName))
 negs$Comments[negs$Comments != "NULL"]
+
+head(spp)
+hist(spp$no.abunG[spp$potential.use2 == 1], breaks=30, main="Histogram of number of cells with records per species", xlab="no. of cells with records", ylab="no. of species")
