@@ -127,9 +127,35 @@ for (i in 1:length(prediction)){
   print(i)
 }
 
+mess <- stack(list.files("mess2/", full.names=T)[1:11])
+messD <- as.data.frame(mess)
+head(messD)
+
+
+messD <- messD[messD$bc45 != Inf,]
+
+bc <- length(messD$bc85[messD$bc85 < 0])/length(messD$bc85)
+cc <- length(messD$bc85[messD$cc85 < 0])/length(messD$bc85)
+gs <- length(messD$bc85[messD$gs85 < 0])/length(messD$bc85)
+he <- length(messD$bc85[messD$he85 < 0])/length(messD$bc85)
+ni <- length(messD$bc85[messD$in85 < 0])/length(messD$bc85)
+cu <- length(messD$current[messD$current < 0])/length(messD$bc85)
+
+
+mean(c(bc, cc, gs, he, ni))
+max(c(bc, cc, gs, he, ni))
+min((c(bc, cc, gs, he, ni)))
+
+summary(messD)
+head(mess$bc85)
+
+
+
+################# visualizing MESS ##################
 setwd("C:/Users/mwone/Documents/geodata/")
-mess <- stack(list.files("mess2/", full.names=T))
+mess <- stack(list.files("mess2/", full.names=T)[1:11])
 proj4string(mess) <- proj4string(raster("climate_data/current/bio_1"))
+
 
 library(rgdal)
 library(rgeos)
@@ -192,6 +218,7 @@ bio.pts <- stack("clipped4_climate_data/bio_2.asc",
                  "clipped4_climate_data/bio_8.asc",
                  "clipped4_climate_data/bio_12.asc",
                  "clipped4_climate_data/bio_15.asc") ### grid cells w/pts
+
 plot(bio.ref$bio_2) 
 ref2 <- as.matrix(bio.pts)  ### make matrix version of stacked reference rasters
 mess2 <- mess(bio.ref, ref2, full=F)
