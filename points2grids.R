@@ -12,14 +12,20 @@ edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_22_2
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 ## read in EDDMapS database (most recently prepped version)
 
+edd <- edd[edd$validInfestedArea == 1 & edd$grossAreaInAcres <= 2, ] 
+## only include infested area data, exclude absences, exclude values over 10 acres
+
 ## extract only the fields that are needed, to save processing time
-edd <- data.frame(cbind(1:length(edd$ScientificName), edd$ScientificName, edd$USDAcode, edd$infestedAreaInAcres, edd$negative, edd$Latitude_N, edd$Longitude_N))
+edd <- data.frame(cbind(1:length(edd$ScientificName), edd$ScientificName, edd$USDAcode, edd$infestedAreaInAcres, edd$negative, edd$Latitude_N, edd$Longitude_N, stringsAsFactors=F))
 colnames(edd) <- c("id", "species", "usda", "abundance", "absence", "latitude", "longitude") ## give fields better names
 
 ## de-factor the numeric columns that will be used
 edd$latitude <- as.numeric(as.character(edd$latitude))
 edd$longitude <- as.numeric(as.character(edd$longitude))
 edd$id <- as.numeric(as.character(edd$id))
+edd$usda <- as.character(edd$usda) ## de-factor the usda code
+edd$abundance <- as.numeric(as.character(edd$abundance)) ## de-factor the abundances
+edd$abundance[edd$absence == 1] <- 0 ## assign 0 abundance to all absences
 
 coordinates(edd) <- c(7,6) ## specifies long, lat
 
@@ -28,7 +34,7 @@ proj4string(edd) <- CRS("+init=epsg:4326")
 #plot(edd)
 
 ## read in fishnet (square polygons corresponding to grid cells)
-fishnet <- readOGR(dsn = "fishnetPolygon", layer = "fishnetPolygon") #, disambiguateFIDs = T)
+fishnet <- readOGR(dsn = "fishnetPolygon", layer = "fishnetPolygon")
 ## plot(fishnet) very time consuming
 
 edd <- spTransform(edd, proj4string(fishnet)) ## transform edd points to same proj4string of fishnet
@@ -45,44 +51,46 @@ tab <- over(edd, fishnet) ## overlays points and fishnet squares, yielding rows 
 tab$ptID <- as.numeric(row.names(tab)) ## convert rownames to its own field for easier use
 tab$Id <- NULL ## remove meaningless field (all zeroes)
 head(tab)
-write.csv(tab,"overlayTable.csv", row.names=F)
+write.csv(tab,"overlayTable2.csv", row.names=F)
 
 
-############ subset fishnet to all cells containing points ############
-ptsPerCell <- data.frame(table(tab$cellID)) ## table with number of points per grid cell polygon
-ptsPerCell$cellID <- as.numeric(as.character(ptsPerCell$Var1)) # de-factor the var1 and rename it cellID
-
-ids <- as.list(ptsPerCell$cellID[ptsPerCell$Freq > 0]) ## make list of cellIDs where there are any points in the cell
-cellsWpts <- fishnet[fishnet$cellID %in% ids,] ## subset all cells with points in them (using IDs)
-#plot(cellsWpts)
-
-writeOGR(cellsWpts, dsn= "cells_with_points", layer = "cellsWpts", driver = "ESRI Shapefile")
-## write out file for later use
+#    ############ subset fishnet to all cells containing points ############
+#    ptsPerCell <- data.frame(table(tab$cellID)) ## table with number of points per grid cell polygon
+#    ptsPerCell$cellID <- as.numeric(as.character(ptsPerCell$Var1)) # de-factor the var1 and rename it cellID
+#    
+#    ids <- as.list(ptsPerCell$cellID[ptsPerCell$Freq > 0]) ## make list of cellIDs where there are any points in the cell
+#    cellsWpts <- fishnet[fishnet$cellID %in% ids,] ## subset all cells with points in them (using IDs)
+#    #plot(cellsWpts)
+#    
+#    writeOGR(cellsWpts, dsn= "cells_with_points", layer = "cellsWpts", driver = "ESRI Shapefile")
+#    ## write out file for later use
 
 #### specify the cell that each point falls in
 edd <- data.frame(merge(edd, tab, by.x = "id", by.y = "ptID", all=F))
 ## for each point (row) in the eddmaps database, merge the cellID corresponding to that
 ## point from table produced from overlaying the eddmaps points with the fishnet cells
-write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_28_2017.csv", row.names=F)
+# write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_10_09_2017.csv", row.names=F)
 ## write out eddmaps database with cell IDs for future use
-
+head(edd)
 
 ############### to skip the above code, run the following code: ###############
-edd <- read.table("C:/Users/mwone/Documents/EddmapS data/eddmaps_prepped_08_28_2017.csv", header = T, sep = ",", quote= "\"", 
-                  comment.char= "", stringsAsFactors = F, strip.white = T)
-cellsWpts <- readOGR(dsn="cells_with_points", layer = "cellsWpts")
-tab <- read.table("overlayTable.csv", header=T, sep=",", stringsAsFactors = F)
+# edd <- read.table("C:/Users/mwone/Documents/EddmapS data/eddmaps_prepped_08_28_2017.csv", header = T, sep = ",", quote= "\"", 
+#                  comment.char= "", stringsAsFactors = F, strip.white = T)
+# cellsWpts <- readOGR(dsn="cells_with_points", layer = "cellsWpts")
+# tab <- read.table("overlayTable.csv", header=T, sep=",", stringsAsFactors = F)
+edd$optional <- NULL ## remove meaningless column
+edd$NA. <- NULL
 ###############################################################################
 
-edd$usda <- as.character(edd$usda) ## de-factor the usda code
-edd$abundance <- as.numeric(as.character(edd$abundance)) ## de-factor the abundances
-edd$abundance[edd$absence == 1] <- 0 ## assign 0 abundance to all absences
-edd$optional <- NULL ## remove meaningless column
+
 
 edd <- edd[!is.na(edd$cellID) & !is.na(edd$usda) & edd$usda != "",]
 ## exclude rows without a usda code or where the point did not fall in a grid cell
 
-rm(ptsPerCell,cellsWpts,fishnet,fishnetD,tab,cellID) ## garbage cleaning
+rm(ptsPerCell,fishnet,fishnetD,tab,cellID) ## garbage cleaning
+
+
+#### THIN DATA TO GRID CELL (WITHIN SPECIES)
 
 head(edd) ## create template dataframe matching eddmapps data
 id        <- -99
@@ -112,5 +120,7 @@ for (i in 1:length(sp.list)){ ## loop through all species
 }
 
 edd2 <- edd2[edd2$usda != "TEMPLATE",] ## remove template row
-write.csv(edd2, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_09_12_2017.csv", row.names=F)
+write.csv(edd2, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_2acre.csv", row.names=F)
 ## write out for later use
+
+head(edd2) ## where id and row.id differ
