@@ -1,263 +1,281 @@
 #### Practicing with GAMS
 ###  Mitch O'Neill
 ##   created: 9/4/2017
-#    last modified: 9/24/2017
+#    last modified: 10/9/2017
 
-library(mgcv)
-library(raster)
-library(rgeos)
-library(reshape2)
-library(combinat)
-library(rgdal)
 
-setwd("C:/Users/mwone/Documents/geodata/")
+## 1. commenting
+## 2. try REML
+## 3. Reassess species data deficiency
+## 4. Look up REML and diff sets of variables
+## 5. assess bias of max min precip
 
-edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_09_12_2017.csv", header = T, sep = ",", quote= "\"", 
+library(mgcv)     ## for GAMS
+library(raster)   ## for Raster climate data
+library(rgeos)    ## for extractig climate data to points
+library(reshape2) ## for reformatting model predictions
+library(combinat) ## for generating pairs of covariates for assessment of collinearity 
+#library(rgdal)
+
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+
+## read in EDDMapS dataset, thinned to 5km climate grid cells (1 point per species per cell)
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_10acre.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 head(edd)
 
-species <- edd[edd$usda == "VEIN9", ]#& edd$abundance < 50,]
-species <- data.frame(cbind(log(species$abundance), species$latitude, species$longitude))
-colnames(species) <- c("abundance", "latitude", "longitude")
-head(species)
+## read in Worldclim climate rasters clipped to L48; 6 variables manually selected by assessing correlations
+bio <- stack("C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_2.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_5.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_6.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_8.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_12.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_15.asc")
+## assign proj4string to that of one of the raw files before clipping
+proj4string(bio) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
 
-hist(species$abundance,  breaks=20)
-
-coordinates(species) <- c(3,2)
-proj4string(species) <- CRS("+init=epsg:4326")
-
-bio <- stack("clipped_climate_data/current/bio_2.asc",
-             "clipped_climate_data/current/bio_5.asc",
-             "clipped_climate_data/current/bio_6.asc",
-             "clipped_climate_data/current/bio_8.asc",
-             "clipped_climate_data/current/bio_12.asc",
-             "clipped_climate_data/current/bio_15.asc")
-
-proj4string(bio) <- proj4string(raster("climate_data/current/bio_1"))
-species <- spTransform(species, proj4string(bio))
-
-#plot(bio$bio_5)
-#plot(species, add=T, pch=19, cex=0.5)
-head(species)
-ext <- extract(bio, species)
-species <- cbind(species, ext)
-species[,2:5] <- species[,2:5]/10
-
-head(species)
-
-
-n=6 ## using all six variables
-M <- gam(species$abundance ~ s(bio_2, fx=F, k=5, bs="tp") +
-                             s(bio_5, fx=F, k=5, bs="tp") +
-                             s(bio_6, fx=F, k=5, bs="tp") +
-                             s(bio_8, fx=F, k=5, bs="tp") +
-                             s(bio_12, fx=F, k=5, bs="tp") + 
-                             s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data=species)
-
-aic <- M$aic
-bio_2 <- 1
-bio_5 <- 1
-bio_6 <- 1
-bio_8 <- 1
-bio_12 <- 1
-bio_15 <- 1
-bios <- "bio_2 bio_5 bio_6 bio_8 bio_12 bio_15"
-model.sel <- data.frame(n,aic, bio_2, bio_5, bio_6, bio_8, bio_12, bio_15, bios, stringsAsFactors = F)
-
-
-#library(combinat)
-variables <- c(1,2,3,4,5,6) # c(1:length(cand.vars))
-
-for (n in 1:5){ ## eventually 1:length(variables)
-
-  var.sets <- as.data.frame(combn(variables, n, simplify=F))
-  #var.sets ## each column is a list of variables
+## read in list of model formulae with all 63 possible combos of 6 variables (created with help of combinat)
+formulae <- read.table("formulae.txt", header = T, sep = "%", quote= "\"", 
+                        comment.char= "", stringsAsFactors = F, strip.white = T)
+tp = "tp" ## so that the tp referred to in the formulae can be interpreted as thin-plate in mgcv
   
-  for (i in 1:NCOL(var.sets)){ 
-    var.list.i <- var.sets[,i]
+## read in table with species list and useability info
+sp.list <- read.table("SpeciesList10_11_2017.csv", header = T, sep = ",", quote= "\"", 
+                           comment.char= "", stringsAsFactors = F, strip.white = T)
+head(sp.list)
+sp.list <- sp.list$usda.code[sp.list$potential.use_10ac == 1] ## subset to useable species
+
+species.code <- "TEMPLATE" ## initialize master file to contain summaries of GAMs (final model for each species)
+Radj <- -99 ## adjusted R-squared of models
+devX <- -99 ## deviance explained by models
+no.vars <- -99 ## number of variables in models
+p2 <- -99 ## significance (p-val) of each variable (2:bio_2, etc.)
+p5 <- -99
+p6 <- -99
+p8 <- -99
+p12 <- -99
+p15 <- -99
+edf2 <- -99 ## effective degrees of freedom for each smooth (edf2:s(bio_2), etc.)
+edf5 <- -99
+edf6 <- -99
+edf8 <- -99
+edf12 <- -99
+edf15 <- -99
+
+GAMsums <- data.frame(species.code,Radj,devX,no.vars,p2,p5,p6,p8,p12,p15,edf2,edf5,edf6,edf8,edf12,edf15, stringsAsFactors=F)
+## concatenate into template dataframe
+
+for(s in 1:10){  #length(sp.list)){ ## Loop through species list
+
+  species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
+  
+  species <- edd[edd$usda == species.code,]## subset to species of the iteration
+  species <- data.frame(cbind(log(species$abundance), species$latitude, species$longitude)) ## select only variables needed to save computation time
+  colnames(species) <- c("abundance", "latitude", "longitude") ## clean up column names
+
+  par(mfrow=c(1,1)) ## clean up plot space from past iterations
+  jpeg(paste("histograms", paste(species.code, "jpg", sep="."), sep="/" )) ## output file name for histogram of abun
+  hist(species$abundance,  breaks=20) # histogram of abundance with 20 breaks
+  dev.off() ## export plot to filepath specified above
+  
+  coordinates(species) <- c(3,2) ## specify lon/lat
+  proj4string(species) <- CRS("+init=epsg:4326") ## assume WGS84/NAD83 for EDDMapS points
+  
+  species <- spTransform(species, proj4string(bio)) ## project point data to proj4string of climate data
+  
+  ext <- extract(bio, species) ## extract climate values to points
+  species <- cbind(as.data.frame(species), ext) ## append extracted climate data to point data
+  species[,4:7] <- species[,4:7]/10 ## convert temp variables back to Celcius (from Celsius*10)
+  #head(species) 
+
+  #### MODEL SELECTION #####
+  
+  ## initialize template masterfile to contain summaries of each model for this species
+  i <- -1 ## keep track of place in formula list
+  n <- -1 ## number of variables
+  aic <- -1 ## Akaike's info criterion
+  bios <- "TEMPLATE" ## list of climate covariates
+  nonsig <- -1 ## 1: there is a non-sig variable, 2: all variables are signif
+  
+  model.sel <- data.frame(i, n, aic, bios, nonsig, stringsAsFactors = F)
+  ## concatenate into master data.frame
+  
+  for (i in 1:length(formulae$form)){ ##loop through all formulae in the formula list
    
-    if(n==1){
-      M <- gam(species$abundance ~ s(ext[,var.list.i[1]], fx=F, k=5, bs="tp"), method="GCV.Cp")
-    }
-    if(n==2){ M <- gam(species$abundance ~ s(ext[,var.list.i[1]], fx=F, k=5, bs="tp") +
-                                           s(ext[,var.list.i[2]], fx=F, k=5, bs="tp"), method="GCV.Cp")
-    }
-    if(n==3){
-      M <- gam(species$abundance ~ s(ext[,var.list.i[1]], fx=F, k=5, bs="tp") +
-                                   s(ext[,var.list.i[2]], fx=F, k=5, bs="tp") +
-                                   s(ext[,var.list.i[3]], fx=F, k=5, bs="tp"), method="GCV.Cp")
-    }
-    if(n==4){
-      M <- gam(species$abundance ~ s(ext[,var.list.i[1]], fx=F, k=5, bs="tp") +
-                                   s(ext[,var.list.i[2]], fx=F, k=5, bs="tp") +
-                                   s(ext[,var.list.i[3]], fx=F, k=5, bs="tp") +
-                                   s(ext[,var.list.i[4]], fx=F, k=5, bs="tp"), method="GCV.Cp")
-    }
-    if(n==5){
-       M <- gam(species$abundance ~ s(ext[,var.list.i[1]], fx=F, k=5, bs="tp") +
-                                    s(ext[,var.list.i[2]], fx=F, k=5, bs="tp") +
-                                    s(ext[,var.list.i[3]], fx=F, k=5, bs="tp") +
-                                    s(ext[,var.list.i[4]], fx=F, k=5, bs="tp") +
-                                    s(ext[,var.list.i[5]], fx=F, k=5, bs="tp"), method="GCV.Cp")
-    }
-    
-    aic <- M$aic
-    bios <- paste(as.character(colnames(ext)[var.list.i]), collapse=" ")
-    if (grepl("bio_2", bios)) {bio_2 <- 1} else {bio_2 <- 0}
-    if (grepl("bio_5", bios)) {bio_5 <- 1} else {bio_5 <- 0}
-    if (grepl("bio_6", bios)) {bio_6 <- 1} else {bio_6 <- 0}
-    if (grepl("bio_8", bios)) {bio_8 <- 1} else {bio_8 <- 0}
-    if (grepl("bio_12", bios)) {bio_12 <- 1} else {bio_12 <- 0}
-    if (grepl("bio_15", bios)) {bio_15 <- 1} else {bio_15 <- 0}
-    
-    model.sel.i <- data.frame(n,aic, bio_2, bio_5, bio_6, bio_8, bio_12, bio_15, bios, stringsAsFactors = F)
-    model.sel <- rbind(model.sel, model.sel.i)
-    print(i)
-  }
-  print(paste("n =", n, sep = " "))
-}
-
-
-cor <- cor(ext, use="pairwise", method="spearman")
-rhos <- as.data.frame(corr$r)
-
-variables <-c(1:6)
-var.pairs<- combn(variables, 2, simplify=T)
-
-var1 <- "TEMPLATE"
-var2 <- "TEMPLATE"
-rho <- -2
-corr.pairs <- data.frame(var1,var2,rho, stringsAsFactors = F)
-
-for (i in 1:NCOL(var.pairs)) {
-
-  var1 <- row.names(rhos[var.pairs[1,i],])
-  var2 <- row.names(rhos[var.pairs[2,i],])
-  rho <- abs(rhos[var.pairs[1,i], var.pairs[2,i]])
-  corr.pairs.i <- data.frame(var1,var2,rho, stringsAsFactors = F)
-  corr.pairs <- rbind(corr.pairs, corr.pairs.i)
-  
-  print(i)
-}
-
-corr.pairs <- corr.pairs[corr.pairs$var1 != "TEMPLATE",]
-corr.pairs <- corr.pairs[corr.pairs$rho >= .8, ] ## change to 8, but be careful
-
-model.sel$collinear <- 0
-
-if(length(corr.pairs$rho) > 0){
-  for (i in 1:length(corr.pairs$rho)){
-    for (j in 1:length(model.sel$bios)){
+    if(i != 63 | length(species$abundance) > 23){ ## skip over model w/ 6 params for species w/ <23 points,
+                                                 ## for coefficients would outumber data     
+      M <- gam(formula(formulae$form[i]), method ="REML", data = species)
+      ## construct model using formula of the iteration
+      ## select smoothness using REML
+      ## use data for species of this iteration
       
-      if(grepl(corr.pairs$var1[i], model.sel$bios[j]) & grepl(corr.pairs$var1[i], model.sel$bios[j])) { 
-        model.sel$collinear[j] <- 1}
-      print(j)
+      Msum <- summary(M)
+      Msum <- as.data.frame(Msum$s.table) ## extract table with significance of smooth terms
+      n <- NROW(Msum) ## number of frows in smooth table = number of smooths = number of variables
+      
+      nonsig <- 0 ## assume significance by default
+      for (j in 1:n){ ## loop through smooths
+        if(Msum$'p-value'[j] > 0.10) { ## if any smooth has a p-value greater than .01
+          nonsig <- 1 ## then note that there is a nonsig variable
+        }
+      }
     }
-    print(paste("i =", i, sep = " "))
-  }
-}
-
-model.sel <- model.sel[model.sel$collinear == 0,]
-model.sel$dAIC <- model.sel$aic - min(model.sel$aic)
-
-model.sel <- model.sel[model.sel$dAIC <=2,]
-model.sel <- model.sel[model.sel$n == min(model.sel$n),]
-model.sel <- model.sel[model.sel$dAIC == min(model.sel$dAIC),]
-
-mod.sel <- as.data.frame(t(model.sel[,3:8]), stringsAsFactors=F)
-colnames(mod.sel) <- c("mod")
-mod.sel$vars <- row.names(mod.sel)
-vars <- mod.sel$vars[mod.sel$mod==1]
-
-M1 <- gam(abundance ~ s(bio_2, fx=F, k=3, bs="tp") + s(bio_5, fx=F, k=3, bs="tp") + 
-                      s(bio_8, fx=F, k=3, bs="tp") + s(bio_12, fx=F, k=3, bs="tp") +
-                      s(bio_15, fx=F, k=3, bs="tp"), method="GCV.Cp", data =species)
-par(mfrow=c(2,3))
-plot(M1)
-summary(M1)
-
-
-################ all possible models #############################################################################
-M2 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M3 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M4 <- gam(abundance ~ s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M5 <- gam(abundance ~ s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M6 <- gam(abundance ~ s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M7 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M8 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M9 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M10 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M11 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M12 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M13 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M14 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M15 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M16 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M17 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M18 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M19 <- gam(abundance ~ s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M20 <- gam(abundance ~ s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M21 <- gam(abundance ~ s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M22 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M23 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M24 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M25 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M26 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M27 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M28 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M29 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M30 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M31 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M32 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M33 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M34 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M35 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M36 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M37 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M38 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M39 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M40 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M41 <- gam(abundance ~ s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M42 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M43 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M44 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M45 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M46 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M47 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M48 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M49 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M50 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M51 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M52 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M53 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M54 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M55 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M56 <- gam(abundance ~ s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)  
-M57 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M58 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M59 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M60 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M61 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M62 <- gam(abundance ~ s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-M63 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") + s(bio_5, fx=F, k=5, bs="tp") + s(bio_6, fx=F, k=5, bs="tp") + s(bio_8, fx=F, k=5, bs="tp") + s(bio_12, fx=F, k=5, bs="tp") + s(bio_15, fx=F, k=5, bs="tp"), method="GCV.Cp", data =species)
-
-
-
-##########################################
-M2 <- gam(abundance ~ s(bio_2, fx=F, k=5, bs="tp") +
-                      s(bio_6, fx=F, k=5, bs="tp") +
-                      s(bio_12, fx=F, k=5, bs="tp"),
-                      method="GCV.Cp", data=species) 
-par(mfrow=c(1,3)); plot(M2)
-summary(M2)
-
-bio.sp <- as.data.frame(bio) ## make copy of bioclimatic variables for manipulation
-bio.sp[,1:4] <- bio.sp[,1:4]/10
-
-## if bio_2 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
-if(grepl("bio_2", as.character(M2$pred.formula)[2])) {
+    
+    aic <- M$aic ## extract aic score
+    
+    bios <- as.character(M$pred.formula[2]) ## list covariates
+   
+    model.sel.i <- data.frame(i, n, aic, bios, nonsig, stringsAsFactors = F) ## concatenate data from ieration
+    model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
+    #print(i) ## keep track of place in loop
   
-  bio_2 <- c(min(species$bio_2), min(species$bio_2 - 1), max(species$bio_2), max(species$bio_2) + 1)
+  }
+  
+  model.sel <- model.sel[model.sel$bios != "TEMPLATE",] ## remove template row
+  #head(model.sel)
+  
+  ########### ASSESS CORRELATIONS ############
+  rhos <- as.data.frame(cor(ext, use="pairwise", method="spearman")) 
+  ## construct data.frame of matrix of pairwise spearman's rho values for climatic variables
+
+  var.pairs<- combn(c(1:6), 2, simplify=T) ## All possible pairs selected from 6 variables
+  
+  # initialize master data frameof pairwise correlations with template
+  var1 <- "TEMPLATE" ## one variable from pairwise correlation
+  var2 <- "TEMPLATE" ## other variable from pairwise correlation
+  rho <- -2 ## rho value from correlation
+  corr.pairs <- data.frame(var1,var2,rho, stringsAsFactors = F) ## create master data frame
+  
+  for (i in 1:NCOL(var.pairs)) { ## loop through list of pairs of the six variables
+    
+    rho <- abs(rhos[var.pairs[1,i], var.pairs[2,i]]) 
+    ## absolute value of spearman's rho at the row and column corresponding to the pair in the iteration
+    var1 <- row.names(rhos[var.pairs[1,i],]) ## name of the first variable in the pair
+    var2 <- row.names(rhos[var.pairs[2,i],]) ## name of the second variable in the pair
+    
+    corr.pairs.i <- data.frame(var1,var2,rho, stringsAsFactors = F) ## concatenate data from the interation
+    corr.pairs <- rbind(corr.pairs, corr.pairs.i) ## append data from iteraction to the master data frame
+    
+    #print(i) ## keep track of place in loop
+  }
+
+  corr.pairs <- corr.pairs[corr.pairs$var1 != "TEMPLATE",] ## remove template row
+  corr.pairs <- corr.pairs[corr.pairs$rho >= .8, ] ## select all pairwise correlations where collinearity is likely 
+  
+  model.sel$collinear <- 0 ## assume correlation between 2 vars is below 0.8
+  
+  if(length(corr.pairs$rho) > 0){ ## if there were any pairs where rho >= 0.8
+    for (i in 1:length(corr.pairs$rho)){ ## then loop through those pairs
+      for (j in 1:length(model.sel$bios)){ ## for each pair, loop through all of the possible models
+        ## and if the two highly correlated variables appear together in a model,
+        if(grepl(corr.pairs$var1[i], model.sel$bios[j]) & grepl(corr.pairs$var1[i], model.sel$bios[j])) { 
+          model.sel$collinear[j] <- 1} ## then flag the model as a collinearity risk
+        #print(j) ## keep track of place in loop w/in loop
+      }
+      #print(paste("i =", i, sep = " ")) ## keep track of place in loop
+    }
+  }
+  
+  rm(rhos, var1, var2, corr.pairs, var.pairs) ## garbage cleaning
+
+  model.sel <- model.sel[model.sel$collinear == 0,] ## exclude models with collinearity
+  model.sel <- model.sel[model.sel$nonsig == 0,] ## exclude models with nonsignificant smooths
+  
+  if (length(model.sel$i) > 0) {
+    ###################  AIC comparison  #####################
+    model.sel$dAIC <- model.sel$aic - min(model.sel$aic) ## calculate delta AIC
+    
+    model.sel <- model.sel[model.sel$dAIC <= 2,] ## select the model with the best score, 
+    ## as well as models with scores that are not significantly worse
+    
+    model.sel <- model.sel[model.sel$n == min(model.sel$n),] 
+    ## of the models with the best scores (<= min + 2), select the simplest models
+    
+    model.sel <- model.sel[model.sel$dAIC == min(model.sel$dAIC),]
+    ## select the model with the best AIC score if there are multiple models
+    ## with similar scores and the same complexity (variable number)
+    
+    M <- gam(formula(formulae$form[model.sel$i]), method="GCV.Cp", data = species)
+    ## reconstruct the best model, using the formula number (i) to re-access it
+  
+    Msum <- summary(M) ## extract summary of the model to access model-fit values
+    smoothSum <- as.data.frame(Msum$s.table) ## extract table with edf and p-vals for smooths
+    
+    Radj <- Msum$r.sq ## extract adjusted R-square value of model
+    devX <- Msum$dev.expl ## extract deviance explained by model
+    no.vars <- NROW(smoothSum) ## extract the number of smooths (number of variables)
+    
+    ## extract significance (p-vals) and effective degrees of freedom for each variables
+    p2 <- -1 ## start by defaulting each to -1, indicating that the variable is not in the model
+    p5 <- -1
+    p6 <- -1
+    p8 <- -1
+    p12 <- -1
+    p15 <- -1
+    edf2 <- -1
+    edf5 <- -1
+    edf6 <- -1
+    edf8 <- -1
+    edf12 <- -1
+    edf15 <- -1
+    
+    bios <- as.character(M$pred.formula[2])
+    if (grepl("bio_2", bios)) {
+      p2 <- smoothSum$`p-value`[row.names(smoothSum) == "s(bio_2)"]
+      edf2 <- smoothSum$edf[row.names(smoothSum) == "s(bio_2)"]
+    }
+    if (grepl("bio_5", bios)) {
+      p5 <- smoothSum$`p-value`[row.names(smoothSum) == "s(bio_5)"]
+      edf5 <- smoothSum$edf[row.names(smoothSum) == "s(bio_5)"]
+    }
+    if (grepl("bio_6", bios)) {
+      p6 <- smoothSum$`p-value`[row.names(smoothSum) == "s(bio_6)"]
+      edf6 <- smoothSum$edf[row.names(smoothSum) == "s(bio_6)"]
+    }
+    if (grepl("bio_8", bios)) {
+      p8 <- smoothSum$`p-value`[row.names(smoothSum) == "s(bio_8)"]
+      edf8 <- smoothSum$edf[row.names(smoothSum) == "s(bio_8)"]
+    }
+    if (grepl("bio_12", bios)) {
+      p12 <- smoothSum$`p-value`[row.names(smoothSum) == "s(bio_12)"]
+      edf12 <- smoothSum$edf[row.names(smoothSum) == "s(bio_12)"]
+    }
+    if (grepl("bio_15", bios)) {
+      p15 <- smoothSum$`p-value`[row.names(smoothSum) == "s(bio_15)"]
+      edf15 <- smoothSum$edf[row.names(smoothSum) == "s(bio_15)"]
+    }
+    
+    
+    GAMsums.i <- data.frame(species.code,Radj,devX,no.vars,p2,p5,p6,p8,p12,p15,edf2,edf5,edf6,edf8,edf12,edf15, stringsAsFactors = F)
+    GAMsums <- rbind(GAMsums,GAMsums.i)
+    
+    jpeg(paste("model_pics", paste(species.code, "jpg", sep="."), sep="/"))
+    
+    if (no.vars > 4){
+      par(mfrow=c(2,3)) 
+    }
+    if (no.vars == 4){
+      par(mfrow=c(2,2)) 
+    }
+    if (no.vars == 3){
+      par(mfrow=c(3,1)) 
+    }
+    if (no.vars == 2){
+      par(mfrow=c(2,1)) 
+    }
+
+    plot(M)
+    dev.off()
+    
+    ############## DEALING WITH EXTRAPOLATION ################
+    
+    bio.sp <- as.data.frame(bio)
+    bio.sp[,1:4] <- bio.sp[,1:4]/10
+    
+    ## if bio_2 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
+    if(grepl("bio_2", bios)) {
+  
+  bio_2 <- c(min(species$bio_2), min(species$bio_2 - 10), max(species$bio_2), max(species$bio_2) + 10)
   ## list of minimum value, one below minimum value, maximum value, and one above maximum value
   ## to detect trending at min and max
   
@@ -269,9 +287,9 @@ if(grepl("bio_2", as.character(M2$pred.formula)[2])) {
   input$bio_15 <- 0
   
   ## predict using dataframe of max, max+1, min, min-1, w/ all other vars constant
-  p <- predict.gam(M2, input)
+  p <- predict.gam(M, input)
   
-  if (p[2]>p[1]) {bio.sp$bio_2[bio.sp$bio_2 < min(species$bio_2)]  <- min(species$bio_2)
+  if (p[1]>p[2]) {bio.sp$bio_2[bio.sp$bio_2 < min(species$bio_2)]  <- min(species$bio_2)
   } ## TRUE: upward trend on left end
   ## reassign values below min to simulate a flatline
   
@@ -279,11 +297,11 @@ if(grepl("bio_2", as.character(M2$pred.formula)[2])) {
   }## TRUE: upward trend on right end
   ## reassign values above max to simulate a flatline
 }
-
-## if bio_5 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
-if(grepl("bio_5", as.character(M2$pred.formula)[2])) {
+    
+    ## if bio_5 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
+    if(grepl("bio_5", as.character(M$pred.formula)[2])) {
   
-  bio_5 <- c(min(species$bio_5), min(species$bio_5 - 1), max(species$bio_5), max(species$bio_5) + 1)
+  bio_5 <- c(min(species$bio_5), min(species$bio_5 - 10), max(species$bio_5), max(species$bio_5) + 10)
   ## list of minimum value, one below minimum value, maximum value, and one above maximum value
   ## to detect trending at min and max
   
@@ -295,9 +313,9 @@ if(grepl("bio_5", as.character(M2$pred.formula)[2])) {
   input$bio_15 <- 0
   
   ## predict using dataframe of max, max+1, min, min-1, w/ all other vars constant
-  p <- predict.gam(M2, input)
+  p <- predict.gam(M, input)
   
-  if (p[2]>p[1]) {bio.sp$bio_5[bio.sp$bio_5 < min(species$bio_5)]  <- min(species$bio_5)
+  if (p[1]>p[2]) {bio.sp$bio_5[bio.sp$bio_5 < min(species$bio_5)]  <- min(species$bio_5)
   } ## TRUE: upward trend on left end
   ## reassign values below min to simulate a flatline
   
@@ -305,11 +323,11 @@ if(grepl("bio_5", as.character(M2$pred.formula)[2])) {
   }## TRUE: upward trend on right end
   ## reassign values above max to simulate a flatline
 }
-
-## if bio_6 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
-if(grepl("bio_6", as.character(M2$pred.formula)[2])) {
+    
+    ## if bio_6 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
+    if(grepl("bio_6", as.character(M$pred.formula)[2])) {
   
-  bio_6 <- c(min(species$bio_6), min(species$bio_6 - 1), max(species$bio_6), max(species$bio_6) + 1)
+  bio_6 <- c(min(species$bio_6), min(species$bio_6 - 10), max(species$bio_6), max(species$bio_6) + 10)
   ## list of minimum value, one below minimum value, maximum value, and one above maximum value
   ## to detect trending at min and max
   
@@ -321,9 +339,9 @@ if(grepl("bio_6", as.character(M2$pred.formula)[2])) {
   input$bio_15 <- 0
   
   ## predict using dataframe of max, max+1, min, min-1, w/ all other vars constant
-  p <- predict.gam(M2, input)
+  p <- predict.gam(M, input)
   
-  if (p[2]>p[1]) {bio.sp$bio_6[bio.sp$bio_6 < min(species$bio_6)]  <- min(species$bio_6)
+  if (p[1]>p[2]) {bio.sp$bio_6[bio.sp$bio_6 < min(species$bio_6)]  <- min(species$bio_6)
   } ## TRUE: upward trend on left end
   ## reassign values below min to simulate a flatline
   
@@ -331,11 +349,11 @@ if(grepl("bio_6", as.character(M2$pred.formula)[2])) {
   }## TRUE: upward trend on right end
   ## reassign values above max to simulate a flatline
 }
-
-## if bio_8 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
-if(grepl("bio_8", as.character(M2$pred.formula)[2])) {
+    
+    ## if bio_8 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
+    if(grepl("bio_8", as.character(M$pred.formula)[2])) {
   
-  bio_8 <- c(min(species$bio_8), min(species$bio_8 - 1), max(species$bio_8), max(species$bio_8) + 1)
+  bio_8 <- c(min(species$bio_8), min(species$bio_8 - 10), max(species$bio_8), max(species$bio_8) + 10)
   ## list of minimum value, one below minimum value, maximum value, and one above maximum value
   ## to detect trending at min and max
   
@@ -347,9 +365,9 @@ if(grepl("bio_8", as.character(M2$pred.formula)[2])) {
   input$bio_15 <- 0
   
   ## predict using dataframe of max, max+1, min, min-1, w/ all other vars constant
-  p <- predict.gam(M2, input)
+  p <- predict.gam(M, input)
   
-  if (p[2]>p[1]) {bio.sp$bio_8[bio.sp$bio_8 < min(species$bio_8)]  <- min(species$bio_8)
+  if (p[1]>p[2]) {bio.sp$bio_8[bio.sp$bio_8 < min(species$bio_8)]  <- min(species$bio_8)
   } ## TRUE: upward trend on left end
   ## reassign values below min to simulate a flatline
   
@@ -357,11 +375,11 @@ if(grepl("bio_8", as.character(M2$pred.formula)[2])) {
   }## TRUE: upward trend on right end
   ## reassign values above max to simulate a flatline
 }
-
-## if bio_12 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
-if(grepl("bio_12", as.character(M2$pred.formula)[2])) {
+    
+    ## if bio_12 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
+    if(grepl("bio_12", as.character(M$pred.formula)[2])) {
   
-  bio_12 <- c(min(species$bio_12), min(species$bio_12 - 1), max(species$bio_12), max(species$bio_12) + 1)
+  bio_12 <- c(min(species$bio_12), min(species$bio_12 - 10), max(species$bio_12), max(species$bio_12) + 10)
   ## list of minimum value, one below minimum value, maximum value, and one above maximum value
   ## to detect trending at min and max
   
@@ -373,9 +391,9 @@ if(grepl("bio_12", as.character(M2$pred.formula)[2])) {
   input$bio_15 <- 0
   
   ## predict using dataframe of max, max+1, min, min-1, w/ all other vars constant
-  p <- predict.gam(M2, input)
+  p <- predict.gam(M, input)
   
-  if (p[2]>p[1]) {bio.sp$bio_12[bio.sp$bio_12 < min(species$bio_12)]  <- min(species$bio_12)
+  if (p[1]>p[2]) {bio.sp$bio_12[bio.sp$bio_12 < min(species$bio_12)]  <- min(species$bio_12)
   } ## TRUE: upward trend on left end
   ## reassign values below min to simulate a flatline
   
@@ -383,25 +401,26 @@ if(grepl("bio_12", as.character(M2$pred.formula)[2])) {
   }## TRUE: upward trend on right end
   ## reassign values above max to simulate a flatline
 }
-
-## if bio_15 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
-if(grepl("bio_15", as.character(M2$pred.formula)[2])) {
+    
+    ## if bio_15 is in the formula, then assess upward trends in extrapolations & simulate flatlines if necessary
+    if(grepl("bio_15", as.character(M$pred.formula)[2])) {
   
-  bio_15 <- c(min(species$bio_15), min(species$bio_15 - 1), max(species$bio_15), max(species$bio_15) + 1)
+  bio_15 <- c(min(species$bio_15), min(species$bio_15 - 10), max(species$bio_15), max(species$bio_15) + 10)
   ## list of minimum value, one below minimum value, maximum value, and one above maximum value
   ## to detect trending at min and max
   
   input <- data.frame(bio_15) ## change list to data.frame
-  input$bio_5 <- 0 ## set all other variables to constant value
+  input$bio_2 <- 0 ## set all other variables to constant value
+  input$bio_5 <- 0
   input$bio_6 <- 0
   input$bio_8 <- 0
   input$bio_12 <- 0
-  input$bio_15 <- 0
+  
   
   ## predict using dataframe of max, max+1, min, min-1, w/ all other vars constant
-  p <- predict.gam(M2, input)
+  p <- predict.gam(M, input)
   
-  if (p[2]>p[1]) {bio.sp$bio_15[bio.sp$bio_15 < min(species$bio_15)]  <- min(species$bio_15)
+  if (p[1]>p[2]) {bio.sp$bio_15[bio.sp$bio_15 < min(species$bio_15)]  <- min(species$bio_15)
   } ## TRUE: upward trend on left end
   ## reassign values below min to simulate a flatline
   
@@ -409,20 +428,69 @@ if(grepl("bio_15", as.character(M2$pred.formula)[2])) {
   }## TRUE: upward trend on right end
   ## reassign values above max to simulate a flatline
 }
+    
+    ############# PREDICTIONS #############
+    P <- predict.gam(M, bio.sp)
+    P <- melt(P)
+    
+    #P$value[P$value < -5] <- NA
+    predict.raster <- raster(nrows=nrow(bio), ncol=ncol(bio), ext=extent(bio), crs=proj4string(bio), vals=P$value)
+    writeRaster(predict.raster, filename= paste("currentPreds", paste(species.code, ".asc", sep="."), sep="/" ), format="ascii", overwrite=T)
+    
+  } else {
+    ## use -99 to indicate that models were insufficient
+    Radj <- -99
+    devX <- -99
+    no.vars <- -99
+    p2 <- -99 
+    p5 <- -99
+    p6 <- -99
+    p8 <- -99
+    p12 <- -99
+    p15 <- -99
+    edf2 <- -99
+    edf5 <- -99
+    edf6 <- -99
+    edf8 <- -99
+    edf12 <- -99
+    edf15 <- -99
+    
+    GAMsums.i <- data.frame(species.code,Radj,devX,no.vars,p2,p5,p6,p8,p12,p15,edf2,edf5,edf6,edf8,edf12,edf15, stringsAsFactors=F)
+    GAMsums <- rbind(GAMsums,GAMsums.i)
+  }
+  
+  print(s)
+  
+} 
 
 
-P <- predict.gam(M2, bio.sp)
-P1 <- melt(P)
-P1$value[P1$value < -12] <- NA
-P1r <- raster(nrows=nrow(bio), ncol=ncol(bio), ext=extent(bio), crs=proj4string(bio), vals=P1$value)
-par(mfrow=c(1,1))
 
+
+
+
+
+GAMsums <- GAMsums[GAMsums$species.code != "TEMPLATE"]
+write.csv(GAMsums, "Gamsums.csv", row.names=F)
+
+
+####################### VISUALIZATIONS
 states<- readOGR(dsn="states", layer= "US_states")
 plot(states, col="grey")
-plot(P1r, add=T)
+plot(predict.raster, add=T)
 plot(species, col="red", pch=19, add=T)
 
 
+M <- gam(abundance ~ s(bio_2, fx=F, k=5) +
+           s(bio_5, fx=F, k=5) +
+           s(bio_8, fx=F, k=5) +
+           s(bio_12, fx=F, k=5) + 
+           s(bio_15, fx=F, k=5)  , method ="GCV.Cp", data = species)
+
+summary(M)
+anova(M)
+hist(M$residuals)
 
 
+edd2 <- edd[edd$usda %in% sp.list,]
+hist(log(edd$abundance))
 
