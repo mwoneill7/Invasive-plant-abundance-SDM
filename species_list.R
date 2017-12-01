@@ -6,9 +6,13 @@
 setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
 
 #### eddmaps species list (all species with infested area downloaded from EDDMAPS October 2016)
-edd.list <- read.table("speciesList06_01_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
-edd.list$edd <- 1## to mark that this species was on the edd.list (for upcoming merges)
+edd.list <- read.table("SpeciesList_11_20_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+## practice with ssp
+#edd.list <- read.table("subspecies2.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+#colnames(edd.list) <- c("scientific.name", "usda.code", "usda.lump" )
 
+edd.list$edd <- 1## to mark that this species was on the edd.list (for upcoming merges)
+head(edd.list)
 
 #### list of species from the occurence-based hotspots analysis (Allen and Bradley 2016)
 occ.list <- read.table("C:/Users/mwone/Google Drive/NSF_GSS_shared/Hotspots_and_Abundance/occ_data_with_2017_codes.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
@@ -44,16 +48,14 @@ head(ipa.list)
 
 
 ## prepped eddmaps database (see eddmaps_prep.R) 
-edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_08_09_2017.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_11_21_2017.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 ed.list <- as.list(unique(edd$USDAcode)) ## list of all usda-codes in prepped file
-
-
 
 ## create template dataframe for a master file with info for each species
 usda.code <- "TEMPLATE" ## for usda code
 scientific.name <- "TEMPLATE" ## for accepted scientific name (plants)
-comment <- "TEMPLATE" ## pulls any comments from the eddmaps-usdacode-conversion file
+#comment <- "TEMPLATE" ## pulls any comments from the eddmaps-usdacode-conversion file
 state   <- -99 ## state status?
 federal <- -99 ## federal status
 other   <- -99 ## listed by another source? (Weeds of the U.S.; PLANTS)
@@ -61,30 +63,31 @@ ipaus   <- -99 ## listed on ipaus?
 hotspot <- -99 ## was this plant in the occurence hotspot analysis (Allen and Bradley 2016)
 nativity<- "TEMPLATE" ## nativity of plant in L48
 usdaCHK <- -99 ## doublt check that usda code is in PLANTS database
-no.abs  <- -99 ## number of absence points
+#no.abs  <- -99 ## number of absence points
 no.abun <- -99 ## number of points with valid infested area
-no.big <- -99  ## number of those observations with unusually high infested area
-min.abun <- -99 ## minimum non-zero infested area value
-max.abun <- -99 ## maximum infested area value, excluding unusually high ones
+#no.big <- -99  ## number of those observations with unusually high infested area
+#min.abun <- -99 ## minimum non-zero infested area value
+#max.abun <- -99 ## maximum infested area value, excluding unusually high ones
+#L48 <- "TEMPLATE"
 
-ed.listing <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, min.abun, max.abun, nativity, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
+ed.listing <- data.frame(scientific.name, usda.code, state, federal, other, ipaus, hotspot, no.abun, nativity, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
 ## make template object
 
 # loops through list of all species with usda codes in prepped database
 for (i in 1:length(ed.list)){
   
+  #scientific.name <- edd.list$scientific.name[edd.list$usda.code == ed.list[i]][1]
   scientific.name <- edd.list$PLANTS_species[edd.list$USDA_code == ed.list[i]][1]
   ## pulls accepted scientific name (PLANTS) for usdacode
   
-  comment <- edd.list$Comment[edd.list$USDA_code == ed.list[i]][1]
+  #comment <- edd.list$Comment[edd.list$USDA_code == ed.list[i]][1]
   ## pulls comments from eddmaps-usda conversion file
   
   usda.code <- ed.list[i] ## pulls usda code of iteration
   
   usda.i <- usda.list[usda.list$Accepted.Symbol == ed.list[i],] ## subsets usda database for all synonyms of usda code
   usda.i <- usda.i[!is.na(usda.i$Accepted.Symbol), ] ## removes nonsence rows
-  
-  
+
   ## if any of the synonyms (subset of usda database) have state listing, then state = 1    
   if (length(usda.i$Accepted.Symbol[usda.i$State.Noxious.Status != ""]) > 0) {
     state <- 1} else {state <- 0}
@@ -112,28 +115,31 @@ for (i in 1:length(ed.list)){
   
   if(length(usda.i$Accepted.Symbol[usda.i$usdaCHK == 1]) > 0) {
     usdaCHK <- 1} else {usdaCHK <- 0} ## verify that species was in PLANTS
-  
-  ## subset all records for species of iteration with valid infested area
-  edd.abun <- edd[edd$USDAcode == ed.list[i] & edd$validInfestedArea == 1, ]
-  no.abun <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode)])
-  ## number of records, exluding NA rows
-  
-  ## subset all records for species of iteration with negative=1
-  edd.abs <- edd[edd$USDAcode == ed.list[i] & edd$negative == 1, ]
-  no.abs <- length(edd.abs$USDAcode[!is.na(edd.abs$USDAcode)])
-  ## number of records, exluding NA rows
-  
-  ## subset all records that have valid infested area,
-  no.big <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode) & (edd.abun$infestedAreaInAcres > 20 | edd.abun$ReporterFULLName == "US Army Corps of Engineers Ombil Database")]) 
-  ## number of records thats are unusually large (>20) or reported by the large-value reporter, exluding NA rows
-  
-  min.abun <- min(edd.abun$infestedAreaInAcres[!is.na(edd.abun$USDAcode)]) ## minimum non-zero abundance
-  max.abun <- max(edd.abun$infestedAreaInAcres[!is.na(edd.abun$USDAcode) & edd.abun$infestedAreaInAcres < 20 & edd.abun$ReporterFULLName != "US Army Corps of Engineers Ombil Database"])
-  ## maximum infested area, excluding unusually large values and excluding large-value reporter
+
+  no.abun <- length(edd$USDAcode[edd$USDAcode == ed.list[i]])  
+  #################
+  # ## subset all records for species of iteration with valid infested area
+  # edd.abun <- edd[edd$USDAcode == ed.list[i] & edd$validInfestedArea == 1, ]
+  # no.abun <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode)])
+  # ## number of records, exluding NA rows
+  #
+  # ## subset all records for species of iteration with negative=1
+  # edd.abs <- edd[edd$USDAcode == ed.list[i] & edd$negative == 1, ]
+  # no.abs <- length(edd.abs$USDAcode[!is.na(edd.abs$USDAcode)])
+  # ## number of records, exluding NA rows
+  #
+  # # subset all records that have valid infested area,
+  # no.big <- length(edd.abun$USDAcode[!is.na(edd.abun$USDAcode) & (edd.abun$infestedAreaInAcres > 20 | edd.abun$ReporterFULLName == "US Army Corps of Engineers Ombil Database")]) 
+  # ## number of records thats are unusually large (>20) or reported by the large-value reporter, exluding NA rows
+  #
+  # min.abun <- min(edd.abun$infestedAreaInAcres[!is.na(edd.abun$USDAcode)]) ## minimum non-zero abundance
+  # max.abun <- max(edd.abun$infestedAreaInAcres[!is.na(edd.abun$USDAcode) & edd.abun$infestedAreaInAcres < 20 & edd.abun$ReporterFULLName != "US Army Corps of Engineers Ombil Database"])
+  # ## maximum infested area, excluding unusually large values and excluding large-value reporter
+  #################
   
   ## compiles all of this info into dataframe, matching format of template
-  ed.listing.i <- data.frame(scientific.name, usda.code, comment, state, federal, other, ipaus, hotspot, no.abun, no.abs, no.big, min.abun, max.abun, L48, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
-  names(ed.listing.i) <- c("scientific.name", "usda.code", "comment", "state", "federal", "other", "ipaus", "hotspot", "no.abun", "no.abs", "no.big", "min.abun", "max.abun", "nativity", "usdaCHK") ## "no.abun", "no.abs", "usdaCHK")  
+  ed.listing.i <- data.frame(scientific.name, usda.code, state, federal, other, ipaus, hotspot, no.abun, L48, usdaCHK, stringsAsFactors = F) ## no.abun, no.abs, usdaCHK, stringsAsFactors = F)
+  names(ed.listing.i) <- c("scientific.name", "usda.code", "state", "federal", "other", "ipaus", "hotspot", "no.abun", "nativity", "usdaCHK") ## "no.abun", "no.abs", "usdaCHK")  
   ed.listing <- rbind(ed.listing, ed.listing.i) ## concatenate row from iteration to template (and rows from past iterations)
   
   print(i) ## keeps track of place
@@ -141,10 +147,10 @@ for (i in 1:length(ed.list)){
 }
 
 
-head(usda.list)
+#head(usda.list)
 
 ed.listing <- ed.listing[ed.listing$usda.code != "TEMPLATE", ] ## removes template rows
-ed.listing <- ed.listing[!is.na(ed.listing$usda.code),] ## removes NA rows
+#ed.listing <- ed.listing[!is.na(ed.listing$usda.code),] ## removes NA rows
 unique(ed.listing$usda.code)
 summary(ed.listing)
 head(ed.listing)
@@ -177,39 +183,73 @@ for (i in 1:length(no.ipaus)){ ## loop through those species
 #######################      FLAG AQUATICS     ########################
 #######################################################################
 
-aqua <- read.table("aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
-## list of aquatic species that haven't been eliminated yet
-
-ed.listing$Aquatic <- 0
-
-for (i in 1:length(aqua$usda.code)){ ## loop through aquatics
-  ed.listing$Aquatic[ed.listing$usda.code == aqua$usda.code[i]] <- 1 ## flag any matches
-  print(i) ## keep place
-}
-
-summary(as.factor(ed.listing$Aquatic))
+# aqua <- read.table("aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+# ## list of aquatic species that haven't been eliminated yet
+# 
+# ed.listing$Aquatic <- 0
+# 
+# for (i in 1:length(aqua$usda.code)){ ## loop through aquatics
+#   ed.listing$Aquatic[ed.listing$usda.code == aqua$usda.code[i]] <- 1 ## flag any matches
+#   print(i) ## keep place
+# }
+# 
+# summary(as.factor(ed.listing$Aquatic))
 
 ## flag species I know I can't use
-ed.listing$potential.use <- 1 ## default is that I can use them, then remove them based on certain criteria
+#ed.listing$potential.use <- 1 ## default is that I can use them, then remove them based on certain criteria
+#
+#ed.listing$potential.use[ed.listing$Aquatic == 1 | ## can't use aquatics
+#                        (ed.listing$state + ed.listing$ipaus + ed.listing$federal + ed.listing$other) < 1 |
+#                          ## can't use species that haven't been recognized as problematic
+#                        (ed.listing$no.abs + ed.listing$no.abun < 20) | ed.listing$no.abun < 15 |
+#                          ## data deficient
+#                        (ed.listing$nativity == "N") ] <- 0  
+#                          ## can't use native plants
+# 
+# ### flag records where there is enough data right now, but if large values are removed, there may not be.
+# ed.listing$data <- 0
+# ed.listing$not.enough.reasonable.values[(ed.listing$no.abs + ed.listing$no.abun - ed.listing$no.big < 20) | 
+#                                         (ed.listing$no.abun - ed.listing$no.big < 15)] <- 1
 
-ed.listing$potential.use[ed.listing$Aquatic == 1 | ## can't use aquatics
-                        (ed.listing$state + ed.listing$ipaus + ed.listing$federal + ed.listing$other) < 1 |
-                          ## can't use species that haven't been recognized as problematic
-                        (ed.listing$no.abs + ed.listing$no.abun < 20) | ed.listing$no.abun < 15 |
-                          ## data deficient
-                        (ed.listing$nativity == "N") ] <- 0  
-                          ## can't use native plants
+########################
 
-### flag records where there is enough data right now, but if large values are removed, there may not be.
-ed.listing$not.enough.reasonable.values <- 0
-ed.listing$not.enough.reasonable.values[(ed.listing$no.abs + ed.listing$no.abun - ed.listing$no.big < 20) | 
-                                        (ed.listing$no.abun - ed.listing$no.big < 15)] <- 1
-
-write.csv(ed.listing, "SpeciesList08_10_2017.csv", row.names = F)
+write.csv(ed.listing, "Species_List_11_21_2017.csv", row.names = F)
 #### output file
 #### manual work to follow; i.e.
 #### where nativity = N/A manually assign nativity using MoBot, etc.
 
+
+
+
+
+ed.listing<- read.table("Species_List_11_21_2017.csv",header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+invListing <- read.table("master list.csv",header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "") 
+head(invListing)
+invListing$Number.of.States[is.na(invListing$Number.of.States)]<-0
+invListing$Federal.Noxious[is.na(invListing$Federal.Noxious)]<-0
+
+spp <- ed.listing$usda.code
+
+for (i in 1:length(ed.listing$usda.code)){
+  if(length(invListing$NewCode[invListing$NewCode==spp[i]])>=1){
+    ed.listing$stateNEW[ed.listing$usda.code==spp[i]] <- max(invListing$Number.of.States[invListing$NewCode == spp[i]])
+    ed.listing$FedNEW[ed.listing$usda.code==spp[i]] <- max(invListing$Federal.Noxious[invListing$NewCode == spp[i]])
+    
+  }
+print(i)
+}
+
+#probs <- ed.listing[ed.listing$state == 1 & is.na(ed.listing$stateNEW),]
+#max(c(NA,7)) ## LOOK INTO LATER
+ed.listing2 <- ed.listing[(!is.na(ed.listing$stateNEW) & ed.listing$stateNEW >1) | (ed.listing$FedNEW ==1 & !is.na(ed.listing$FedNEW)) |
+                            ed.listing$other==1 | ed.listing$ipaus==1 ,]
+ed.listing2 <- ed.listing2[ed.listing2$no.abun > 20 & ed.listing2$nativity != "N",]
+head(ed.listing2)
+
+unique(ed.listing$ipaus)
+unique(ed.listing$stateNEW)
+summary(ed.listing2$no.abun)
+hist(ed.listing2$no.abun,breaks=100)
 
 ############################################################################
 ########## add the number of unique grid cells to the master file ##########
@@ -345,19 +385,24 @@ head(traits)
 
 spList <- merge(speciesList, traits, by="usda.code", all.x=T)
 
-write.csv(spList, "SpeciesList09_26_2017.csv", row.names=F)
+#write.csv(spList, "SpeciesList09_26_2017.csv", row.names=F)
+speciesList <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/SpeciesList10_11_2017.csv", header = T, sep = ",", quote= "\"", 
+                          comment.char= "", stringsAsFactors = F, strip.white = T)
 
-spList2 <- spList[spList$potential.use2 == 1,]
+speciesList <- speciesList[speciesList$potential.use_10ac == 1,]
 
-spList2$habitF <- as.factor(spList2$habit)
-spList2$durationF <- as.factor(spList2$duration)
-summary(spList2$durationF)
-summary(spList2$habitF)
 
-spList2$both <- as.factor(paste(spList2$duration, spList2$habit, sep=" "))
-summary(spList2$both)
+speciesList$habitF <- as.factor(speciesList$habit)
+speciesList$durationF <- as.factor(speciesList$duration)
+summary(speciesList$durationF)
+summary(speciesList$habitF)
 
-hist(spList2$no.abunG, breaks=25, main="Histogram of number of grid cells", xlab= "no. of grid cells with record", ylab= "no. of species")
+speciesList$both <- as.factor(paste(speciesList$duration, speciesList$habit, sep=" "))
+summary(speciesList$both)
+
+hist(speciesList$no.abunG10, breaks=25, main=" ", 
+     xlab= "no. of grid cells with record", ylab= "no. of species",
+     cex.axis=1.2, cex.lab=1.5, mar=c(5, 4, 4, 2))
 
 # summary(spList2$no.abunG)
 # str(spList2$no.abs)
