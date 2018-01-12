@@ -8,8 +8,6 @@ setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files")
 #### eddmaps species list (all species with infested area downloaded from EDDMAPS October 2016)
 edd.list <- read.table("SpeciesList_11_20_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 ## practice with ssp
-#edd.list <- read.table("subspecies2.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
-#colnames(edd.list) <- c("scientific.name", "usda.code", "usda.lump" )
 
 edd.list$edd <- 1## to mark that this species was on the edd.list (for upcoming merges)
 head(edd.list)
@@ -48,7 +46,7 @@ head(ipa.list)
 
 
 ## prepped eddmaps database (see eddmaps_prep.R) 
-edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_11_21_2017.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_18_2017.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 ed.list <- as.list(unique(edd$USDAcode)) ## list of all usda-codes in prepped file
 
@@ -79,11 +77,8 @@ for (i in 1:length(ed.list)){
   #scientific.name <- edd.list$scientific.name[edd.list$usda.code == ed.list[i]][1]
   scientific.name <- edd.list$PLANTS_species[edd.list$USDA_code == ed.list[i]][1]
   ## pulls accepted scientific name (PLANTS) for usdacode
-  
-  #comment <- edd.list$Comment[edd.list$USDA_code == ed.list[i]][1]
-  ## pulls comments from eddmaps-usda conversion file
-  
-  usda.code <- ed.list[i] ## pulls usda code of iteration
+
+    usda.code <- ed.list[i] ## pulls usda code of iteration
   
   usda.i <- usda.list[usda.list$Accepted.Symbol == ed.list[i],] ## subsets usda database for all synonyms of usda code
   usda.i <- usda.i[!is.na(usda.i$Accepted.Symbol), ] ## removes nonsence rows
@@ -147,8 +142,6 @@ for (i in 1:length(ed.list)){
 }
 
 
-#head(usda.list)
-
 ed.listing <- ed.listing[ed.listing$usda.code != "TEMPLATE", ] ## removes template rows
 #ed.listing <- ed.listing[!is.na(ed.listing$usda.code),] ## removes NA rows
 unique(ed.listing$usda.code)
@@ -178,23 +171,27 @@ for (i in 1:length(no.ipaus)){ ## loop through those species
   print(i) ## keep track of place
 }
 
+summary(ed.listing$no.abun)
+ed.listing <- ed.listing[ed.listing$no.abun >= 40,]
 
-#######################################################################
-#######################      FLAG AQUATICS     ########################
-#######################################################################
-
-# aqua <- read.table("aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
-# ## list of aquatic species that haven't been eliminated yet
+# #######################################################################
+# #######################      FLAG AQUATICS     ########################
+# #######################################################################
 # 
-# ed.listing$Aquatic <- 0
+#  aqua <- read.table("aquatics.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+#  ## list of aquatic species that haven't been eliminated yet
+#  
+#  ed.listing$Aquatic <- 0
+#  
+#  for (i in 1:length(aqua$usda.code)){ ## loop through aquatics
+#    ed.listing$Aquatic[ed.listing$usda.code == aqua$usda.code[i]] <- 1 ## flag any matches
+#    print(i) ## keep place
+#  }
+#  
+#  summary(as.factor(ed.listing$Aquatic))
+#  ed.listing <- ed.listing[ed.listing$Aquatic == 0,]
+#  #ed.listing <- ed.listing[ed.listing$no.abun >= 20,] ## 939 to 407
 # 
-# for (i in 1:length(aqua$usda.code)){ ## loop through aquatics
-#   ed.listing$Aquatic[ed.listing$usda.code == aqua$usda.code[i]] <- 1 ## flag any matches
-#   print(i) ## keep place
-# }
-# 
-# summary(as.factor(ed.listing$Aquatic))
-
 ## flag species I know I can't use
 #ed.listing$potential.use <- 1 ## default is that I can use them, then remove them based on certain criteria
 #
@@ -212,17 +209,13 @@ for (i in 1:length(no.ipaus)){ ## loop through those species
 #                                         (ed.listing$no.abun - ed.listing$no.big < 15)] <- 1
 
 ########################
-
-write.csv(ed.listing, "Species_List_11_21_2017.csv", row.names = F)
+ 
+#write.csv(ed.listing, "Species_List_11_21_2017.csv", row.names = F)
 #### output file
 #### manual work to follow; i.e.
 #### where nativity = N/A manually assign nativity using MoBot, etc.
 
-
-
-
-
-ed.listing<- read.table("Species_List_11_21_2017.csv",header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+#ed.listing<- read.table("Species_List_11_21_2017.csv",header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 invListing <- read.table("master list.csv",header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "") 
 head(invListing)
 invListing$Number.of.States[is.na(invListing$Number.of.States)]<-0
@@ -230,7 +223,7 @@ invListing$Federal.Noxious[is.na(invListing$Federal.Noxious)]<-0
 
 spp <- ed.listing$usda.code
 
-for (i in 1:length(ed.listing$usda.code)){
+for (i in 1:length(spp)){
   if(length(invListing$NewCode[invListing$NewCode==spp[i]])>=1){
     ed.listing$stateNEW[ed.listing$usda.code==spp[i]] <- max(invListing$Number.of.States[invListing$NewCode == spp[i]])
     ed.listing$FedNEW[ed.listing$usda.code==spp[i]] <- max(invListing$Federal.Noxious[invListing$NewCode == spp[i]])
@@ -239,22 +232,255 @@ for (i in 1:length(ed.listing$usda.code)){
 print(i)
 }
 
+nativity2 <- read.table("Nativity2.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+for (i in (1:length(nativity2$usda.code))){
+  ed.listing$nativity[ed.listing$usda.code == nativity2$usda.code[i]] <- nativity2$Nativity[nativity2$usda.code == nativity2$usda.code[i]]
+}
+
+head(ed.listing)
+summary(as.factor(ed.listing$nativity))
+ed.listing <- ed.listing[ed.listing$nativity == "I",]
+summary(ed.listing$stateNEW)
+summary(ed.listing$no.abun)
+
+#summary(ed.listing$FedNEW)
+#
+#probs <- ed.listing[ed.listing$state == 1 & is.na(ed.listing$stateNEW),]
+#probsp <- probs$usda.code
+#
+#write.csv(probs, "C://Users/mwone/Desktop/probs.csv", row.names=F)
+#
+#probs <- ed.listing[ed.listing$state == 1 & ed.listing$stateNEW == 0,]
+#probs <- probs[!is.na(probs$usda.code),]
+#write.csv(probs, "C://Users/mwone/Desktop/probs2.csv", row.names=F)
+#
+#probs <- ed.listing[ed.listing$federal == 1 & is.na(ed.listing$FedNEW),]
+#probs <- probs[!is.na(probs$usda.code),]
+#write.csv(probs, "C://Users/mwone/Desktop/probs2.csv", row.names=F)
+#
+#probs <- ed.listing[ed.listing$federal == 1 & ed.listing$FedNEW==0,]
+#probs <- probs[!is.na(probs$usda.code),]
+#write.csv(probs, "C://Users/mwone/Desktop/probs2.csv", row.names=F)
+
+#probs <- ed.listing[ed.listing$state == 1 & ed.listing$stateNEW == 0,]
+
 #probs <- ed.listing[ed.listing$state == 1 & is.na(ed.listing$stateNEW),]
 #max(c(NA,7)) ## LOOK INTO LATER
-ed.listing2 <- ed.listing[(!is.na(ed.listing$stateNEW) & ed.listing$stateNEW >1) | (ed.listing$FedNEW ==1 & !is.na(ed.listing$FedNEW)) |
-                            ed.listing$other==1 | ed.listing$ipaus==1 ,]
-ed.listing2 <- ed.listing2[ed.listing2$no.abun > 20 & ed.listing2$nativity != "N",]
-head(ed.listing2)
+#ed.listing2 <- ed.listing[(!is.na(ed.listing$stateNEW) & ed.listing$stateNEW >1) | (ed.listing$FedNEW ==1 & !is.na(ed.listing$FedNEW)) |
+#                            ed.listing$other==1 | ed.listing$ipaus==1 ,]
+#ed.listing2 <- ed.listing2[ed.listing2$no.abun > 20 & ed.listing2$nativity != "N",]
+#head(ed.listing2)
 
-unique(ed.listing$ipaus)
-unique(ed.listing$stateNEW)
-summary(ed.listing2$no.abun)
-hist(ed.listing2$no.abun,breaks=100)
+ed.listing$useable <- 0
+ed.listing$useable[ed.listing$other==1] <- .75
+ed.listing$useable[ed.listing$ipaus==1 | (!is.na(ed.listing$FedNEW) & ed.listing$FedNEW == 1) | 
+                     (!is.na(ed.listing$stateNEW) & ed.listing$stateNEW > 0)] <- 1
+#ed.listing$useable[ed.listing$other==1 & ed.listing$nativity == "I/N"] <- 0.25
+#ed.listing$useable[ed.listing$nativity == "I/N" & (ed.listing$ipaus==1 | ed.listing$state==1 | ed.listing$federal ==1)] <- 0.5
+summary(as.factor(ed.listing$useable))
+#summary(as.factor(edd$ORD[edd$USDAcode == "URDI" ]))
+ed.listing[ed.listing$useable == .75,]
+#ed.listing$useable[ed.listing$no.abun < 20] <- 0
+#ed.listing[ed.listing$useable == .25,]
+#unique(ed.listing$ipaus)
+#unique(ed.listing$stateNEW)
+#summary(ed.listing2$no.abun)
+#hist(ed.listing2$no.abun,breaks=100)
+
+write.csv(ed.listing,"species_summary_12_12_2017.csv",row.names=F)
+ed.listing <- read.table("species_summary_12_12_2017.csv", header = T, sep = ",", quote= "\"", 
+                   comment.char= "", stringsAsFactors = F, strip.white = T)
+
+
+## thinned, number in each category
+edd2 <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_12_18_2017.csv", header = T, sep = ",", quote= "\"", 
+                   comment.char= "", stringsAsFactors = F, strip.white = T)
+edd2$abundance <- ceiling(edd2$best)
+
+
+sp <- ed.listing$usda.code[ed.listing$useable>0]
+
+for (i in 1:length(sp)){
+  edd.sp <- edd2[edd2$species == sp[i],]
+  ed.listing$no.1[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 1])
+  ed.listing$no.2[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 2])
+  ed.listing$no.3[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 3])
+  ed.listing$no.4[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 4])
+  #ed.listing$no.01[ed.listing$usda.code == sp[i]]<- length(edd.sp$species[edd.sp$abundance == 1 & edd.sp$cov01 == 0]) 
+  
+  if(length(unique(edd.sp$abundance))==4){
+  ed.listing$rarest.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+  #ed.listing$second.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+  } else {
+  ed.listing$rarest.binc[ed.listing$usda.code == sp[i]] <- 0
+  }
+  
+  
+  print(i)
+}
+
+
+length(ed.listing$usda.code[ed.listing$rarest.bin >= 10 & !is.na(ed.listing$rarest.bin)])
+## 116 species (median of best)
+
+species.list <- ed.listing[ed.listing$rarest.bin >= 10 & !is.na(ed.listing$rarest.bin),]
+write.csv(ed.listing, "species_list_12_18_17.csv",row.names=F)
+
+edd3 <- edd2[edd2$species %in% species.list$usda.code,]
+write.csv(edd3, "edd_final_12_18_17.csv",row.names=F)
+
+
+
+
+##############################################
+lost <- ed.listing[ed.listing$rarest.bin <10,]
+edd3 <- edd2[edd2$species %in% species.list$usda.code,]
+write.csv(edd3, "edd_final_12_15_17.csv",row.names=F)
+write.csv(ed.listing, "species_list_12_15_17.csv",row.names=F)
+unique(edd3$species)
+head(edd3)
+
+
+coordinates(edd3) <- c(5,4)
+plot(edd3, pch=".")
+
+#sppF <- species.list$usda.code
+probs <- probs[probs$species %in% sppF,]
+unique(probs$species)
+
+##############################################
+cov01 <- ed.listing[ed.listing$no.01 <10 & ed.listing$no.1>=10 & ed.listing$no.2>=10 & ed.listing$no.3>=10 & ed.listing$no.4>=10,]
+cov01[!is.na(cov01$scientific.name),]
+## cov01 saves one species (VEIN9)
+#summary(ed.listing)
+
+nrow(ed.listing[ed.listing$rarest.bin < 10 & !is.na(ed.listing$rarest.bin),])
+nrow(ed.listing[ed.listing$rarest.bin >= 5 & !is.na(ed.listing$rarest.bin),])
+ species.list <- ed.listing[ed.listing$rarest.bin >= 10 & !is.na(ed.listing$rarest.bin),]
+species.list$n <- species.list$no.01 + species.list$no.2 + species.list$no.3 + species.list$no.4
+hist(species.list$n, breaks=50)
+hist(species.list$rarest.bin, breaks=50)
+summary(species.list$n)
+
+
+length(ed.listing$rarest.bin[ed.listing$rarest.bin >= 5 & ed.listing$useable > 0])  ## 272 (270)
+length(ed.listing$rarest.bin[ed.listing$rarest.bin >= 10]) ## 217 (213)
+
+
+
+
+##############################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ed.listing[ed.listing$rarest.bin >= 5 & ed.listing$useable < 1 & ed.listing$useable > 0,]
+## same as below, but also urtica dioica & taraxacum officionale
+ed.listing[ed.listing$rarest.bin >= 10 & ed.listing$useable < 1 & ed.listing$useable > 0,]
+## Bromus inermis and Oplismenus hirtellus
+ 
+## none rely on the "other" column
+#ed.listing[ed.listing$other==1 & ed.listing$ipaus==0 & ed.listing$FedNEW == 0 & ed.listing$stateNEW ==0,]
+hist(ed.listing$no.abun[ed.listing$rarest.bin >= 5 & ed.listing$useable >.5],breaks=100) #& ed.listing$no.abun < 120
+range(ed.listing$no.abun[ed.listing$rarest.bin >= 5 & ed.listing$useable >.5],na.rm=T) ## 20 42080
+quantile(ed.listing$no.abun[ed.listing$rarest.bin >= 5 & ed.listing$useable >.5],na.rm=T)
+hist(ed.listing$no.abun[ed.listing$rarest.bin < 5 & ed.listing$useable >.5],breaks=100)
+ed.listing[ed.listing$no.abun > 500 & ed.listing$rarest.bin <5,]
+length(ed.listing$no.abun[ed.listing$no.abun > 100 & ed.listing$rarest.bin <5])
+
+
+length(ed.listing$rarest.bin[ed.listing$rarest.bin == ed.listing$no.1])/383 # 64%
+length(ed.listing$rarest.bin[ed.listing$rarest.bin == ed.listing$no.2])/383 # 12%
+length(ed.listing$rarest.bin[ed.listing$rarest.bin == ed.listing$no.3])/383 # 14%
+length(ed.listing$rarest.bin[ed.listing$rarest.bin == ed.listing$no.4])/383 # 30%
+
+#ed.listing[ed.listing$usda.code == "PUMOL",]
+#ed.listing$no.1<-NULL
+#ed.listing$no.2<-NULL
+#ed.listing$no.3<-NULL
+#ed.listing$no.4<-NULL
+
+
+ed <- ed.listing[ed.listing$useable == 1 | ed.listing$usda.code == "OPHI",]
+
+length(ed$usda.code[ed$rarest.bin >=5 & ed$no.1 >0 & ed$no.2 >0 & ed$no.3>0 & ed$no.4 >0])
+length(ed$usda.code[ed$rarest.bin >=5 & ed$no.1 >0 & ed$no.2 >0 & ed$no.3>0 & ed$no.4 >0 & ed$no.abun >= 50])
+length(ed$usda.code[ed$rarest.bin >=10 & ed$no.1 >0 & ed$no.2 >0 & ed$no.3>0 & ed$no.4 >0])
+length(ed$usda.code[ed$rarest.bin >=10 & ed$no.abun >= 50  & ed$no.1 >0 & ed$no.2 >0 & ed$no.3>0 & ed$no.4 >0])
+
+#ed2 <- ed[ed$rarest.bin < 5,]
+
+#ed2 <- data.frame(cbind(ed2$usda.code, ed2$no.1, ed2$no.2, ed2$no.3, ed2$no.4), stringsAsFactors = F)
+#colnames(ed2)<- c("sp","one","two","three","four")
+#write.csv(ed2, "C://Users/mwone/Desktop/ed2.csv", row.names=F)
+
+ed.listing$one5[ed.listing$no.1 <5] <- 0
+ed.listing$two5[ed.listing$no.2 <5] <- 0
+ed.listing$three5[ed.listing$no.3 <5] <- 0
+ed.listing$four5[ed.listing$no.4 <5] <- 0
+
+ed.listing$one5[ed.listing$no.1 >= 5] <- 1
+ed.listing$two5[ed.listing$no.2 >= 5] <- 1
+ed.listing$three5[ed.listing$no.3 >= 5] <- 1
+ed.listing$four5[ed.listing$no.4 >= 5] <- 1
+
+ed.listing$cats5 <- ed.listing$one5 +ed.listing$two5 +ed.listing$three5 + ed.listing$four5
+summary(as.factor(ed.listing$cats5[ed.listing$useable == 1]))
+ed.listing[ed.listing$cats5==3 & ed.listing$useable == 1,]
+
+ed.listing$one10[ed.listing$no.1 <10] <- 0
+ed.listing$two10[ed.listing$no.2 <10] <- 0
+ed.listing$three10[ed.listing$no.3 <10] <- 0
+ed.listing$four10[ed.listing$no.4 <10] <- 0
+
+ed.listing$one10[ed.listing$no.1 >= 10] <- 1
+ed.listing$two10[ed.listing$no.2 >= 10] <- 1
+ed.listing$three10[ed.listing$no.3 >= 10] <- 1
+ed.listing$four10[ed.listing$no.4 >= 10] <- 1
+
+ed.listing$cats10 <- ed.listing$one10 +ed.listing$two10 +ed.listing$three10 + ed.listing$four10
+summary(as.factor(ed.listing$cats10[ed.listing$useable == 1]))
+
+summary(as.factor(ed.listing$cats5[ed.listing$useable == 1 & ed.listing$no.abun >= 50]))
+summary(as.factor(ed.listing$cats10[ed.listing$useable == 1 & ed.listing$no.abun >= 50]))
+
+summary(as.factor(ed.listing$cats5[ed.listing$useable == 1 & ed.listing$no.1 == ed.listing$rarest.bin]))
+summary(as.factor(ed.listing$cats10[ed.listing$useable == 1 & ed.listing$no.1 == ed.listing$rarest.bin]))
+
+summary(as.factor(ed.listing$cats5[ed.listing$useable == 1 & ed.listing$no.abun >= 50& ed.listing$no.1 == ed.listing$rarest.bin]))
+summary(as.factor(ed.listing$cats10[ed.listing$useable == 1 & ed.listing$no.abun >= 50& ed.listing$no.1 == ed.listing$rarest.bin]))
+
+#ed2$one[ed2$one >= 5] <- 1
+#ed2$two[ed2$two >= 5] <- 1
+#ed2$three[ed2$three >= 5] <- 1
+#ed2$four[ed2$four >= 5] <- 1
+
+ed.listing$no.1b <- ed.listing$no.1 + ed.listing$no.2
+
+length(ed.listing$usda.code[ed.listing$no.1b >=5 & ed.listing$no.3 >= 5 & ed.listing$no.4 >=5 & ed.listing$useable==1 & ed.listing$no.abun >= 50])
+length(ed.listing$usda.code[ed.listing$no.1b >=10 & ed.listing$no.3 >= 10 & ed.listing$no.4 >= 10 & ed.listing$useable==1 & ed.listing$no.abun >= 50])
+
+ed.listing[ed.listing$scientific.name=="Arctotheca calendula",]
+
+hist(as.numeric(edd$abundance), main = "After thinning", xlab = "abundance rank")
+
+
+
+
+
+
 
 ############################################################################
-########## add the number of unique grid cells to the master file ##########
-############################################################################
-
 edd2 <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_08_28_2017.csv", header = T, sep = ",", quote= "\"", 
                    comment.char= "", stringsAsFactors = F, strip.white = T)
 
