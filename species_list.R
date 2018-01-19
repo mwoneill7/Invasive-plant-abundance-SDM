@@ -680,3 +680,136 @@ hist(speciesList$no.abunG10, breaks=25, main=" ",
 # 
 # head(spp)
 # hist(spp$no.abunG[spp$potential.use2 == 1], breaks=30, main="Histogram of number of cells with records per species", xlab="no. of cells with records", ylab="no. of species")
+
+library(rgdal);library(raster)
+### WITHOUT BUFFER AROUND SHAPEFILE
+
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+## read in EDDMapS dataset, thinned to 5km climate grid cells (1 point per species per cell)
+ed.listing <- read.table("species_list_12_18_17.csv", header = T, sep = ",", quote= "\"", 
+                          comment.char= "", stringsAsFactors = F, strip.white = T)
+
+edd <- read.table("edd_final_12_18_17.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+edd$abundance <- ceiling(edd$best)
+edd$max<-NULL;edd$med<-NULL;edd$best<-NULL;edd$no.pts<-NULL;edd$no.best<-NULL;head(edd)
+coordinates(edd) <- c(4,3)
+
+
+bio <- raster("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/us_roads_2_5.asc")
+## read in Worldclim climate rasters clipped to L48; 6 variables manually selected by assessing correlations
+#bio <- stack("C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_2.asc",
+#             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_5.asc",
+#             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_6.asc",
+#             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_8.asc",
+#             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_12.asc",
+#             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_15.asc")
+## assign proj4string to that of one of the raw files before clipping
+proj4string(edd) <- proj4string(bio) #<- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
+#bioD <- as.data.frame(bio)
+#bioD[,1:4] <- bioD[,1:4]/10
+
+states <- readOGR(dsn = "states", layer = "US_states")
+states <- spTransform(states, proj4string(bio))
+#bio.i <- mask(crop(bio, states), states) 
+
+#edd <- spTransform(edd, proj4string(bio)) ## project point data to proj4string of climate data
+ext <- extract(bio, edd) ## extract climate values to points
+edd <- cbind(as.data.frame(edd), ext) ## append extracted climate data to point data
+#edd[,(ncol(edd)-5):(ncol(edd)-2)] <- edd[,(ncol(edd)-5):(ncol(edd)-2)]/10
+head(edd)
+summary(edd$ext)
+edd <- edd[!is.na(edd$ext),]
+
+ed.listing <- ed.listing[ed.listing$useable>0,]
+sp <- ed.listing$usda.code[ed.listing$useable>0]
+
+for (i in 1:length(sp)){
+  edd.sp <- edd[edd$species == sp[i],]
+  ed.listing$no.1b[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 1])
+  ed.listing$no.2b[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 2])
+  ed.listing$no.3b[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 3])
+  ed.listing$no.4b[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 4])
+  #ed.listing$no.01[ed.listing$usda.code == sp[i]]<- length(edd.sp$species[edd.sp$abundance == 1 & edd.sp$cov01 == 0]) 
+  
+  if(length(unique(edd.sp$abundance))==4){
+    ed.listing$rarest.binb[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+    #ed.listing$second.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+  } else {
+    ed.listing$rarest.binb[ed.listing$usda.code == sp[i]] <- 0
+  }
+  
+  #head(ed.listing)
+  print(i)
+}
+
+ed.listing$rarest.bin[is.na(ed.listing$rarest.bin)] <- 0
+ed.listing$rarest.binc <- NULL
+#ed.listing$rarest.binb[is.na(ed.listing$rarest.binb)] <- 0
+summary(ed.listing$rarest.binb)
+
+lost <- ed.listing[ed.listing$rarest.bin >= 10 & ed.listing$rarest.binb <10,]
+head(lost) 
+
+#ed.listing$loss1 <- ed.listing$no.1 - ed.listing$no.1b
+#ed.listing$loss2 <- ed.listing$no.2 - ed.listing$no.2b
+#ed.listing$loss3 <- ed.listing$no.3 - ed.listing$no.3b
+#ed.listing$loss4 <- ed.listing$no.4 - ed.listing$no.4b
+
+#summary(ed.listing$loss1)
+#summary(ed.listing$loss2)
+#summary(ed.listing$loss3)
+#summary(ed.listing$loss4)
+
+ed.listing$total <- ed.listing$no.1 + ed.listing$no.2 + ed.listing$no.3 + ed.listing$no.4
+ed.listing$totalb <- ed.listing$no.1b + ed.listing$no.2b + ed.listing$no.3b + ed.listing$no.4b
+ed.listing$total.loss <- ed.listing$total - ed.listing$totalb
+
+hist(ed.listing$total[ed.listing$total <100], breaks=10)
+
+ed.listing2 <- ed.listing[ed.listing$rarest.bin >= 10,]
+#summary(ed.listing2$rarest.binb)
+hist(ed.listing2$total[ed.listing2$total <100], breaks=10)
+
+
+ed.listing3 <- ed.listing2[ed.listing2$rarest.binb >= 10,]
+
+ed.listing3$loss.prop <- ed.listing3$total.loss/ed.listing3$total
+
+summary(ed.listing3$loss.prop)
+hist(ed.listing3$loss.prop, breaks=50)
+
+summary(ed.listing3$total.loss)
+hist(ed.listing3$total.loss, breaks=50)
+hist(ed.listing3$totalb)
+
+ed.prob <- ed.listing3[ed.listing3$loss.prop > 0.05,]
+ed.prob
+
+sum(ed.listing3$total.loss)
+
+ed3 <- edd[edd$species %in% ed.listing3$usda.code,]
+758/86307
+
+#writeRaster(bio.i$bio_2, "cropped_raster.asc", format="ascii", prj=T)
+ed.listing3$loss1 <- ed.listing3$no.1 - ed.listing3$no.1b
+ed.listing3$loss2 <- ed.listing3$no.2 - ed.listing3$no.2b
+ed.listing3$loss3 <- ed.listing3$no.3 - ed.listing3$no.3b
+ed.listing3$loss4 <- ed.listing3$no.4 - ed.listing3$no.4b
+
+#summary(ed.listing$loss1)
+#summary(ed.listing$loss2)
+#summary(ed.listing$loss3)
+#summary(ed.listing$loss4)
+
+ed.listing3$loss1P <- ed.listing3$loss1/ed.listing3$no.1 
+ed.listing3$loss2P <- ed.listing3$loss2/ed.listing3$no.2
+ed.listing3$loss3P <- ed.listing3$loss3/ed.listing3$no.3
+ed.listing3$loss4P <- ed.listing3$loss4/ed.listing3$no.4
+
+
+ed.listing3[ed.listing3$loss1P > 0.05 & ed.listing3$loss.prop <0.05,]
+ed.listing3[ed.listing3$loss2P > 0.05 & ed.listing3$loss.prop <0.05,]
+ed.listing3[ed.listing3$loss4P > 0.05 & ed.listing3$loss.prop <0.05,]
+
+## write out bio cropped to states
