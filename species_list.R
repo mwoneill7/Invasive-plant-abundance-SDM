@@ -293,26 +293,25 @@ ed.listing <- read.table("species_summary_12_12_2017.csv", header = T, sep = ","
 
 
 ## thinned, number in each category
-edd2 <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_12_18_2017.csv", header = T, sep = ",", quote= "\"", 
+edd2 <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_12_21_2017.csv", header = T, sep = ",", quote= "\"", 
                    comment.char= "", stringsAsFactors = F, strip.white = T)
 edd2$abundance <- ceiling(edd2$best)
-
 
 sp <- ed.listing$usda.code[ed.listing$useable>0]
 
 for (i in 1:length(sp)){
   edd.sp <- edd2[edd2$species == sp[i],]
-  ed.listing$no.1[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 1])
+  #ed.listing$no.1[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 1])
   ed.listing$no.2[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 2])
   ed.listing$no.3[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 3])
   ed.listing$no.4[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 4])
   #ed.listing$no.01[ed.listing$usda.code == sp[i]]<- length(edd.sp$species[edd.sp$abundance == 1 & edd.sp$cov01 == 0]) 
   
-  if(length(unique(edd.sp$abundance))==4){
+  if(length(unique(edd.sp$abundance))==3){
   ed.listing$rarest.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
   #ed.listing$second.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
   } else {
-  ed.listing$rarest.binc[ed.listing$usda.code == sp[i]] <- 0
+  ed.listing$rarest.bin[ed.listing$usda.code == sp[i]] <- 0
   }
   
   
@@ -709,8 +708,8 @@ proj4string(edd) <- proj4string(bio) #<- proj4string(raster("C:/Users/mwone/Docu
 #bioD <- as.data.frame(bio)
 #bioD[,1:4] <- bioD[,1:4]/10
 
-states <- readOGR(dsn = "states", layer = "US_states")
-states <- spTransform(states, proj4string(bio))
+#states <- readOGR(dsn = "states", layer = "US_states")
+#states <- spTransform(states, proj4string(bio))
 #bio.i <- mask(crop(bio, states), states) 
 
 #edd <- spTransform(edd, proj4string(bio)) ## project point data to proj4string of climate data
@@ -743,13 +742,24 @@ for (i in 1:length(sp)){
   print(i)
 }
 
-ed.listing$rarest.bin[is.na(ed.listing$rarest.bin)] <- 0
-ed.listing$rarest.binc <- NULL
+#ed.listing$rarest.bin[is.na(ed.listing$rarest.bin)] <- 0
+#ed.listing$rarest.binc <- NULL
 #ed.listing$rarest.binb[is.na(ed.listing$rarest.binb)] <- 0
-summary(ed.listing$rarest.binb)
+#summary(ed.listing$rarest.binb)
 
+sp <- ordsums$species.code
+for (i in 1:length(sp)){
+  ed.listing$kappa[ed.listing$usda.code == sp[i]] <- ordsums$kappa[ordsums$species.code == sp[i]]
+  print(i)
+} 
+
+ed.listing <- ed.listing[!is.na(ed.listing$kappa),]
+summary(ed.listing$kappa)
+#ed.listing <- ed.listing[!is.na(ed.listing$usda.code),]
+
+#ed.listing[ed.listing$no]
 lost <- ed.listing[ed.listing$rarest.bin >= 10 & ed.listing$rarest.binb <10,]
-head(lost) 
+#lost <- lost[!is.na(lost$usda.code),]
 
 #ed.listing$loss1 <- ed.listing$no.1 - ed.listing$no.1b
 #ed.listing$loss2 <- ed.listing$no.2 - ed.listing$no.2b
@@ -783,6 +793,7 @@ summary(ed.listing3$total.loss)
 hist(ed.listing3$total.loss, breaks=50)
 hist(ed.listing3$totalb)
 
+
 ed.prob <- ed.listing3[ed.listing3$loss.prop > 0.05,]
 ed.prob
 
@@ -813,3 +824,14 @@ ed.listing3[ed.listing3$loss2P > 0.05 & ed.listing3$loss.prop <0.05,]
 ed.listing3[ed.listing3$loss4P > 0.05 & ed.listing3$loss.prop <0.05,]
 
 ## write out bio cropped to states
+
+edd.list <- read.table("SpeciesList_11_20_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+
+
+
+###########################################################################
+
+ed.listing <- read.table("species_list_12_18_17.csv", header = T, sep = ",", quote= "\"", 
+                         comment.char= "", stringsAsFactors = F, strip.white = T)
+head(ed.listing)
+
