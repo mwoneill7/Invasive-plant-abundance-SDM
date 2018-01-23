@@ -3,6 +3,8 @@
 ##   created 9/21/2017
 #    last modified 9/25/2017
 
+#Test2
+
 setwd("C:/Users/mwone/Documents/geodata/")
 library(raster)
 
