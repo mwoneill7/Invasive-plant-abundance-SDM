@@ -65,10 +65,21 @@ edd <- edd[!is.na(edd$cellID) & !is.na(edd$usda) & edd$usda != "",]
 ## exclude rows without a usda code or where the point did not fall in a grid cell
 write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmapsWgrid2.csv", row.names=F)
 
+################## combining 1 and 2 ###################
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmapsWgrid2.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+
+head(edd)
 str(edd)
+
 edd$abundance <- as.numeric(edd$abundance)
 edd$source <- as.numeric(edd$source)
-rm(fishnet,fishnetD,tab,cellID) ## garbage cleaning
+
+summary(as.factor(edd$abundance))
+edd$abundance[edd$abundance == 1] <- 2
+summary(as.factor(edd$abundance))
+
+#rm(fishnet,fishnetD,tab,cellID) ## garbage cleaning
 
 #### THIN DATA TO GRID CELL (WITHIN SPECIES)
 species   <- "TEMPLATE"
