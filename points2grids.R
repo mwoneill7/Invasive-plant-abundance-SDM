@@ -8,21 +8,15 @@ library(rgdal)
 library(raster)
 library(rgeos)
 
-edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_21_2017.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_1_25_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
+
 head(edd)
 ## read in EDDMapS database (most recently prepped version)
 
-
-#sp.list <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/species_summary_12_12_2017.csv", header = T, sep = ",", quote= "\"", 
-#                       comment.char= "", stringsAsFactors = F, strip.white = T)
-#sp.list <- sp.list$usda.code[sp.list$useable > 0]
-#edd <- edd[edd$USDAcode %in% sp.list,]
-
-
 ## extract only the fields that are needed, to save processing time
-edd <- data.frame(cbind(1:length(edd$ScientificName), edd$ObjectID, edd$ScientificName, edd$USDAcode, edd$ORD, edd$Latitude_Decimal, edd$Longitude_Decimal, edd$ORDsourceNUM), stringsAsFactors=F)
-colnames(edd) <- c("id", "objectid","species", "usda", "abundance", "latitude", "longitude", "source") ## give fields better names
+edd <- data.frame(cbind(1:length(edd$ScientificName), edd$ObjectID, edd$ScientificName, edd$USDAcode, edd$ord, edd$Latitude_Decimal, edd$Longitude_Decimal), stringsAsFactors=F)
+colnames(edd) <- c("id", "objectid","species", "usda", "abundance", "latitude", "longitude") ## give fields better names
 head(edd)
 
 ## coords need to be numeric
@@ -52,7 +46,7 @@ tab$ptID <- as.numeric(row.names(tab)) ## convert rownames to its own field for 
 tab$Id <- NULL ## remove meaningless field (all zeroes)
 head(tab)
 
-write.csv(tab,"overlayTableORD.csv", row.names=F)
+write.csv(tab,"overlayTable1_25_2018.csv", row.names=F)
 #tab <- read.table("overlayTableORD.csv", header = T, sep = ",", quote= "\"", 
 #           comment.char= "", stringsAsFactors = F, strip.white = T)
 
@@ -61,38 +55,35 @@ edd <- data.frame(merge(edd, tab, by.x = "id", by.y = "ptID", all=F))
 ## point from table produced from overlaying the eddmaps points with the fishnet cells
 
 edd$optional <- NULL ## remove meaningless column
-edd <- edd[!is.na(edd$cellID) & !is.na(edd$usda) & edd$usda != "",]
+edd <- edd[!is.na(edd$cellID) & !is.na(edd$usda) & edd$usda != "",] ## 627071 --> 626985
 ## exclude rows without a usda code or where the point did not fall in a grid cell
-write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmapsWgrid2.csv", row.names=F)
 
-################## combining 1 and 2 ###################
-edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmapsWgrid2.csv", header = T, sep = ",", quote= "\"", 
-                  comment.char= "", stringsAsFactors = F, strip.white = T)
+write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmapsWgrid_1_25_2018.csv", row.names=F)
 
-head(edd)
-str(edd)
+################### combining 1 and 2 ###################
+#edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmapsWgrid2.csv", header = T, sep = ",", quote= "\"", 
+#                  comment.char= "", stringsAsFactors = F, strip.white = T)
+#edd$abundance <- as.numeric(edd$abundance)
+#edd$source <- as.numeric(edd$source)
+#
+#summary(as.factor(edd$abundance))
+#edd$abundance[edd$abundance == 1] <- 2
+#summary(as.factor(edd$abundance))
+
+rm(fishnet,fishnetD,tab,cellID) ## garbage cleaning
+
 
 edd$abundance <- as.numeric(edd$abundance)
-edd$source <- as.numeric(edd$source)
-
-summary(as.factor(edd$abundance))
-edd$abundance[edd$abundance == 1] <- 2
-summary(as.factor(edd$abundance))
-
-#rm(fishnet,fishnetD,tab,cellID) ## garbage cleaning
+hist(edd$abundance)
 
 #### THIN DATA TO GRID CELL (WITHIN SPECIES)
 species   <- "TEMPLATE"
-max       <- -99
 med       <- -99
-best      <- -99
 no.pts    <- -99
-no.best   <- -99
-source    <- -99
 latitude  <- -99
 longitude <- -99
 cellID    <- -99
-edd2 <- data.frame(species,max,med,best,no.pts,no.best,source,latitude,longitude,cellID, stringsAsFactors = F)
+edd2 <- data.frame(species,med,no.pts,latitude,longitude,cellID, stringsAsFactors = F)
 
 sp.list <- as.list(as.character(unique(edd$usda)))
 ## list of all usda codes
@@ -106,24 +97,25 @@ for (i in 1:length(sp.list)){ ## loop through all species
     cell.j <- cell.j[!is.na(cell.j$species),] 
      
     species <- cell.j$usda[1]
-    max <- max(cell.j$abundance)
+    #max <- max(cell.j$abundance)
     med <- median(cell.j$abundance)
-    best <- median(cell.j$abundance[cell.j$source == min(cell.j$source)])
+    #best <- median(cell.j$abundance[cell.j$source == min(cell.j$source)])
     no.pts <- length(cell.j$abundance)
-    no.best <- length(cell.j$abundance[cell.j$source == min(cell.j$source)])
-    source <- min(cell.j$source)
+    #no.best <- length(cell.j$abundance[cell.j$source == min(cell.j$source)])
+    #source <- min(cell.j$source)
     latitude <- mean(cell.j$latitude)
     longitude <- mean(cell.j$longitude)
     cellID <- unique(cell.j$cellID)
     
   
-    keep <- data.frame(species,max,med,best,no.pts,no.best,source,latitude,longitude,cellID, stringsAsFactors = F) 
+    #keep <- data.frame(species,med,no.pts,no.best,source,latitude,longitude,cellID, stringsAsFactors = F) 
+    keep <- data.frame(species,med,no.pts,latitude,longitude,cellID, stringsAsFactors = F)
     edd2 <- rbind(edd2, keep) ## append the kept row to the master object
     #print(j)
   }
 print(i)  
 }
-
+## 12:30-400 12:40-450------ 12:50 START 1:11 (300)
 head(edd2)
 edd2 <- edd2[edd2$species != "TEMPLATE",] ## remove template row
 sum(edd2$no.pts) == length(edd$id[edd$usda %in% sp.list])
@@ -132,8 +124,9 @@ sum(edd2$no.pts) == length(edd$id[edd$usda %in% sp.list])
 #summary(edd2$no.best)
 #hist(edd2$no.best)
 #edd2[edd2$no.best==2931,]
+hist(edd2$med)
+hist(ceiling(edd2$med))
 
-
-write.csv(edd2, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_12_21_2017.csv", row.names=F)
+write.csv(edd2, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_1_25_2017.csv", row.names=F)
 
 
