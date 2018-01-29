@@ -27,9 +27,9 @@ edd$invasivecover[edd$percentcover != "NULL"] <- edd$percentcover[edd$percentcov
 edd$invasivecover[edd$canopycover == "NULL" &  edd$percentcover == "NULL"] <- "NULL"
 
 length(edd$invasivecover[edd$canopycover != "NULL" & edd$percentcover == "NULL"] )
-#### 264871 canopy
+#### 264871 -- 257799canopy
 length(edd$invasivecover[edd$percentcover != "NULL"] )
-#### 184536 percent
+#### 184536 --182298percent
 
 ## get all count data into a new column
 edd$count[!is.na(edd$stemcount)] <- edd$stemcount[!is.na(edd$stemcount)]
@@ -79,7 +79,7 @@ edd$grossAreaInAcres <- as.numeric(edd$grossAreaInAcres)
 edd$validInfestedArea <- 0
 edd$validInfestedArea[(edd$grossAreaInAcres >= edd$infestedAreaInAcres) & (!is.na(edd$infestedAreaInAcres)) & edd$infestedAreaInAcres > 0] <- 1
 ## whenever gross area is larger than or equal infested are (as required by definition), the record is valid
-edd$validInfestedArea[is.na(edd$infestedAreaInAcres) |is.na(edd$grossAreaInAcres)] <- 0 ## if one is missing, record is invalid
+edd$validInfestedArea[is.na(edd$infestedAreaInAcres)|is.na(edd$grossAreaInAcres)] <- 0 ## if one is missing, record is invalid
 edd$validInfestedArea[edd$infestedAreaInAcres <= 0] <- 0   ## if infested area is 0, or less than zero, record is not valid **
 edd$validInfestedArea[edd$ReporterFULLName == "US Army Corps of Engineers Ombil Database"] <- 0 ## exclude aggregated data
 edd$infestedAreaInAcres[edd$validInfestedArea == 0] <- NA
@@ -154,12 +154,12 @@ states = readOGR(dsn = "states", layer = "US_states")
 #proj4string(states) ## wgs84
 ## transform states to same proj4string as eddmaps
 states <- spTransform(states, "+init=epsg:4326")
-#plot(states) ## plot eddmaps onto US
+plot(states) ## plot eddmaps onto US
 #plot(edd, pch=20, add=T) ## plot points on top
 edd  <- edd[states, ] ## clip edd_US to L48
-#plot(edd, pch=20, add=T, col="purple") 
+plot(edd, pch=20, add=T, col="purple") 
 ## replot subsetted points in new color to ensure that it worked
-#dev.off()
+dev.off()
 
 edd <- data.frame(edd, stringsAsFactors = F) #### bring back into dataframe.format
 edd$optional <- NULL ## remove meaningless column
@@ -226,11 +226,6 @@ aqua <- read.table("aquatics.csv", header = T, sep = ",", stringsAsFactors = F, 
 
 edd <- edd[!(edd$USDAcode %in% aqua$usda.code),] ## 720650 to 700945 to 681412
 
-
-#write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_4_2017.csv", row.names = F)
-#edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_4_2017.csv", header = T, sep = ",", quote= "\"", 
-#                  comment.char= "", stringsAsFactors = F, strip.white = T)
-
 ########### COUNT ############
 edd$countN <- as.numeric(edd$count)
 edd$countC[is.na(edd$countN)] <- edd$count[is.na(edd$countN)]
@@ -250,6 +245,8 @@ bL20 <- c("<20", "<20 ", "Less than 20")
 #common   <- "Common"
 #abundant <- "Abundant"
 #many     <- c("A Lot", "many", "many SELECTED", "many ", "Many")  
+#length(edd$count[edd$count %in% c("Few", "few", "Rare", "Uncommon", "Common", "Abundant",
+#                                  "A lot", "many", "many SELECTED", "many ", "Many")])
 
 edd$countQUANT[edd$countC %in% b1] <- "1 plant" 
 edd$countQUANT[edd$countC %in% b2t10] <- "2-10 plants"
@@ -273,7 +270,6 @@ summary(as.factor(edd$countQUANT))
 #edd$countQUAL[edd$countC %in% many]     <- "many"
 
 ############## COVER ##############
-
 edd$coverN <-as.numeric(edd$invasivecover)
 edd$coverC[is.na(edd$coverN)] <- edd$invasivecover[is.na(edd$coverN)]
 edd$coverP <- as.numeric(gsub("%", "", edd$coverC))
@@ -400,11 +396,6 @@ summary(as.factor(edd$cover))
 ## 24,531
 
 
-#hist(as.numeric(factor(edd$cover, levels=c("trace","low","medium","high","majority"),ordered=T)))
-#propcov <- (edd[edd$coverN <1,])
-#propcov <- propcov[!is.na(propcov$USDAcode),]
-#propcov <- propcov[!(is.na(propcov$AbundanceText) & is.na(propcov$countQUANT) & propcov$validInfestedArea==0),] ## 18686/24531
-
 ############ DENSITY ##############
 edd$densityN <- as.numeric(edd$density)
 edd$density[!is.na(edd$densityN)] <- NA
@@ -417,37 +408,6 @@ edd$dTLMH[!is.na(edd$density)] <- sapply(edd$density[!is.na(edd$density)], grepl
  
 
 ########################
-#for(i in 1:length(edd$density[!is.na(edd$density)])){
-#  
-#  edd$dPERC[!is.na(edd$density)][i] <- grepl("%", edd$density[!is.na(edd$density)][i])
-# 
-#  if(grepl("PLANT", edd$density[!is.na(edd$density)][i], ignore.case=T) |
-#     grepl("ROSETTE", edd$density[!is.na(edd$density)][i], ignore.case=T)){
-#       edd$dPLANT[!is.na(edd$density)][i] <- TRUE
-#     } else {
-#       edd$dPLANT[!is.na(edd$density)][i] <- FALSE
-#     }
-# 
-#  if(grepl("low", edd$density[!is.na(edd$density)][i], ignore.case=T) |
-#     grepl("med", edd$density[!is.na(edd$density)][i], ignore.case=T) |
-#     grepl("high", edd$density[!is.na(edd$density)][i], ignore.case=T) |
-#     grepl("maj", edd$density[!is.na(edd$density)][i], ignore.case=T) |
-#     grepl("moderate", edd$density[!is.na(edd$density)][i], ignore.case=T) |
-#     grepl("trace", edd$density[!is.na(edd$density)][i], ignore.case=T)){#)
-#      edd$dTLMH[!is.na(edd$density)][i] <- TRUE
-#  } else {
-#      edd$dTLMH[!is.na(edd$density)][i] <- FALSE
-#    }
-#   
-#  print(i)
-#}
-########################
-
-#write.csv(edd, "C://Users/mwone/Google Drive/eddDENSITY.csv",row.names=F)
-#edd <- read.table("C://Users/mwone/Google Drive/eddDENSITY.csv", header = T, sep = ",", quote= "\"", 
-#                   comment.char= "", stringsAsFactors = F, strip.white = T)
-#unique(edd$countQUANT)
-
 edd <- edd[!is.na(edd$countQUANT) | !is.na(edd$cover) | !is.na(edd$AbundanceText) | edd$validInfestedArea == 1 | 
            edd$dTLMH == TRUE | edd$dPLANT == TRUE | edd$dPERC == TRUE,]
 
@@ -494,17 +454,21 @@ edd$cover[edd$Dcover %in% majority] <- "majority"
 
 edd <- edd[!is.na(edd$cover) | !is.na(edd$countQUANT) | edd$validInfestedArea == 1 | !is.na(edd$AbundanceText),]
  
-edd$countORD[edd$countQUANT == "1 plant"] <- 1
-edd$countORD[edd$countQUANT == "2-10 plants" | edd$countQUANT == "<20 plants"] <- 2
-edd$countORD[edd$countQUANT == "11-100 plants"] <- 3
-edd$countORD[edd$countQUANT == "101-1000 plants" | edd$countQUANT == ">1000 plants"] <- 4 
-reps1000 <- c("Victor Maddox", "United States Forest Service  Intermountain Region",
-                "Mark Twain National Forest", "FNAI iMapInvasives")
+#test <- c("med", "hi", "low", "hi", "med")
+#test <- ordered(as.factor(test), levels=c("low","med","hi"))
+#test <- as.numeric(test)
+
+edd$countORD[edd$countQUANT == "1 plant" | edd$countQUANT == "2-10 plants" | edd$countQUANT == "<20 plants"] <- 1
+edd$countORD[edd$countQUANT == "11-100 plants"] <- 2
+edd$countORD[edd$countQUANT == "101-1000 plants" | edd$countQUANT == ">1000 plants"] <- 3 
 
 ## Remove counts and areas from unreasonably (potentially aggregated high ones)
+reps1000 <- c("Victor Maddox", "United States Forest Service  Intermountain Region",
+                "Mark Twain National Forest", "FNAI iMapInvasives")
 edd$unreasonably_large_area <- 0
 edd$unreasonably_large_area[edd$grossAreaInAcres >= 1000 & edd$validInfestedArea == 1& !(edd$ReporterFULLName %in% reps1000) ] <- 1
 #summary(as.factor(edd$ReporterFULLName[edd$unreasonably_large_area == 1]))
+
 edd$validInfestedArea[edd$unreasonably_large_area == 1] <- 0
 edd$infestedAreaInAcres[edd$validInfestedArea == 0] <- NA
 edd$countORD[edd$unreasonably_large_area == 1] <- NA
@@ -512,19 +476,17 @@ edd$countORD[edd$unreasonably_large_area == 1] <- NA
 length(edd$countORD[!is.na(edd$countORD) & edd$countFromDensity==1])/length(edd$countORD[!is.na(edd$countORD) ])
 ## 80% of counts from density
 
-edd$coverORD[edd$cover == "trace"] <- 1
-edd$coverORD[edd$cover == "low"] <- 2
-edd$coverORD[edd$cover == "medium"] <- 3
-edd$coverORD[edd$cover == "high" | edd$cover == "majority"] <- 4
+edd$coverORD[edd$cover == "trace" | edd$cover == "low"] <- 1
+edd$coverORD[edd$cover == "medium"] <- 2
+edd$coverORD[edd$cover == "high" | edd$cover == "majority"] <- 3
 
 length(edd$coverORD[!is.na(edd$coverORD) & edd$coverFromDensity==1])/length(edd$coverORD[!is.na(edd$coverORD) ])
 ## 29% of covers from density
 
 unique(edd$AbundanceText)
-edd$textORD[edd$AbundanceText == "Single Plant                  "] <- 1
-edd$textORD[edd$AbundanceText == "Scattered Plants              " | edd$AbundanceText == "Linearly scattered            "] <- 2
-edd$textORD[edd$AbundanceText == "Scattered Dense Patches       "] <- 3
-edd$textORD[edd$AbundanceText == "Dominant cover                " | edd$AbundanceText == "Dense Monoculture             "] <- 4
+edd$textORD[edd$AbundanceText == "Single Plant                  " | edd$AbundanceText == "Scattered Plants              " | edd$AbundanceText == "Linearly scattered            "] <- 1
+edd$textORD[edd$AbundanceText == "Scattered Dense Patches       "] <- 2
+edd$textORD[edd$AbundanceText == "Dominant cover                " | edd$AbundanceText == "Dense Monoculture             "] <- 3
 
 edd <- edd[edd$validInfestedArea == 1 | !is.na(edd$countORD) | !is.na(edd$coverORD) | !is.na(edd$textORD),]
 
@@ -536,67 +498,104 @@ par(mfrow=c(1,2))
 hist(edd$coverORD[edd$coverFromDensity == 1], main = "Cover from density", xlab = "rank") ## all high abundances superceded by text)
 hist(edd$coverORD[edd$coverFromDensity == 0], main = "Cover", xlab = "rank") ## all high abundances superceded by text)
 
-cor.test(edd$textORD,edd$coverORD, method="spearman") ## .33
-cor.test(edd$textORD,edd$countORD, method="spearman") ## .66
-cor.test(edd$countORD,edd$coverORD, method="spearman") ## .38
-cor.test(edd$coverORD,edd$infestedAreaInAcres, method="spearman")  ## -03
-cor.test(edd$textORD,edd$infestedAreaInAcres, method="spearman")   ## .41
-cor.test(edd$countORD,edd$infestedAreaInAcres, method="spearman")  ## .51
+cor.test(edd$textORD,edd$coverORD, method="spearman")  ## .33 -> .30
+cor.test(edd$textORD,edd$countORD, method="spearman")  ## .66 -> .64
+cor.test(edd$countORD,edd$coverORD, method="spearman") ## .38 -> .41
+cor.test(edd$coverORD,edd$infestedAreaInAcres, method="spearman")  ## -.03->-.08
+cor.test(edd$textORD,edd$infestedAreaInAcres, method="spearman")   ## .41 -> .34
+cor.test(edd$countORD,edd$infestedAreaInAcres, method="spearman")  ## .51 -> .51
 
 dev.off() ## only compare against text ord, because wherever area + count are not NA, there is also text, which supercedes area
 plot(as.factor(edd$textORD),log(edd$infestedAreaInAcres), xlab="text rank", ylab="log(infested area)")
-abline(h=log(10/43560),col="blue") ## just over median for ord 1 observations
-abline(h=log(200/43560),col="blue") ## between medians of ord 2 and 3
+#abline(h=log(10/43560),col="blue") ## just over median for ord 1 observations
+abline(h=log(100/43560),col="blue") ## between medians of ord 2 and 3
 abline(h=log(.25),col="blue") ## 75th percentile of ord 3, b/t median and 75th of 
 #plot(as.factor(edd$coverORD), log(edd$infestedAreaInAcres))
-points(.51,-12, pch="1", col="red")
-points(.51,-7, pch="2", col="red")
-points(.51,-3.5, pch="3", col="red")
-points(.51,2, pch="4", col="red")
+#points(.51,-12, pch="1", col="red")
+points(.51,-9, pch="1", col="red")
+points(.51,-3.5, pch="2", col="red")
+points(.51,2, pch="3", col="red")
 
-edd$areaORD[edd$infestedAreaInAcres <= 10/43560] <- 1
-edd$areaORD[edd$infestedAreaInAcres <= 200/43560 & edd$infestedAreaInAcres > 10/43560] <- 2
-edd$areaORD[edd$infestedAreaInAcres <= .25 & edd$infestedAreaInAcres > 200/43560] <- 3
-edd$areaORD[edd$infestedAreaInAcres > .25] <- 4
+edd$areaORD[edd$infestedAreaInAcres <= 200/43560] <- 1
+edd$areaORD[edd$infestedAreaInAcres <= .25 & edd$infestedAreaInAcres > 200/43560] <- 2
+edd$areaORD[edd$infestedAreaInAcres > .25] <- 3
 hist(edd$areaORD, main="Histogram of ranked area", xlab="area rank")
 hist(edd$areaORD[is.na(edd$textORD) & is.na(edd$coverORD) & is.na(edd$countORD)])
 
-cor.test(edd$areaORD, edd$countORD, method="spearman") ## .47
-cor.test(edd$areaORD, edd$textORD, method="spearman") ## .39
-cor.test(edd$areaORD, edd$coverORD, method="spearman") ##-0.06
-cor.test(edd$areaORD, edd$infestedAreaInAcres, method="spearman") ##0.91
+cor.test(edd$areaORD, edd$countORD, method="spearman") ## .47 -> .40
+cor.test(edd$areaORD, edd$textORD, method="spearman")  ## .39 -> .29
+cor.test(edd$areaORD, edd$coverORD, method="spearman") ##-.06 -> -0.09
+cor.test(edd$areaORD, edd$infestedAreaInAcres, method="spearman") ##0.92
 plot(as.factor(edd$areaORD)~as.factor(edd$textORD))
 plot(as.factor(edd$areaORD)~as.factor(edd$coverORD))
 plot(as.factor(edd$areaORD)~as.factor(edd$countORD))
 
-edd$ORD <- NULL
-edd$ORD[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)]
-edd$ORD[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
-edd$ORD[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)]
-edd$ORD[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
+#edd$textORD[edd$AbundanceText == "Single Plant                  " | edd$AbundanceText == "Scattered Plants              " | edd$AbundanceText == "Linearly scattered            "] <- 1
+#edd$textORD[edd$AbundanceText == "Scattered Dense Patches       "] <- 2
+#edd$textORD[edd$AbundanceText == "Dominant cover                " | edd$AbundanceText == "Dense Monoculture             "] <- 3
 
-edd <- edd[!is.na(edd$ORD),]
+edd$test[edd$AbundanceText == "Single Plant                  "] <- "single"
+edd$test[edd$AbundanceText == "Scattered Plants              "] <- "scattered"
+edd$test[edd$AbundanceText == "Linearly scattered            "] <- "linear"
+edd$test[edd$AbundanceText == "Scattered Dense Patches       "] <- "patched"
+edd$test[edd$AbundanceText == "Dominant cover                "] <- "dominant"
+edd$test[edd$AbundanceText == "Dense Monoculture             "] <- "monoculture"
+edd$test <- ordered(as.factor(edd$test), levels = c("single", "scattered", "linear", "patched", "dominant", "monoculture"))
+
+plot(as.factor(edd$coverORD)~as.factor(edd$test))
+plot(as.factor(edd$countORD)~as.factor(edd$test))
+
+#### MEDIAN
+
+# cov <- 1
+# cou <- 3
+# text <-2
+#test <- data.frame(cov,cou,text, stringsAsFactors = F)
+#head(test)
+#test$cou <- NA
+
+##8:20
+for (i in 1:nrow(edd)){
+  edd$ord[i] <-  (median(c(edd$coverORD[i],edd$countORD[i],edd$textORD[i],edd$areaORD[i]),na.rm=T))
+  print(i)
+}
+
+#make matrix with coluns of interest, then try?
+#https://dzone.com/articles/what-are-apply-function-with-r
+
+hist(edd$ord)
+head(edd)
+hist(ceiling(edd$ord))
+#ceiling(median(c(test$cov[1],test$cou[1],test$text[1]), na.rm=T))
+#median(c(1,3,2))
+#edd$ORD <- NULL
+#edd$ORD[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)]
+#edd$ORD[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
+#edd$ORD[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)]
+#edd$ORD[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
+
+#edd <- edd[!is.na(edd$ORD),]
  
 #length(edd$coverN[is.na(edd$ORD) & (edd$coverN <= 0.01 & !is.na(edd$coverN))]) ## save those 45!
-edd$ORDsource[!is.na(edd$areaORD)] <- "area"
-edd$ORDsource[!is.na(edd$countORD)] <- "count"
-edd$ORDsource[!is.na(edd$textORD)] <- "text"
-edd$ORDsource[!is.na(edd$coverORD)] <- "cover"
+#edd$ORDsource[!is.na(edd$areaORD)] <- "area"
+#edd$ORDsource[!is.na(edd$countORD)] <- "count"
+#edd$ORDsource[!is.na(edd$textORD)] <- "text"
+#edd$ORDsource[!is.na(edd$coverORD)] <- "cover"
 
-edd$ORDsourceNUM[!is.na(edd$areaORD)] <- 4
-edd$ORDsourceNUM[!is.na(edd$countORD)] <- 3
-edd$ORDsourceNUM[!is.na(edd$textORD)] <- 2
-edd$ORDsourceNUM[!is.na(edd$coverORD)] <- 1
+#edd$ORDsourceNUM[!is.na(edd$areaORD)] <- 4
+#edd$ORDsourceNUM[!is.na(edd$countORD)] <- 3
+#edd$ORDsourceNUM[!is.na(edd$textORD)] <- 2
+#edd$ORDsourceNUM[!is.na(edd$coverORD)] <- 1
 
 
 
-summary(as.factor(edd$ORDsourceNUM))
-373394/627077 ## 59.5% cover
-208629/627077 ## 33.3% text
-4120/627077   ##  0.7% count
-40934/627077  ##  6.5% area
+#summary(as.factor(edd$ORDsourceNUM))
+#373394/627077 ## 59.5% cover
+#208629/627077 ## 33.3% text
+#4120/627077   ##  0.7% count
+#40934/627077  ##  6.5% area
 
-write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_21_2017.csv", row.names = F)
+write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_1_25_2018.csv", row.names = F)
 
 
 
@@ -606,258 +605,261 @@ write.csv(edd, "C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_21_2017
 #627123
 
 
-edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_12_2017.csv", header = T, sep = ",", quote= "\"", 
-                  comment.char= "", stringsAsFactors = F, strip.white = T)
-
-edd1000 <- edd[edd$grossAreaInAcres>=1000 & edd$validInfestedArea==1 & (is.na(edd$cover) | edd$cov01=1) & is.na(edd$AbundanceText),]
-#unique(edd1000$ReporterFULLName)
-# CHECK FOR COV01
-#ps <- edd[edd$grossAreaInAcres>1000 & edd$ReporterFULLName == "Paul Still",]
-#ps <- ps[!is.na(ps$ObjectID),]
-# PAUL STILL
-#summary(edd1000$grossAreaInAcres)
-#head(edd)
-
-#############################################
-## explore proportional cover
-#length(edd$cover[edd$coverN < 1])
-eddP <- edd[edd$coverN <= 1,]
-eddP <- eddP[!is.na(eddP$USDAcode),]
-#unique(edd$invasivecover[edd$coverN < 1])
-
-plot(as.factor(eddP$ORD),eddP$coverN)
-summary(as.factor(eddP$ORD))
-plot(as.factor(eddP$coverORD),eddP$coverN)
-summary(as.factor(eddP$textORD[eddP$coverN == 1])) ## mostly 2s
-summary(as.factor(eddP$countORD[eddP$coverN == 1])) ## mostly 4s
-summary(as.factor(eddP$areaORD[eddP$coverN == 1])) ## mostly 3s
-
-summary(as.factor(eddP$textORD[eddP$coverN <= .01])) ## mostly 2s
-summary(as.factor(eddP$countORD[eddP$coverN <= .01]))
-summary(as.factor(eddP$areaORD[eddP$coverN <= .01])) ## mostly 3s
-
-summary(as.factor(eddP$textORD[eddP$coverN > .01 & eddP$coverN <= .05])) ## mostly 2s
-summary(as.factor(eddP$countORD[eddP$coverN> .01 & eddP$coverN <= .05])) ## mostly 2s
-summary(as.factor(eddP$areaORD[eddP$coverN > .01 & eddP$coverN <= .05])) ## mostly 3s
-
-summary(as.factor(eddP$textORD[eddP$coverN > .05 & eddP$coverN <= .25])) ## mostly 2s
-summary(as.factor(eddP$countORD[eddP$coverN> .05 & eddP$coverN <= .25])) ## mostly 3s
-summary(as.factor(eddP$areaORD[eddP$coverN > .05 & eddP$coverN <= .25])) ## mostly 3s
-
-summary(as.factor(eddP$textORD[eddP$coverN > .25 & eddP$coverN <= 1])) ## mostly 2s
-summary(as.factor(eddP$countORD[eddP$coverN> .25 & eddP$coverN <= 1])) ## mostly 3s
-summary(as.factor(eddP$areaORD[eddP$coverN > .25 & eddP$coverN <= 1]))## mostly 4s////////////
-
-par(mfrow=c(1,2))
-hist(edd$textORD, main="text", xlab="text")
-hist(edd$textORD[is.na(edd$coverORD)], main="text when cover is NA", xlab="text")
-dev.off()
-hist(edd$ORD, main ="Before thinning", xlab = "abundance rank")
-
-edd$ORD2[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
-edd$ORD2[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
-edd$ORD2[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
-edd$ORD2[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
-hist(edd$ORD2, main ="Alternate Scheme", xlab = "abundance rank")
-
-edd$ORD2source[!is.na(edd$areaORD)] <- "area"
-edd$ORD2source[!is.na(edd$coverORD)] <-"cover"
-edd$ORD2source[!is.na(edd$countORD)] <-"count"
-edd$ORD2source[!is.na(edd$textORD)] <- "text"
-summary(as.factor(edd$ORD2source))
-length(edd$ORD[edd$ORD2source == "cover" & edd$coverFromDensity==1])/639939
-length(edd$ORD[edd$ORD2source == "count" & edd$countFromDensity==1])/639939
-5530/639939
-266415/639939
-327352/639939
-
-par(mfrow=c(1,2))
-hist(log(edd$infestedAreaInAcres), main="Continuous area", xlab="log(infested area)", breaks=30)
-abline(v=log(10/43560), col="blue", lwd=2)
-abline(v=log(200/43560), col="blue", lwd=2)
-abline(v=log(.5), col="blue", lwd=2)
-points(-12,17000,pch="1", col="red")
-points(-7,17000,pch="2", col="red")
-points(-3.5,17000,pch="3", col="red")
-points(2,17000,pch="4", col="red")
-
-hist(edd$areaORD, main="binned area", xlab="area rank")
-hist(edd$areaORD[is.na(edd$coverORD) & is.na(edd$countORD) & is.na(edd$textORD)])
-
-#############################################
-### 6% area, 40% cover, 1% count, 51% text
-summary(as.factor(edd$ORDsource))
-40642+4139+376528+218630
-40642/639939
-4139/639939
-376528/639939
-218630/639939
-
-length(edd$ORD[edd$ORDsource== "count" & edd$countFromDensity==1])/639939
-length(edd$ORD[edd$ORDsource== "cover" & edd$coverFromDensity==1])/639939
-
-
-############ explore large infested area #############
-
-edd  <-  read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_8_2017.csv", header = T, sep = ",", quote= "\"", 
-         comment.char= "", stringsAsFactors = F, strip.white = T)
-
-## large reporters?
-reps <- c("Alicia Garcia","catherine calderon","Evan Burks","Chris Evans","Matthew Hansen",
-          "Allan Trently","Brett O'Brien","Patricia Wright","Charles Houder", "Izabella Redlinski",
-          "Charles Conner", "B R Kirk", "Robert Servis", "Irene Frentz", "Tom Benson")
-
-
-b<- edd[edd$ReporterFULLName %in% reps,]
-#bb <- bb <- b[b$grossAreaInAcres>=1000,]
-bb<-b
-bb<- bb[!is.na(as.numeric(bb$infestedAreaInAcres)),]
-bb <- bb[bb$infestedAreaInAcres <= bb$grossAreaInAcres,]
-summary(as.numeric(bb$infestedAreaInAcres))
-summary(as.factor(bb$AbundanceText))
-summary(as.factor(bb$coverORD)) ## 70 1s, 47 2s, 32 3s
-## Mostly scattered
-length(bb$count[is.na(bb$coverORD) & is.na(bb$textORD)])
-
-summary(as.factor(bb$percentcover))
-summary(as.factor(bb$canopycover[is.na(bb$percentcover)]))
-summary(as.factor(bb$density[is.na(bb$percentcover) & is.na(bb$canopycover)]))
-summary(as.factor(bb$AbundanceText))
-33 ## Dense monoculture
-62 ## Scattered Dense Patches
-131## Scattered Plants
-29 ## Single plants
-19 ## NULL
-
-b <- edd[edd$ReporterFULLName == "Abbie Moleta",]
-
-## Mostly Scattered or Scattered Dense Patches
-## are the area estimates of abundance inflated?
-## are the text estimates of aundance deflates? I don't think so?
-
-1#trace
-2#low
-2#mod
-#high
-b <- edd2[edd2$ReporterFName == "B R" & edd2$ReporterLName == "Kirk",]
-bb <- b[b$grossAreaInAcres>=1000,]
-bb<- bb[!is.na(bb$ReporterFName),]
-cbind(bb$Infestedarea,bb$Infestedareaunits,bb$infestedAreaInAcres,bb$Grossarea,bb$Grossareaunits, bb$grossAreaInAcres)
-
-goodreps <- c("Victor Maddox", "Alexander Levy", "United States Forest Service Intermountain System",
-              "Mark Twain National Forest", "Rick Iverson", "Robin Mackie", "Thomas Schultz",
-              "FNAI iMapInvasives", "Joe Gartner")
-b <- edd[edd$ReporterFULLName %in% goodreps,]
-#b <- b[b$validInfestedArea == 1,]
-summary(as.factor(b$coverORD))
-summary(as.factor(b$countORD))
-summary(as.factor(b$textORD))
-b <- b[b$grossAreaInAcres >= 1000,]
-
-summary(as.factor(edd$coverORD), as.factor(edd$countORD))
-summary(as.factor(edd$areaORD[edd$validInfestedArea == 1 &  edd$countORD == 4]))
-summary(as.factor(edd$areaORD[edd$validInfestedArea == 1 &  edd$countORD == 3]))
-
-par(mfrow = c(4,1), mar= c(5,4,4,2)-2)
-hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==1]), breaks=15, xlim=c(-15,5), main="count class 1", xlab="log(area)")
-hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==2]), breaks=20, xlim=c(-15,5), main="count class 2", xlab="log(area)")
-hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==3]), breaks=20, xlim=c(-15,5), main="count class 3", xlab="log(area)")
-hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==4]), breaks=20, xlim=c(-15,5), main="count class 4", xlab="log(area)")
-
-dev.off()
-hist(as.numeric(edd$countORD[is.na(edd$coverORD)]))
-hist(as.numeric(edd$textORD[!is.na(edd$countORD)]))
-hist(as.numeric(edd$countORD[!is.na(edd$textORD)]))
-
-plot(as.factor(edd$countORD)~as.factor(edd$textORD))
-hist(as.numeric(edd$textORD))
-hist(as.numeric(edd$coverORD[!is.na(edd$textORD)]))
-hist(as.numeric(edd$coverORD))
-
-wtf <- edd[edd$countORD == 3 & edd$textORD==1,]
-wtf <- wtf[!is.na(wtf$ScientificName),]
-wtf<- data.frame(cbind(wtf$count,wtf$AbundanceText), stringsAsFactors=F)
-colnames(wtf) <- c("count", "text")
-wtf <- wtf[!is.na(wtf$count) & !is.na(wtf$text),]
-summary(as.factor((wtf$count)))
-summary(as.factor(as.numeric(wtf$count)))
-
-hc <- edd[edd$countORD == 4,]
-hc <- hc[!is.na(hc$ScientificName),]
-summary(as.factor(edd$cover))
-
-edd$ordB[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
-edd$ordB[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
-
-plot(as.factor(edd$ordB[is.na(edd$coverORD)]), log(edd$infestedAreaInAcres[is.na(edd$coverORD)]))
-abline(h=log(10/43560))
-abline(h=log(500/43560))
-abline(h=log(.5))
- 
-
-edd$ordB[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)] 
-plot(as.factor(edd$ordB), log(edd$infestedAreaInAcres))
-plot(as.factor(edd$textORD), log(edd$infestedAreaInAcres))
-
-
-## most have largeish areas ( class 3 and 4, but i think that could be because area was classed well?)
-## >75% below .5 acres, max=219 acres
-## 80549
-## most counts have NA for area
-
-par(mfrow=c(1,2))
-hist(edd$countORD[!is.na(edd$areaORD)], main="!is.na(area)", xlab="count")
-hist(edd$countORD[is.na(edd$areaORD)], main="is.na(area)", xlab="count")
-
-edd$ORD1[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
-edd$ORD1[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
-edd$ORD1[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
-edd$ORD1[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
-
-edd$ORD2[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
-edd$ORD2[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
-edd$ORD2[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
-edd$ORD2[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
-
-edd$ORD3[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
-edd$ORD3[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
-edd$ORD3[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
-edd$ORD3[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
-
-edd$ORD4[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
-edd$ORD4[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
-edd$ORD4[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
-edd$ORD4[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
-
-
-par(mfrow=c(2,2))
-hist(edd$ORD1, main = "text>cover>count>area")
-hist(edd$ORD2, main = "cover>text>count>area")
-hist(edd$ORD3, main = "cover>count>text>area")
-hist(edd$ORD4, main = "cover>count>area>text")
-
-
-dev.off()
-plot(log(edd$infestedAreaInAcres[is.na(edd$cover)])~as.factor(edd$countORD[is.na(edd$cover)]))
-abline(h=log(10/43560))
-abline(h=log(200/43560))
-abline(h=log(.25))
-
-
-
-
-length(edd$coverN[edd$coverN<=0.01 & !is.na(edd$coverN)]) #269
-length(edd$coverN[edd$coverN>0.01 & edd$coverN<1 & !is.na(edd$coverN)]) #24101, but not really relevant
-length(edd$coverN[edd$coverN==1 & !is.na(edd$coverN)]) #1783
-
-par(mfrow=c(1,2))
-hist(edd$coverORD[!(edd$coverN<=1) | is.na(edd$coverN) ])
-hist(edd$coverORD)
-2000/600000
-b <- edd[(edd$coverN<=0.01)& !is.na(edd$coverN),]
-b <- b[!is.na(b$USDAcode),]
-
-
-summary(as.factor(b$USDAcode))
-head(ed.listing)
-#length(ed.listing$X[ed.listing$useable == 1 & ed.listing$])
+#edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_12_2017.csv", header = T, sep = ",", quote= "\"", 
+#                  comment.char= "", stringsAsFactors = F, strip.white = T)
+#
+#edd1000 <- edd[edd$grossAreaInAcres>=1000 & edd$validInfestedArea==1 & (is.na(edd$cover) | edd$cov01=1) & is.na(edd$AbundanceText),]
+##unique(edd1000$ReporterFULLName)
+## CHECK FOR COV01
+##ps <- edd[edd$grossAreaInAcres>1000 & edd$ReporterFULLName == "Paul Still",]
+##ps <- ps[!is.na(ps$ObjectID),]
+## PAUL STILL
+##summary(edd1000$grossAreaInAcres)
+##head(edd)
+#
+##############################################
+### explore proportional cover
+##length(edd$cover[edd$coverN < 1])
+#eddP <- edd[edd$coverN <= 1,]
+#eddP <- eddP[!is.na(eddP$USDAcode),]
+##unique(edd$invasivecover[edd$coverN < 1])
+#
+#plot(as.factor(eddP$ORD),eddP$coverN)
+#summary(as.factor(eddP$ORD))
+#plot(as.factor(eddP$coverORD),eddP$coverN)
+#summary(as.factor(eddP$textORD[eddP$coverN == 1])) ## mostly 2s
+#summary(as.factor(eddP$countORD[eddP$coverN == 1])) ## mostly 4s
+#summary(as.factor(eddP$areaORD[eddP$coverN == 1])) ## mostly 3s
+#
+#summary(as.factor(eddP$textORD[eddP$coverN <= .01])) ## mostly 2s
+#summary(as.factor(eddP$countORD[eddP$coverN <= .01]))
+#summary(as.factor(eddP$areaORD[eddP$coverN <= .01])) ## mostly 3s
+#
+#summary(as.factor(eddP$textORD[eddP$coverN > .01 & eddP$coverN <= .05])) ## mostly 2s
+#summary(as.factor(eddP$countORD[eddP$coverN> .01 & eddP$coverN <= .05])) ## mostly 2s
+#summary(as.factor(eddP$areaORD[eddP$coverN > .01 & eddP$coverN <= .05])) ## mostly 3s
+#
+#summary(as.factor(eddP$textORD[eddP$coverN > .05 & eddP$coverN <= .25])) ## mostly 2s
+#summary(as.factor(eddP$countORD[eddP$coverN> .05 & eddP$coverN <= .25])) ## mostly 3s
+#summary(as.factor(eddP$areaORD[eddP$coverN > .05 & eddP$coverN <= .25])) ## mostly 3s
+#
+#summary(as.factor(eddP$textORD[eddP$coverN > .25 & eddP$coverN <= 1])) ## mostly 2s
+#summary(as.factor(eddP$countORD[eddP$coverN> .25 & eddP$coverN <= 1])) ## mostly 3s
+#summary(as.factor(eddP$areaORD[eddP$coverN > .25 & eddP$coverN <= 1]))## mostly 4s////////////
+#
+#par(mfrow=c(1,2))
+#hist(edd$textORD, main="text", xlab="text")
+#hist(edd$textORD[is.na(edd$coverORD)], main="text when cover is NA", xlab="text")
+#dev.off()
+#hist(edd$ORD, main ="Before thinning", xlab = "abundance rank")
+#
+#edd$ORD2[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
+#edd$ORD2[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
+#edd$ORD2[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
+#edd$ORD2[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
+#hist(edd$ORD2, main ="Alternate Scheme", xlab = "abundance rank")
+#
+#edd$ORD2source[!is.na(edd$areaORD)] <- "area"
+#edd$ORD2source[!is.na(edd$coverORD)] <-"cover"
+#edd$ORD2source[!is.na(edd$countORD)] <-"count"
+#edd$ORD2source[!is.na(edd$textORD)] <- "text"
+#summary(as.factor(edd$ORD2source))
+#length(edd$ORD[edd$ORD2source == "cover" & edd$coverFromDensity==1])/639939
+#length(edd$ORD[edd$ORD2source == "count" & edd$countFromDensity==1])/639939
+#5530/639939
+#266415/639939
+#327352/639939
+#
+#par(mfrow=c(1,2))
+#hist(log(edd$infestedAreaInAcres), main="Continuous area", xlab="log(infested area)", breaks=30)
+#abline(v=log(10/43560), col="blue", lwd=2)
+#abline(v=log(200/43560), col="blue", lwd=2)
+#abline(v=log(.5), col="blue", lwd=2)
+#points(-12,17000,pch="1", col="red")
+#points(-7,17000,pch="2", col="red")
+#points(-3.5,17000,pch="3", col="red")
+#points(2,17000,pch="4", col="red")
+#
+#hist(edd$areaORD, main="binned area", xlab="area rank")
+#hist(edd$areaORD[is.na(edd$coverORD) & is.na(edd$countORD) & is.na(edd$textORD)])
+#
+##############################################
+#### 6% area, 40% cover, 1% count, 51% text
+#summary(as.factor(edd$ORDsource))
+#40642+4139+376528+218630
+#40642/639939
+#4139/639939
+#376528/639939
+#218630/639939
+#
+#length(edd$ORD[edd$ORDsource== "count" & edd$countFromDensity==1])/639939
+#length(edd$ORD[edd$ORDsource== "cover" & edd$coverFromDensity==1])/639939
+#
+#
+############# explore large infested area #############
+#
+#edd  <-  read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_12_8_2017.csv", header = T, sep = ",", quote= "\"", 
+#         comment.char= "", stringsAsFactors = F, strip.white = T)
+#
+### large reporters?
+#reps <- c("Alicia Garcia","catherine calderon","Evan Burks","Chris Evans","Matthew Hansen",
+#          "Allan Trently","Brett O'Brien","Patricia Wright","Charles Houder", "Izabella Redlinski",
+#          "Charles Conner", "B R Kirk", "Robert Servis", "Irene Frentz", "Tom Benson")
+#
+#
+#b<- edd[edd$ReporterFULLName %in% reps,]
+##bb <- bb <- b[b$grossAreaInAcres>=1000,]
+#bb<-b
+#bb<- bb[!is.na(as.numeric(bb$infestedAreaInAcres)),]
+#bb <- bb[bb$infestedAreaInAcres <= bb$grossAreaInAcres,]
+#summary(as.numeric(bb$infestedAreaInAcres))
+#summary(as.factor(bb$AbundanceText))
+#summary(as.factor(bb$coverORD)) ## 70 1s, 47 2s, 32 3s
+### Mostly scattered
+#length(bb$count[is.na(bb$coverORD) & is.na(bb$textORD)])
+#
+#summary(as.factor(bb$percentcover))
+#summary(as.factor(bb$canopycover[is.na(bb$percentcover)]))
+#summary(as.factor(bb$density[is.na(bb$percentcover) & is.na(bb$canopycover)]))
+#summary(as.factor(bb$AbundanceText))
+#33 ## Dense monoculture
+#62 ## Scattered Dense Patches
+#131## Scattered Plants
+#29 ## Single plants
+#19 ## NULL
+#
+#b <- edd[edd$ReporterFULLName == "Abbie Moleta",]
+#
+### Mostly Scattered or Scattered Dense Patches
+### are the area estimates of abundance inflated?
+### are the text estimates of aundance deflates? I don't think so?
+#
+#1#trace
+#2#low
+#2#mod
+##high
+#b <- edd2[edd2$ReporterFName == "B R" & edd2$ReporterLName == "Kirk",]
+#bb <- b[b$grossAreaInAcres>=1000,]
+#bb<- bb[!is.na(bb$ReporterFName),]
+#cbind(bb$Infestedarea,bb$Infestedareaunits,bb$infestedAreaInAcres,bb$Grossarea,bb$Grossareaunits, bb$grossAreaInAcres)
+#
+#goodreps <- c("Victor Maddox", "Alexander Levy", "United States Forest Service Intermountain System",
+#              "Mark Twain National Forest", "Rick Iverson", "Robin Mackie", "Thomas Schultz",
+#              "FNAI iMapInvasives", "Joe Gartner")
+#b <- edd[edd$ReporterFULLName %in% goodreps,]
+##b <- b[b$validInfestedArea == 1,]
+#summary(as.factor(b$coverORD))
+#summary(as.factor(b$countORD))
+#summary(as.factor(b$textORD))
+#b <- b[b$grossAreaInAcres >= 1000,]
+#
+#summary(as.factor(edd$coverORD), as.factor(edd$countORD))
+#summary(as.factor(edd$areaORD[edd$validInfestedArea == 1 &  edd$countORD == 4]))
+#summary(as.factor(edd$areaORD[edd$validInfestedArea == 1 &  edd$countORD == 3]))
+#
+#par(mfrow = c(4,1), mar= c(5,4,4,2)-2)
+#hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==1]), breaks=15, xlim=c(-15,5), main="count class 1", xlab="log(area)")
+#hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==2]), breaks=20, xlim=c(-15,5), main="count class 2", xlab="log(area)")
+#hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==3]), breaks=20, xlim=c(-15,5), main="count class 3", xlab="log(area)")
+#hist(log(edd$infestedAreaInAcres[edd$validInfestedArea == 1 & edd$countORD ==4]), breaks=20, xlim=c(-15,5), main="count class 4", xlab="log(area)")
+#
+#dev.off()
+#hist(as.numeric(edd$countORD[is.na(edd$coverORD)]))
+#hist(as.numeric(edd$textORD[!is.na(edd$countORD)]))
+#hist(as.numeric(edd$countORD[!is.na(edd$textORD)]))
+#
+#plot(as.factor(edd$countORD)~as.factor(edd$textORD))
+#hist(as.numeric(edd$textORD))
+#hist(as.numeric(edd$coverORD[!is.na(edd$textORD)]))
+#hist(as.numeric(edd$coverORD))
+#
+#wtf <- edd[edd$countORD == 3 & edd$textORD==1,]
+#wtf <- wtf[!is.na(wtf$ScientificName),]
+#wtf<- data.frame(cbind(wtf$count,wtf$AbundanceText), stringsAsFactors=F)
+#colnames(wtf) <- c("count", "text")
+#wtf <- wtf[!is.na(wtf$count) & !is.na(wtf$text),]
+#summary(as.factor((wtf$count)))
+#summary(as.factor(as.numeric(wtf$count)))
+#
+#hc <- edd[edd$countORD == 4,]
+#hc <- hc[!is.na(hc$ScientificName),]
+#summary(as.factor(edd$cover))
+#
+#edd$ordB[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
+#edd$ordB[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
+#
+#plot(as.factor(edd$ordB[is.na(edd$coverORD)]), log(edd$infestedAreaInAcres[is.na(edd$coverORD)]))
+#abline(h=log(10/43560))
+#abline(h=log(500/43560))
+#abline(h=log(.5))
+# 
+#
+#edd$ordB[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)] 
+#plot(as.factor(edd$ordB), log(edd$infestedAreaInAcres))
+#plot(as.factor(edd$textORD), log(edd$infestedAreaInAcres))
+#
+#
+### most have largeish areas ( class 3 and 4, but i think that could be because area was classed well?)
+### >75% below .5 acres, max=219 acres
+### 80549
+### most counts have NA for area
+#
+#par(mfrow=c(1,2))
+#hist(edd$countORD[!is.na(edd$areaORD)], main="!is.na(area)", xlab="count")
+#hist(edd$countORD[is.na(edd$areaORD)], main="is.na(area)", xlab="count")
+#
+#edd$ORD1[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
+#edd$ORD1[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
+#edd$ORD1[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
+#edd$ORD1[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
+#
+#edd$ORD2[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
+#edd$ORD2[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
+#edd$ORD2[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
+#edd$ORD2[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
+#
+#edd$ORD3[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
+#edd$ORD3[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
+#edd$ORD3[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
+#edd$ORD3[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
+#
+#edd$ORD4[!is.na(edd$textORD)] <- edd$textORD[!is.na(edd$textORD)] 
+#edd$ORD4[!is.na(edd$coverORD)] <- edd$coverORD[!is.na(edd$coverORD)]
+#edd$ORD4[!is.na(edd$areaORD)] <- edd$areaORD[!is.na(edd$areaORD)] 
+#edd$ORD4[!is.na(edd$countORD)] <- edd$countORD[!is.na(edd$countORD)]
+#
+#
+#par(mfrow=c(2,2))
+#hist(edd$ORD1, main = "text>cover>count>area")
+#hist(edd$ORD2, main = "cover>text>count>area")
+#hist(edd$ORD3, main = "cover>count>text>area")
+#hist(edd$ORD4, main = "cover>count>area>text")
+#
+#
+#dev.off()
+#plot(log(edd$infestedAreaInAcres[is.na(edd$cover)])~as.factor(edd$countORD[is.na(edd$cover)]))
+#abline(h=log(10/43560))
+#abline(h=log(200/43560))
+#abline(h=log(.25))
+#
+#
+#
+#
+#length(edd$coverN[edd$coverN<=0.01 & !is.na(edd$coverN)]) #269
+#length(edd$coverN[edd$coverN>0.01 & edd$coverN<1 & !is.na(edd$coverN)]) #24101, but not really relevant
+#length(edd$coverN[edd$coverN==1 & !is.na(edd$coverN)]) #1783
+#
+#par(mfrow=c(1,2))
+#hist(edd$coverORD[!(edd$coverN<=1) | is.na(edd$coverN) ])
+#hist(edd$coverORD)
+#2000/600000
+#b <- edd[(edd$coverN<=0.01)& !is.na(edd$coverN),]
+#b <- b[!is.na(b$USDAcode),]
+#
+#
+#summary(as.factor(b$USDAcode))
+#head(ed.listing)
+##length(ed.listing$X[ed.listing$useable == 1 & ed.listing$])
+#
+head(edd)
+edd$test <- NULL
