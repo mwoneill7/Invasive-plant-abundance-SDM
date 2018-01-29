@@ -835,3 +835,185 @@ ed.listing <- read.table("species_list_12_18_17.csv", header = T, sep = ",", quo
                          comment.char= "", stringsAsFactors = F, strip.white = T)
 head(ed.listing)
 
+##############################################################################
+### WITHOUT BUFFER AROUND SHAPEFILE, WITH # BINS
+library(rgdal);library(raster)
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+## read in EDDMapS dataset, thinned to 5km climate grid cells (1 point per species per cell)
+ed.listing <- read.table("species_list_12_18_17.csv", header = T, sep = ",", quote= "\"", 
+                         comment.char= "", stringsAsFactors = F, strip.white = T)
+ed.listing$rarest.binc <- NULL
+
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_1_25_2017.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+edd$abundance <- ceiling(edd$med)
+edd <- edd[edd$species %in% ed.listing$usda.code[ed.listing$useable>0],]
+coordinates(edd) <- c(5,4)
+
+bias <- stack("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/us_roads.asc",
+              "C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/us_pop.asc")
+bios <- stack("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/bio_5.asc",
+              "C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/bio_6.asc")
+extent(bias)
+extent(bios)
+
+#proj4string(bios) <- proj4string(bias)
+proj4string(edd) <- proj4string(bias) #<- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
+
+#edd <- spTransform(edd, proj4string(bio)) ## project point data to proj4string of climate data
+ext <- extract(bias, edd) ## extract climate values to points
+ext2 <- extract(bios, edd) 
+edd <- cbind(as.data.frame(edd),ext,ext2) ## append extracted climate data to point data
+#edd[,(ncol(edd)-5):(ncol(edd)-2)] <- edd[,(ncol(edd)-5):(ncol(edd)-2)]/10
+head(edd)
+#edd$check <- edd$us_pop*edd$us_roads*edd$ext2
+
+summary(edd$us_pop)   ## 2829
+summary(edd$us_roads) ## 1300
+summary(edd$bio_5)    ## 0
+summary(edd$check)    ## 2829
+#plot(bias$us_pop)
+edd <- edd[!is.na(edd$bio_5),]
+nrow(edd[is.na(edd$us_pop) & is.na(edd$us_roads),])
+nrow(edd[!is.na(edd$us_roads) & is.na(edd$us_pop),])
+nrow(edd[!is.na(edd$us_pop) & is.na(edd$us_roads),])
+## 1300 points missing from roads, additional 1529 missed from pop
+
+lakepts <- edd[(!is.na(edd$us_roads)) & (is.na(edd$us_pop)) & (!is.na(edd$ext2)),]
+head(lakepts)
+coordinates(lakepts) <- c(5,4)
+proj4string(lakepts) <- proj4string(bias)
+plot(bias$us_pop)
+plot(lakepts, col="blue", pch=20, add=T)
+
+biasD <- cbind(as.data.frame(bias$us_roads), as.data.frame(bias$us_pop))
+summary(biasD$us_roads)
+summary(biasD$us_pop)
+biasD$us_pop[is.na(biasD$us_pop) & !is.na(biasD$us_roads)] <- 0
+pop <- raster(nrows=nrow(bias), ncols=ncol(bias), ext=extent(bias), crs=crs(bias), vals=biasD$us_pop )
+writeRaster(pop,"C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/us_pop_NA_to_0.ascii", format="ascii", prj=T)
+
+edd <- edd[!is.na(edd$us_roads),] ##112048 to 110748
+
+ed.listing <- ed.listing[ed.listing$useable>0,]
+sp <- ed.listing$usda.code[ed.listing$useable>0]
+
+for (i in 1:length(sp)){
+  edd.sp <- edd[edd$species == sp[i],]
+  ed.listing$no.1a[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 1])
+  ed.listing$no.2a[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 2])
+  ed.listing$no.3a[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 3])
+  ed.listing$no.pts[ed.listing$usda.code == sp[i]] <- nrow(edd.sp)
+  
+  if(length(unique(edd.sp$abundance))==3){
+    ed.listing$rarest.bina[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+    #ed.listing$second.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+  } else {
+    ed.listing$rarest.bina[ed.listing$usda.code == sp[i]] <- 0
+  }
+  
+  print(i)
+}
+
+nrow(ed.listing[ed.listing$rarest.bina >= 10,])
+hist(ed.listing$no.pts[ed.listing$rarest.bina >= 10], breaks=50)
+hist(ed.listing$no.pts[ed.listing$rarest.bin < 10], breaks=50)
+#ed.listing[ed.listing$rarest.bin ]
+
+look <- ed.listing[ed.listing$rarest.bina<10 & ed.listing$rarest.bin>=10,]
+look[!is.na(look$scientific.name),]
+
+par(mfrow=c(3,1))
+hist((ed.listing$no.1a/(ed.listing$no.1+ed.listing$no.2)), breaks=10,xlim=c(0,40))
+hist(((ed.listing$no.2a)/ed.listing$no.3), breaks=70,xlim=c(0,40))
+hist(((ed.listing$no.3a)/ed.listing$no.4), breaks=5,xlim=c(0,40))
+
+ed.listing <- ed.listing[ed.listing$rarest.bina >= 10,]
+write.csv(ed.listing,"speciesList_1_25_2018.csv",row.names=F)
+edd <- edd[edd$species %in% ed.listing$usda.code, ] ## 99692
+write.csv(edd,"final_dataset_1_25_2018.csv",row.names=F)
+#ed.listing$rarest.bin[is.na(ed.listing$rarest.bin)] <- 0
+#ed.listing$rarest.binc <- NULL
+#ed.listing$rarest.binb[is.na(ed.listing$rarest.binb)] <- 0
+#summary(ed.listing$rarest.binb)
+
+sp <- ordsums$species.code
+for (i in 1:length(sp)){
+  ed.listing$kappa[ed.listing$usda.code == sp[i]] <- ordsums$kappa[ordsums$species.code == sp[i]]
+  print(i)
+} 
+
+ed.listing <- ed.listing[!is.na(ed.listing$kappa),]
+summary(ed.listing$kappa)
+#ed.listing <- ed.listing[!is.na(ed.listing$usda.code),]
+
+#ed.listing[ed.listing$no]
+lost <- ed.listing[ed.listing$rarest.bin >= 10 & ed.listing$rarest.binb <10,]
+#lost <- lost[!is.na(lost$usda.code),]
+
+#ed.listing$loss1 <- ed.listing$no.1 - ed.listing$no.1b
+#ed.listing$loss2 <- ed.listing$no.2 - ed.listing$no.2b
+#ed.listing$loss3 <- ed.listing$no.3 - ed.listing$no.3b
+#ed.listing$loss4 <- ed.listing$no.4 - ed.listing$no.4b
+
+#summary(ed.listing$loss1)
+#summary(ed.listing$loss2)
+#summary(ed.listing$loss3)
+#summary(ed.listing$loss4)
+
+ed.listing$total <- ed.listing$no.1 + ed.listing$no.2 + ed.listing$no.3 + ed.listing$no.4
+ed.listing$totalb <- ed.listing$no.1b + ed.listing$no.2b + ed.listing$no.3b + ed.listing$no.4b
+ed.listing$total.loss <- ed.listing$total - ed.listing$totalb
+
+hist(ed.listing$total[ed.listing$total <100], breaks=10)
+
+ed.listing2 <- ed.listing[ed.listing$rarest.bin >= 10,]
+#summary(ed.listing2$rarest.binb)
+hist(ed.listing2$total[ed.listing2$total <100], breaks=10)
+
+
+ed.listing3 <- ed.listing2[ed.listing2$rarest.binb >= 10,]
+
+ed.listing3$loss.prop <- ed.listing3$total.loss/ed.listing3$total
+
+summary(ed.listing3$loss.prop)
+hist(ed.listing3$loss.prop, breaks=50)
+
+summary(ed.listing3$total.loss)
+hist(ed.listing3$total.loss, breaks=50)
+hist(ed.listing3$totalb)
+
+
+ed.prob <- ed.listing3[ed.listing3$loss.prop > 0.05,]
+ed.prob
+
+sum(ed.listing3$total.loss)
+
+ed3 <- edd[edd$species %in% ed.listing3$usda.code,]
+758/86307
+
+#writeRaster(bio.i$bio_2, "cropped_raster.asc", format="ascii", prj=T)
+ed.listing3$loss1 <- ed.listing3$no.1 - ed.listing3$no.1b
+ed.listing3$loss2 <- ed.listing3$no.2 - ed.listing3$no.2b
+ed.listing3$loss3 <- ed.listing3$no.3 - ed.listing3$no.3b
+ed.listing3$loss4 <- ed.listing3$no.4 - ed.listing3$no.4b
+
+#summary(ed.listing$loss1)
+#summary(ed.listing$loss2)
+#summary(ed.listing$loss3)
+#summary(ed.listing$loss4)
+
+ed.listing3$loss1P <- ed.listing3$loss1/ed.listing3$no.1 
+ed.listing3$loss2P <- ed.listing3$loss2/ed.listing3$no.2
+ed.listing3$loss3P <- ed.listing3$loss3/ed.listing3$no.3
+ed.listing3$loss4P <- ed.listing3$loss4/ed.listing3$no.4
+
+
+ed.listing3[ed.listing3$loss1P > 0.05 & ed.listing3$loss.prop <0.05,]
+ed.listing3[ed.listing3$loss2P > 0.05 & ed.listing3$loss.prop <0.05,]
+ed.listing3[ed.listing3$loss4P > 0.05 & ed.listing3$loss.prop <0.05,]
+
+## write out bio cropped to states
+
+edd.list <- read.table("SpeciesList_11_20_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+
