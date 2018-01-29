@@ -51,21 +51,25 @@ rm(var.sets, combo.j, combos.i, i, j, var.list) ## garbage cleaning
 
 setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
 ## read in EDDMapS dataset, thinned to 5km climate grid cells (1 point per species per cell)
-edd <- read.table("edd_final_12_18_17.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("final_dataset_1_25_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
-edd <- read.table("C://Users/mwone/Documents/EDDMapS data/eddmaps_thinned_12_21_2017.csv", header = T, sep = ",", quote= "\"", 
-                  comment.char= "", stringsAsFactors = F, strip.white = T)
-edd$abundance <- ceiling(edd$best)
+edd$bio_5<-NULL;edd$bio_6<-NULL
 
+#edd <- read.table("C://Users/mwone/Documents/EDDMapS data/eddmaps_thinned_12_21_2017.csv", header = T, sep = ",", quote= "\"", 
+#                  comment.char= "", stringsAsFactors = F, strip.white = T)
+#edd$abundance <- ceiling(edd$best)
 ##### combine 1s and 2s
-edd$abundance[edd$abundance==1]<-2
-hist(edd$abundance)
-edd <- edd[edd$species %in% species.list$usda.code,]
-length(unique(edd$species))
+##edd$abundance[edd$abundance==1]<-2
+#hist(edd$abundance)
+#edd <- edd[edd$species %in% species.list$usda.code,]
+#length(unique(edd$species))
 head(edd)
+#prob <- edd[2932,]
+#proj4string(prob) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 
-edd$max<-NULL;edd$med<-NULL;edd$best<-NULL;edd$no.pts<-NULL;edd$no.best<-NULL;head(edd)
-coordinates(edd) <- c(4,3)
+
+#edd$max<-NULL;edd$med<-NULL;edd$best<-NULL;edd$no.pts<-NULL;edd$no.best<-NULL;head(edd)
+coordinates(edd) <- c(5,4)
 proj4string(edd) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0") ## from transformations during data prep
 
 #hist(edd$abundance)
@@ -101,6 +105,7 @@ pS <- -99
 pI <- -99
 null <- -99
 kappa <- -99
+kappaP <- -99
 kappaW <- -99
 regS <- -99
 regI <-99
@@ -117,23 +122,23 @@ regI <-99
 #c15   <- -999
 #c15.2 <- -999
 
-ordsums <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c.up,c.down,pS,pI,null,kappa,kappaW,regS,regI, stringsAsFactors = F)
+ordsums <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c.up,c.down,pS,pI,null,kappa,kappaP,kappaW,regS,regI, stringsAsFactors = F)
 #ordsums <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c2,c2.2,c5,c5.2,c6,c6.2,c8,c8.2,c12,c12.2,c15,c15.2, stringsAsFactors = F)
 #ordsums <- data.frame(species.code,aic,no.pts,no.terms,no.vars,p05s,p10s,p05i,p10i,formu,stringsAsFactors = F)
 sp.list <- unique(edd$species)
 
-for(s in 178:length(sp.list)){ ## Loop through species list
+for(s in 1:length(sp.list)){ ## Loop through species list
   
   species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
-  
-  if(#species.code != "ACJA" & species.code !="HIAU" & species.code != "TRFL" &
-     species.code != "LIVU" & species.code != "COCO3" & species.code != "CYSC4" &
-     species.code != "ECRU2" & species.code != "MISA" & species.code != "VIVI" &
-     species.code != "SCBA" & species.code != "ELRE4" & species.code != "SAKA" &
-     species.code != "CYRO8") {
+
+  if(species.code !="HIAU" &
+     species.code != "CYSC4" &
+     species.code != "VIVI" &
+     species.code != "CICA" & species.code != "SEPU7" & species.code != "MESA" &
+     species.code != "RUAC3") {
     species <- edd[edd$species == species.code,]## subset to species of the iteration
     #species <- data.frame(cbind(species$abundance, species$latitude, species$longitude)) ## select only variables needed to save computation time
-    species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3,4))
+    species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3))
     
     #par(mfrow=c(1,1)) ## clean up plot space from past iterations
     #jpeg(paste("histograms", paste(species.code, "jpg", sep="."), sep="/" )) ## output file name for histogram of abun
@@ -300,11 +305,14 @@ for(s in 178:length(sp.list)){ ## Loop through species list
     #pm$observed <- as.numeric(pm$observed)
     #pm$predicted <- as.numeric(pm$predicted)
     #cor(as.numeric(as.character(pm$observed)),as.numeric(as.character(pm$predicted)),method="spearman")
-    levels(pm$observed); levels(pm$predicted)
+    #levels(pm$observed); levels(pm$predicted)
     
     kappa <- kappa2(pm)
-    kappaW <- kappa2(pm, "equal")  
+    kappaP <- kappa$p.value
     kappa <- kappa$value
+    
+      
+    kappaW <- kappa2(pm, "equal")  
     kappaW <- kappaW$value
     
     reg <- summary(glm(as.numeric(predicted)~as.numeric(observed), data=pm))$coefficients
@@ -335,7 +343,7 @@ for(s in 178:length(sp.list)){ ## Loop through species list
    # confus <- data.frame(one,two,thr,fou)
     ###############################
     #ordsums.i <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c2,c2.2,c5,c5.2,c6,c6.2,c8,c8.2,c12,c12.2,c15,c15.2,kappa,kappaW,regS,regI,p, stringsAsFactors = F)
-    ordsums.i <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c.up,c.down,pS,pI,null,kappa,kappaW,regS,regI, stringsAsFactors = F)
+    ordsums.i <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c.up,c.down,pS,pI,null,kappa,kappaP,kappaW,regS,regI, stringsAsFactors = F)
     
     ordsums <- rbind(ordsums,ordsums.i) 
     print(s)
@@ -343,6 +351,20 @@ for(s in 178:length(sp.list)){ ## Loop through species list
 }
 
 ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
+
+
+hist(ordsums$kappa)
+length(ordsums$species.code[ordsums$kappaP <=0.05 & !is.na(ordsums$kappaP)]) ##108
+length(ordsums$species.code[ordsums$kappaP <=0.01 & !is.na(ordsums$kappaP)]) ##100
+par(mfrow=c(2,2))
+hist(ordsums$kappa[ordsums$kappaP <=0.05 & !is.na(ordsums$kappaP)], breaks=40)
+hist(ordsums$kappa[ordsums$kappaP <=0.01 & !is.na(ordsums$kappaP)], breaks=40)
+hist(ordsums$kappaW[ordsums$kappaP <=0.05 & !is.na(ordsums$kappaP)], breaks=40)
+hist(ordsums$kappaW[ordsums$kappaP <=0.01 & !is.na(ordsums$kappaP)], breaks=40)
+
+#hist(log(ordsums$kappaW[ordsums$kappaP <=0.05 & !is.na(ordsums$kappaP)]))
+
+
 ## 11:55-12:45 for 78
 #hist(ordsums$p10s/(ordsums$no.terms-3),breaks=50)
 #plot(ordsums$p10s/(ordsums$no.terms-3)~ordsums$no.pts)
@@ -354,7 +376,7 @@ nrow(ordsums[ordsums$kappaW>.2,]) ##63
 nrow(ordsums[ordsums$kappa>.2,])  ##54
 summary()
 
-write.csv(ordsums,"ordsums1_22THREEBINS.csv",row.names=F)
+write.csv(ordsums,"ordsums1_26THREEBINS.csv",row.names=F)
 
 summary(ordsums$kappa)
 summary(ordsums$null)
