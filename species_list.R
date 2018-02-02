@@ -864,36 +864,37 @@ proj4string(edd) <- proj4string(bias) #<- proj4string(raster("C:/Users/mwone/Doc
 ext <- extract(bias, edd) ## extract climate values to points
 ext2 <- extract(bios, edd) 
 edd <- cbind(as.data.frame(edd),ext,ext2) ## append extracted climate data to point data
-#edd[,(ncol(edd)-5):(ncol(edd)-2)] <- edd[,(ncol(edd)-5):(ncol(edd)-2)]/10
+## edd[,(ncol(edd)-5):(ncol(edd)-2)] <- edd[,(ncol(edd)-5):(ncol(edd)-2)]/10
 head(edd)
-#edd$check <- edd$us_pop*edd$us_roads*edd$ext2
+## edd$check <- edd$us_pop*edd$us_roads*edd$ext2
 
-summary(edd$us_pop)   ## 2829
-summary(edd$us_roads) ## 1300
-summary(edd$bio_5)    ## 0
-summary(edd$check)    ## 2829
-#plot(bias$us_pop)
+# summary(edd$us_pop)   ## 2829
+# summary(edd$us_roads) ## 1300
+# summary(edd$bio_5)    ## 0
+# summary(edd$check)    ## 2829
+# #plot(bias$us_pop)
+# edd <- edd[!is.na(edd$bio_5),]
+# nrow(edd[is.na(edd$us_pop) & is.na(edd$us_roads),])
+# nrow(edd[!is.na(edd$us_roads) & is.na(edd$us_pop),])
+# nrow(edd[!is.na(edd$us_pop) & is.na(edd$us_roads),])
+# ## 1300 points missing from roads, additional 1529 missed from pop
+# 
+# lakepts <- edd[(!is.na(edd$us_roads)) & (is.na(edd$us_pop)) & (!is.na(edd$ext2)),]
+# head(lakepts)
+# coordinates(lakepts) <- c(5,4)
+# proj4string(lakepts) <- proj4string(bias)
+# plot(bias$us_pop)
+# plot(lakepts, col="blue", pch=20, add=T)
+# 
+# biasD <- cbind(as.data.frame(bias$us_roads), as.data.frame(bias$us_pop))
+# summary(biasD$us_roads)
+# summary(biasD$us_pop)
+# biasD$us_pop[is.na(biasD$us_pop) & !is.na(biasD$us_roads)] <- 0
+# pop <- raster(nrows=nrow(bias), ncols=ncol(bias), ext=extent(bias), crs=crs(bias), vals=biasD$us_pop )
+# writeRaster(pop,"C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/us_pop_NA_to_0.ascii", format="ascii", prj=T)
+
 edd <- edd[!is.na(edd$bio_5),]
-nrow(edd[is.na(edd$us_pop) & is.na(edd$us_roads),])
-nrow(edd[!is.na(edd$us_roads) & is.na(edd$us_pop),])
-nrow(edd[!is.na(edd$us_pop) & is.na(edd$us_roads),])
-## 1300 points missing from roads, additional 1529 missed from pop
-
-lakepts <- edd[(!is.na(edd$us_roads)) & (is.na(edd$us_pop)) & (!is.na(edd$ext2)),]
-head(lakepts)
-coordinates(lakepts) <- c(5,4)
-proj4string(lakepts) <- proj4string(bias)
-plot(bias$us_pop)
-plot(lakepts, col="blue", pch=20, add=T)
-
-biasD <- cbind(as.data.frame(bias$us_roads), as.data.frame(bias$us_pop))
-summary(biasD$us_roads)
-summary(biasD$us_pop)
-biasD$us_pop[is.na(biasD$us_pop) & !is.na(biasD$us_roads)] <- 0
-pop <- raster(nrows=nrow(bias), ncols=ncol(bias), ext=extent(bias), crs=crs(bias), vals=biasD$us_pop )
-writeRaster(pop,"C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs/us_pop_NA_to_0.ascii", format="ascii", prj=T)
-
-edd <- edd[!is.na(edd$us_roads),] ##112048 to 110748
+edd2 <- edd[!is.na(edd$us_roads),] ##112048 to 109219
 
 ed.listing <- ed.listing[ed.listing$useable>0,]
 sp <- ed.listing$usda.code[ed.listing$useable>0]
@@ -912,8 +913,33 @@ for (i in 1:length(sp)){
     ed.listing$rarest.bina[ed.listing$usda.code == sp[i]] <- 0
   }
   
+  edd.sp <- edd2[edd2$species == sp[i],]
+   
+  ed.listing$no.1b[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 1])
+  ed.listing$no.2b[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 2])
+  ed.listing$no.3b[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 3])
+  ed.listing$no.ptsb[ed.listing$usda.code == sp[i]] <- nrow(edd.sp)
+  
+  if(length(unique(edd.sp$abundance))==3){
+    ed.listing$rarest.binb[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+    #ed.listing$second.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+  } else {
+    ed.listing$rarest.binb[ed.listing$usda.code == sp[i]] <- 0
+  }
+  
+  
   print(i)
 }
+
+species.codes <- ed.listing$usda.code[ed.listing$rarest.binb >= 10]
+write.csv(species.codes, "species.codes.1.31.18.csv", row.names=F)
+
+ed.listing <- ed.listing[ed.listing$rarest.bina >= 10,]
+length(ed.listing$usda.code[ed.listing$rarest.binb < 10])
+length(ed.listing$usda.code[ed.listing$rarest.binb >= 10]) ##156
+hist(ed.listing$no.ptsb/ed.listing$no.pts, breaks = 50)
+
+
 
 nrow(ed.listing[ed.listing$rarest.bina >= 10,])
 hist(ed.listing$no.pts[ed.listing$rarest.bina >= 10], breaks=50)
@@ -992,11 +1018,12 @@ sum(ed.listing3$total.loss)
 ed3 <- edd[edd$species %in% ed.listing3$usda.code,]
 758/86307
 
+ed.listing3 <- ed.listing[ed.listing$rarest.binb >= 10,]
 #writeRaster(bio.i$bio_2, "cropped_raster.asc", format="ascii", prj=T)
-ed.listing3$loss1 <- ed.listing3$no.1 - ed.listing3$no.1b
-ed.listing3$loss2 <- ed.listing3$no.2 - ed.listing3$no.2b
-ed.listing3$loss3 <- ed.listing3$no.3 - ed.listing3$no.3b
-ed.listing3$loss4 <- ed.listing3$no.4 - ed.listing3$no.4b
+ed.listing3$loss1 <- ed.listing3$no.1a - ed.listing3$no.1b
+ed.listing3$loss2 <- ed.listing3$no.2a - ed.listing3$no.2b
+ed.listing3$loss3 <- ed.listing3$no.3a - ed.listing3$no.3b
+#ed.listing3$loss4 <- ed.listing3$no.4 - ed.listing3$no.4b
 
 #summary(ed.listing$loss1)
 #summary(ed.listing$loss2)
@@ -1006,10 +1033,19 @@ ed.listing3$loss4 <- ed.listing3$no.4 - ed.listing3$no.4b
 ed.listing3$loss1P <- ed.listing3$loss1/ed.listing3$no.1 
 ed.listing3$loss2P <- ed.listing3$loss2/ed.listing3$no.2
 ed.listing3$loss3P <- ed.listing3$loss3/ed.listing3$no.3
-ed.listing3$loss4P <- ed.listing3$loss4/ed.listing3$no.4
+#ed.listing3$loss4P <- ed.listing3$loss4/ed.listing3$no.4
 
 
-ed.listing3[ed.listing3$loss1P > 0.05 & ed.listing3$loss.prop <0.05,]
+length(ed.listing3$usda.code[ed.listing3$no.ptsb/ed.listing3$no.pts < 0.95])
+length(ed.listing3$usda.code[ed.listing3$loss1P > 0.05 | ed.listing3$loss2P > 0.05 |ed.listing3$loss3P >0.05])
+              #& ed.listing3$loss.prop <0.05,]
+length(ed.listing3$usda.code[ed.listing3$no.ptsb/ed.listing3$no.pts < 0.90])
+length(ed.listing3$usda.code[ed.listing3$loss1P > 0.1 | ed.listing3$loss2P > 0.1 |ed.listing3$loss3P >0.1])
+
+length(ed.listing3$usda.code[ed.listing3$no.ptsb/ed.listing3$no.pts < 0.80])
+length(ed.listing3$usda.code[ed.listing3$loss1P > 0.2 | ed.listing3$loss2P > 0.2 |ed.listing3$loss3P >0.2])
+
+
 ed.listing3[ed.listing3$loss2P > 0.05 & ed.listing3$loss.prop <0.05,]
 ed.listing3[ed.listing3$loss4P > 0.05 & ed.listing3$loss.prop <0.05,]
 
