@@ -3,7 +3,13 @@
 ##   created 1/31/2018
 #    last modified: 2/01/2018
 
+library(rgdal)
+library(raster)
+
 setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+
+extentShape = readOGR(dsn = "ArcFiles_2_2_2018/us_shape", layer = "us_shape")
+#extentShape2 <- spTransform(extentShape, "+init=epsg:4326")
 
 codes <- read.table("species.codes.1.31.18.csv", header=T, sep=",")
 
@@ -11,7 +17,6 @@ hotspots <- read.table("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_o
                          header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 head(hotspots)
 hotspots <- hotspots[hotspots$PLANT_CODE %in% codes$x,]
-
 
 ### append new occurencces to the hotspots dataset
 edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/EDDMaps_plants_10_18_2016.csv", header = T, sep = ",", quote= "\"", 
@@ -38,6 +43,7 @@ for (sp in spp){
   edd$USDAcode[edd$ScientificName == sp] <- edd.list$USDA_code[edd.list$eddmap_species == sp]
   print(sp)  
 }
+
 edd <- edd[!is.na(edd$USDAcode),] 
 
 
@@ -66,7 +72,6 @@ edd$DATA_SOURCE <- as.character(edd$DATA_SOURCE)
 edd$LONGITUDE_DECIMAL[edd$LONGITUDE_DECIMAL > 65 & edd$LONGITUDE_DECIMAL < 130 & edd$Latitude_Decimal >20 & edd$Latitude_Decimal <55] <-
   -1*edd$LONGITUDE_DECIMAL[edd$LONGITUDE_DECIMAL > 65 & edd$LONGITUDE_DECIMAL < 130 & edd$Latitude_Decimal >20 & edd$Latitude_Decimal <55] 
 
-library(rgdal) ## for spatial data
 edd <- edd[edd$LONGITUDE_DECIMAL < -65 & edd$LONGITUDE_DECIMAL > -130 & edd$LATITUDE_DECIMAL > 20 & edd$LATITUDE_DECIMAL <55, ]
 ## removes records I know that I won't use (no coords, coords way outside US, not absence data or valid infested area data)
 
@@ -92,6 +97,11 @@ edd$DATA_SOURCE <- as.character(edd$DATA_SOURCE)
 full_occurences <- rbind(edd,hotspots)
 full_occurences <- full_occurences[order(full_occurences$PLANT_CODE),]
 
+coordinates(full_occurences) <- c(2,3)
+proj4string(full_occurences) <- CRS("+init=epsg:4326")
+full_occurences <- spTransform(full_occurences, proj4string(extentShape))
+full_occurences <- full_occurences[extentShape, ] ## 1454711 -- 1452468
+full_occurences <- as.data.frame(full_occurences)
 
 ### FULL ABUNDANCE BIAS DATASET 
 edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_prepped_1_25_2018.csv", header = T, sep = ",", quote= "\"", 
@@ -100,6 +110,15 @@ edd <- edd[edd$USDAcode %in% codes$x,]
 abun_occurences <- data.frame(cbind(edd$USDAcode,edd$Longitude_Decimal,edd$Latitude_Decimal,rep("EDDMaps2016", NROW(edd))), stringsAsFactors=F)
 colnames(abun_occurences) <- colnames(hotspots)
 abun_occurences <- abun_occurences[order(abun_occurences$PLANT_CODE),]
+abun_occurences$LONGITUDE_DECIMAL <- as.numeric(abun_occurences$LONGITUDE_DECIMAL)
+abun_occurences$LATITUDE_DECIMAL <- as.numeric(abun_occurences$LATITUDE_DECIMAL)
+
+coordinates(abun_occurences) <- c(2,3)
+proj4string(abun_occurences) <- CRS("+init=epsg:4326")
+abun_occurences <- spTransform(abun_occurences, proj4string(extentShape))
+abun_occurences <- abun_occurences[extentShape, ]  
+abun_occurences <- as.data.frame(abun_occurences)
+
 
 ### ABUNDANCE DATASET FOR MODELLING
 edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_1_25_2017.csv", header = T, sep = ",", quote= "\"", 
@@ -108,9 +127,123 @@ edd <- edd[edd$species %in% codes$x,]
 abun_modeling <- data.frame(cbind(edd$species,edd$longitude,edd$latitude,rep("EDDMaps2016", NROW(edd))), stringsAsFactors=F)
 colnames(abun_modeling) <- colnames(hotspots)
 abun_modeling <- abun_modeling[order(abun_modeling$PLANT_CODE),]
+abun_modeling$LONGITUDE_DECIMAL <- as.numeric(abun_modeling$LONGITUDE_DECIMAL)
+abun_modeling$LATITUDE_DECIMAL <- as.numeric(abun_modeling$LATITUDE_DECIMAL)
 
-dir.create("MaxEntFiles")
+coordinates(abun_modeling) <- c(2,3)
+proj4string(abun_modeling) <- proj4string(extentShape)
+abun_modeling <- abun_modeling[extentShape, ]  
+abun_modeling <- as.data.frame(abun_modeling)
+
 write.csv(full_occurences, "MaxEntFiles/full_bias_pts.csv", row.names=F)
 write.csv(abun_occurences, "MaxEntFiles/Abun_bias_pts.csv", row.names=F)
-write.csv(full_modeling,  "MaxEntFiles/full_model_pts.csv", row.names=F)
 write.csv(abun_modeling,  "MaxEntFiles/Abun_model_pts.csv", row.names=F)
+
+rm(full_occurences, abun_occurences, abun_modeling, biasD, codes, full_occurence, hotspots, bias, extentShape, pop, roads, states, spp)
+
+
+###### ABUNDANCE MODELING DATASET ######################
+
+edd <- full_occurences
+coordinates(edd) <- c(3,4) ## specifies long, lat
+
+proj4string(edd) <- proj4string(extentShape)
+
+## read in fishnet (square polygons corresponding to grid cells)
+fishnet <- readOGR(dsn = "ArcFiles_2_2_2018/fishnet", layer = "fishnet2018")
+
+fishnetD <- data.frame(fishnet) ## make dataframe version to append ID column to
+cellID <- 1:length(fishnetD$Id) ## make list of unique IDs for each row
+fishnetD <- cbind(fishnetD, cellID) ## assign unique ID # to each row
+fishnet <- SpatialPolygonsDataFrame(Sr = fishnet, data = fishnetD) 
+## convert dataframe ba/ck into spatial object, using source spatial object
+
+tab <- over(edd, fishnet) ## overlays points and fishnet squares, yielding rows labeled 
+## by the point id (row.name), with information from the cell
+## that the point falls in
+tab$ptID <- as.numeric(row.names(tab)) ## convert rownames to its own field for easier use
+tab$Id <- NULL ## remove meaningless field (all zeroes)
+head(tab)
+
+edd$id <- row.names(edd)
+edd <- data.frame(merge(edd, tab, by.x = "id", by.y = "ptID", all=F))
+## for each point (row) in the eddmaps database, merge the cellID corresponding to that
+## point from table produced from overlaying the eddmaps points with the fishnet cells
+write.csv(edd, "full_occurence_wgrids.csv",row.names=F)
+edd <- read.table("full_occurence_wgrids.csv", sep=",", header=T, stringsAsFactors = F)
+#colnames(edd) <- c(as.character(edd[1,])
+
+edd$optional <- NULL ## remove meaningless column
+edd <- edd[!is.na(edd$cellID) & !is.na(edd$PLANT_CODE),] ##1452460 to 1452460
+## exclude rows without a usda code or where the point did not fall in a grid cell
+edd$PLANT_CODE <- as.character(edd$PLANT_CODE)
+rm(fishnet,fishnetD,tab,cellID) ## garbage cleaning
+
+#### THIN DATA TO GRID CELL (WITHIN SPECIES)
+PLANT_CODE <- "TEMPLATE"
+LONGITUDE_DECIMAL <- -99
+LATITUDE_DECIMAL <- -99
+DATA_SOURCE <- "TEMPLATE"
+
+edd2 <- data.frame(PLANT_CODE, LONGITUDE_DECIMAL, LATITUDE_DECIMAL, DATA_SOURCE, stringsAsFactors = F)
+
+sp.list <- as.list(as.character(unique(edd$PLANT_CODE)))
+## list of all usda codes
+
+for (i in 1:length(sp.list)){ ## loop through all species
+  spp.i <- edd[edd$PLANT_CODE == sp.list[i],] ## subset data to the species of the iteration
+  cell.ids <- as.list(unique(spp.i$cellID)) ## list all the cells that the species has points in
+  print(paste("species number", i, sep=" ")) ## keep track of species of the iteration
+  for (j in 1:length(cell.ids)){ ## loop through all cells for that species
+    cell.j <- spp.i[spp.i$cellID == cell.ids[j],] ## subset to all points in the cell of the iteration
+    cell.j <- cell.j[!is.na(cell.j$PLANT_CODE),] 
+    
+    PLANT_CODE <- cell.j$PLANT_CODE[1]
+    LONGITUDE_DECIMAL <- mean(cell.j$LONGITUDE_DECIMAL)
+    LATITUDE_DECIMAL <- mean(cell.j$LONGITUDE_DECIMAL)
+    DATA_SOURCE <- cell.j$DATA_SOURCE[1]
+    
+    #keep <- data.frame(species,med,no.pts,no.best,source,latitude,longitude,cellID, stringsAsFactors = F) 
+    keep <- data.frame(PLANT_CODE, LONGITUDE_DECIMAL, LATITUDE_DECIMAL, DATA_SOURCE, stringsAsFactors = F)
+    edd2 <- rbind(edd2, keep) ## append the kept row to the master object
+    #print(j)
+  }
+  print(i)  
+}
+
+head(edd2)
+full_modeling <- edd2[edd2$PLANT_CODE != "TEMPLATE",] ## remove template row
+
+
+
+
+
+write.csv(full_modeling,  "MaxEntFiles/full_model_pts.csv", row.names=F)
+
+
+
+
+###############################################################
+library(raster)
+bias <- stack("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_pop/us_pop/w001001.adf",
+              "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_roads/us_roads/w001001.adf")
+plot(bias)
+proj4string(bias)
+plot(bias$w001001.1) ## pop
+plot(bias$w001001.2) ## roads
+
+biasD <- cbind(as.data.frame(bias$w001001.1), as.data.frame(bias$w001001.2))
+colnames(biasD) <- c("us_pop", "us_roads")
+summary(biasD$us_roads)
+summary(biasD$us_pop)
+biasD$us_pop[is.na(biasD$us_pop) & !is.na(biasD$us_roads)] <- 0
+pop <- raster(nrows=nrow(bias), ncols=ncol(bias), ext=extent(bias), crs=crs(bias), vals=biasD$us_pop )
+roads <- raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_roads/us_roads/w001001.adf")
+
+nrow(pop)==nrow(roads)
+ncol(pop)==ncol(roads)  
+extent(pop)==extent(roads) 
+proj4string(pop)==proj4string(roads) 
+
+writeRaster(pop,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_pop_2_5_2018.ascii", format="ascii", prj=T)
+writeRaster(roads,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_roads_2_5_2018.ascii", format="ascii", prj=T)
