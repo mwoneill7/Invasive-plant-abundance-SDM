@@ -5,8 +5,7 @@
 
 library(rgdal)
 library(raster)
-
-setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 extentShape = readOGR(dsn = "ArcFiles_2_2_2018/us_shape", layer = "us_shape")
 #extentShape2 <- spTransform(extentShape, "+init=epsg:4326")
@@ -247,6 +246,9 @@ writeRaster(pop,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/
 writeRaster(roads,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_roads_2_5_2018.asc", format="ascii", prj=T, overwrite=T)
 
 #######################################################################
+#######################################################################
+#######################################################################
+
 tabulate <- read.table("Tab_area/tabulate_area.txt",  header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 head(tabulate)
 
@@ -256,12 +258,32 @@ tabulate$total <- rowSums(tabulate, na.rm = FALSE, dims = 1)
 head(tabulate)
 
 
-roads <- raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_roads_2_5_2018.asc")
-proj4string(roads) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
-
+roads <- raster("MaxEntFiles/us_roads_2_5_2018.asc")
+proj4string(roads) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
+#"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 #proj4string(roads) <-
 roaDs <- as.data.frame(roads)
 head(roaDs)
+
+cellid <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=crs(roads), vals=seq(1:ncell(roads)))
+plot(cellid)
+writeRaster(cellid, "cellIDraster.asc", format="ascii", prj=T)
+
+fishnet <- readOGR(dsn = "ArcFiles_2_2_2018/fishnet", layer = "fishnet2018")
+fidraster <- raster("ArcFiles_2_2_2018/FIDraster_2_8/rasterFID.tif")
+plot(fidraster)
+fids <- as.data.frame(fidraster)
+head(fids)
+summary(fids)
+
+
+#ext <- extract(cellid, fishnet, cellnumbers=T)
+#write.csv(ext, "extract_1.csv", row.names=T)
+#head(ext)
+#library(reshape2)
+#ext2 <- melt(ext)
+#ext2
+
 
 length(roaDs$us_roads_2_5_2018[!is.na(roaDs$us_roads_2_5_2018)])
 roaDs$total[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$total
@@ -285,15 +307,37 @@ tabulate$prop7 <- tabulate$BIN_7/tabulate$total
 tabulate$prop8 <- tabulate$BIN_8/tabulate$total
 tabulate$prop9 <- tabulate$BIN_9/tabulate$total
 
-roaDs$nlcd1[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop1
-roaDs$nlcd2[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop2
-roaDs$nlcd3[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop3
-roaDs$nlcd4[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop4
-roaDs$nlcd5[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop5
-roaDs$nlcd6[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop6
-roaDs$nlcd7[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop7
-roaDs$nlcd8[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop8
-roaDs$nlcd9[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop9
+head(fids)
+fids$cellID<- as.numeric(row.names(fids))
+fids <- fids[!is.na(fids$rasterFID),]
+colnames(fids) <- c("FID","cellID")
+
+head(tabulate)
+tabulate <- tabulate[,10:19]
+tabulate$FID <- as.numeric(row.names(tabulate)) -1 #tabulate$row - 1
+head(tabulate)
+
+summary(fids$FID)
+summary(tabulate$FID)
+nlcd2fid <- merge(fids,tabulate,by="FID")
+
+head(nlcd2fid)
+nlcd2fid <- nlcd2fid[order(nlcd2fid$cellID),]
+head(nlcd2fid)
+plot(nlcd2fid$total~nlcd2fid$cellID)
+#newdata <- mtcars[order(mpg),]
+
+roaDs$nlcd1[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop1
+roaDs$nlcd2[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop2
+roaDs$nlcd3[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop3
+roaDs$nlcd4[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop4
+roaDs$nlcd5[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop5
+roaDs$nlcd6[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop6
+roaDs$nlcd7[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop7
+roaDs$nlcd8[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop8
+roaDs$nlcd9[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$prop9
+roaDs$total[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$total
+
 
 nlcd1 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd1)
 nlcd2 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd2)
@@ -304,19 +348,21 @@ nlcd6 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=pro
 nlcd7 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd7)
 nlcd8 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd8)
 nlcd9 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd9)
+total <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$total)
 
+plot(total)
 #nlcd <- stack(nlcd1,nlcd2,nlcd3,nlcd4,nlcd5,nlcd6,nlcd7,nlcd8,nlcd9)
-#plot(log(nlcd1))
-#plot(log(nlcd2))
-#plot(log(nlcd3))
-#plot(log(nlcd4))
-#plot(log(nlcd5))
-#plot(log(nlcd6))
-#plot(log(nlcd7))
-#plot(log(nlcd8))
-#plot(log(nlcd9))
+plot( (nlcd1))
+plot( (nlcd2))
+plot( (nlcd3))
+plot( (nlcd4))
+plot( (nlcd5))
+plot( (nlcd6))
+plot( (nlcd7))
+plot( (nlcd8))
+plot( (nlcd9))
 
-dir.create("nlcd")
+#dir.create("nlcd")
 writeRaster(nlcd1, "nlcd/nlcd1.asc", format="ascii", prj=T, overwrite=T) ## unsuitable
 writeRaster(nlcd2, "nlcd/nlcd2.asc", format="ascii", prj=T, overwrite=T) ## develop
 writeRaster(nlcd3, "nlcd/nlcd3.asc", format="ascii", prj=T, overwrite=T) ## forest
@@ -351,10 +397,10 @@ proj4string(bio) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate
 
 
 
-stack <- stack("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_pop_2_5_2018.asc",
+stack <- stack("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_pop_2_5_2018.asc",
                roads,nlcd1,nlcd2,nlcd3,nlcd4,nlcd5,nlcd6,nlcd7,nlcd8,nlcd9)
-proj4string(stacj) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
-              
+proj4string(stack) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
+
 
 dim(bio)
 dim(stack)
@@ -384,3 +430,15 @@ writeRaster(bio$bio_2 ,"checkBIO.asc", format="ascii",prj=T)
 
 cor.matrix <- cor(full_matrix, use="pairwise", method="spearman")
 write.csv(cor.matrix,"nlcd_bio.csv",row.names=F)
+
+
+
+##### try new extentshape w/ buffer
+
+bio <- raster("C:/Users/Localadmin/Documents/checkAlignment/bio_2.asc")
+extentShape2 = readOGR(dsn = "C:/Users/Localadmin/Documents/checkAlignment/us_shape_buff", layer = "us_shape_buff")
+plot(extentShape2)
+proj4string(bio) <- proj4string(extentShape2)
+bio <- mask(crop(bio, extentShape2), extentShape2)
+plot(bio, add=T)
+writeRaster(bio, "C:/Users/Localadmin/Documents/checkAlignment/biobuff2.asc", format="ascii", prj=T)
