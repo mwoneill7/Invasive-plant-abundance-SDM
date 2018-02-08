@@ -220,9 +220,6 @@ full_modeling <- edd2[edd2$PLANT_CODE != "TEMPLATE",] ## remove template row
 
 write.csv(full_modeling,  "MaxEntFiles/full_model_pts.csv", row.names=F)
 
-
-
-
 ###############################################################
 library(raster)
 bias <- stack("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_pop/us_pop/w001001.adf",
@@ -238,6 +235,7 @@ summary(biasD$us_roads)
 summary(biasD$us_pop)
 biasD$us_pop[is.na(biasD$us_pop) & !is.na(biasD$us_roads)] <- 0
 pop <- raster(nrows=nrow(bias), ncols=ncol(bias), ext=extent(bias), crs=crs(bias), vals=biasD$us_pop )
+
 roads <- raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_roads/us_roads/w001001.adf")
 
 nrow(pop)==nrow(roads)
@@ -245,5 +243,144 @@ ncol(pop)==ncol(roads)
 extent(pop)==extent(roads) 
 proj4string(pop)==proj4string(roads) 
 
-writeRaster(pop,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_pop_2_5_2018.ascii", format="ascii", prj=T)
-writeRaster(roads,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_roads_2_5_2018.ascii", format="ascii", prj=T)
+writeRaster(pop,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_pop_2_5_2018.asc", format="ascii", prj=T, overwrite=T)
+writeRaster(roads,"C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_roads_2_5_2018.asc", format="ascii", prj=T, overwrite=T)
+
+#######################################################################
+tabulate <- read.table("Tab_area/tabulate_area.txt",  header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+head(tabulate)
+
+tabulate <- tabulate[,3:11]
+head(tabulate)
+tabulate$total <- rowSums(tabulate, na.rm = FALSE, dims = 1)
+head(tabulate)
+
+
+roads <- raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_roads_2_5_2018.asc")
+proj4string(roads) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
+
+#proj4string(roads) <-
+roaDs <- as.data.frame(roads)
+head(roaDs)
+
+length(roaDs$us_roads_2_5_2018[!is.na(roaDs$us_roads_2_5_2018)])
+roaDs$total[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$total
+
+totals <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=crs(roads), vals=roaDs$total)
+plot(totals)
+dev.off()
+sqrt(min(tabulate$total))/1000
+sqrt(mean(tabulate$total))/1000
+sqrt(max(tabulate$total))/1000
+hist(tabulate$total) ## 3.7 - 4.4 (4.1)
+
+head(tabulate)
+tabulate$prop1 <- tabulate$BIN_1/tabulate$total
+tabulate$prop2 <- tabulate$BIN_2/tabulate$total
+tabulate$prop3 <- tabulate$BIN_3/tabulate$total
+tabulate$prop4 <- tabulate$BIN_4/tabulate$total
+tabulate$prop5 <- tabulate$BIN_5/tabulate$total
+tabulate$prop6 <- tabulate$BIN_6/tabulate$total
+tabulate$prop7 <- tabulate$BIN_7/tabulate$total
+tabulate$prop8 <- tabulate$BIN_8/tabulate$total
+tabulate$prop9 <- tabulate$BIN_9/tabulate$total
+
+roaDs$nlcd1[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop1
+roaDs$nlcd2[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop2
+roaDs$nlcd3[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop3
+roaDs$nlcd4[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop4
+roaDs$nlcd5[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop5
+roaDs$nlcd6[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop6
+roaDs$nlcd7[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop7
+roaDs$nlcd8[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop8
+roaDs$nlcd9[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$prop9
+
+nlcd1 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd1)
+nlcd2 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd2)
+nlcd3 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd3)
+nlcd4 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd4)
+nlcd5 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd5)
+nlcd6 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd6)
+nlcd7 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd7)
+nlcd8 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd8)
+nlcd9 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd9)
+
+#nlcd <- stack(nlcd1,nlcd2,nlcd3,nlcd4,nlcd5,nlcd6,nlcd7,nlcd8,nlcd9)
+#plot(log(nlcd1))
+#plot(log(nlcd2))
+#plot(log(nlcd3))
+#plot(log(nlcd4))
+#plot(log(nlcd5))
+#plot(log(nlcd6))
+#plot(log(nlcd7))
+#plot(log(nlcd8))
+#plot(log(nlcd9))
+
+dir.create("nlcd")
+writeRaster(nlcd1, "nlcd/nlcd1.asc", format="ascii", prj=T, overwrite=T) ## unsuitable
+writeRaster(nlcd2, "nlcd/nlcd2.asc", format="ascii", prj=T, overwrite=T) ## develop
+writeRaster(nlcd3, "nlcd/nlcd3.asc", format="ascii", prj=T, overwrite=T) ## forest
+writeRaster(nlcd4, "nlcd/nlcd4.asc", format="ascii", prj=T, overwrite=T) ## evergreen
+writeRaster(nlcd5, "nlcd/nlcd5.asc", format="ascii", prj=T, overwrite=T) ## shrub
+writeRaster(nlcd6, "nlcd/nlcd6.asc", format="ascii", prj=T, overwrite=T) ## herbaceous
+writeRaster(nlcd7, "nlcd/nlcd7.asc", format="ascii", prj=T, overwrite=T) ## pasture/hay
+writeRaster(nlcd8, "nlcd/nlcd8.asc", format="ascii", prj=T, overwrite=T) ## cropland
+writeRaster(nlcd9, "nlcd/nlcd9.asc", format="ascii", prj=T, overwrite=T) ## wetland
+
+## read in Worldclim climate rasters clipped to L48; 6 variables manually selected by assessing correlations
+bio <- stack("C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_2.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_5.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_6.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_8.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_12.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_15.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_1.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_3.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_4.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_7.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_9.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_10.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_11.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_13.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_14.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_16.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_17.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_18.asc",
+             "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_19.asc")
+proj4string(bio) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
+
+
+
+stack <- stack("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_pop_2_5_2018.asc",
+               roads,nlcd1,nlcd2,nlcd3,nlcd4,nlcd5,nlcd6,nlcd7,nlcd8,nlcd9)
+proj4string(stacj) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
+              
+
+dim(bio)
+dim(stack)
+
+bio <- mask(crop(bio, roads),roads)
+
+nrow(bio)==nrow(stack)
+ncol(bio)==ncol(stack)  
+extent(bio)==extent(stack) 
+proj4string(bio)==proj4string(stack) 
+
+ymin(bio) == ymin(stack) ## FALSE
+ymax(bio) == ymax(stack) ## TRUE
+xmin(bio) == xmin(stack) ## TRUE
+xmax(bio) == xmax(stack) ## FALSE
+
+bioD <- as.data.frame(bio)
+stackD <- as.data.frame(stack)
+head(stackD)
+head(bioD)
+
+full_matrix <- cbind(stackD,bioD) 
+head(full_matrix)
+
+writeRaster(stack$layer.1,"checkNLCD.asc", format="ascii",prj=T)
+writeRaster(bio$bio_2 ,"checkBIO.asc", format="ascii",prj=T)
+
+cor.matrix <- cor(full_matrix, use="pairwise", method="spearman")
+write.csv(cor.matrix,"nlcd_bio.csv",row.names=F)
