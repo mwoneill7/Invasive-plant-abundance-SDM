@@ -19,7 +19,15 @@ var.list <- c("bio_2", "poly(bio_2, 2)",
               "bio_6", "poly(bio_6, 2)",
               "bio_8", "poly(bio_8, 2)",
               "bio_12", "poly(bio_12, 2)",
-              "bio_15", "poly(bio_15, 2)")
+              "bio_15", "poly(bio_15, 2)",
+              "nlcd_2", "poly(nlcd_1 ,2)",
+              "nlcd_3", "poly(nlcd_3 ,2)",
+              "nlcd_4", "poly(nlcd_4 ,2)",
+              "nlcd_5", "poly(nlcd_5 ,2)",
+              "nlcd_6", "poly(nlcd_6 ,2)",
+              "nlcd_7", "poly(nlcd_7 ,2)",
+              "nlcd_8", "poly(nlcd_8 ,2)",
+              "nlcd_9", "poly(nlcd_9 ,2)")
 
 var.sets <- c("variable sets") ## initialize list of variable sets
 
@@ -37,7 +45,15 @@ for(i in 1:(length(var.list)/2)){
        !(grepl("bio_6 ", combo.j) & grepl("poly(bio_6", combo.j, fixed=T)) &
        !(grepl("bio_8 ", combo.j) & grepl("poly(bio_8", combo.j, fixed=T)) &
        !(grepl("bio_12 ", combo.j) & grepl("poly(bio_12", combo.j, fixed=T)) &
-       !(grepl("bio_15 ", combo.j) & grepl("poly(bio_15", combo.j, fixed=T)) ){
+       !(grepl("bio_15 ", combo.j) & grepl("poly(bio_15", combo.j, fixed=T)) &
+       !(grepl("nlcd_2 ", combo.j) & grepl("poly(nlcd_2", combo.j, fixed=T)) &
+       !(grepl("nlcd_3 ", combo.j) & grepl("poly(nlcd_3", combo.j, fixed=T)) &
+       !(grepl("nlcd_4 ", combo.j) & grepl("poly(nlcd_4", combo.j, fixed=T)) &
+       !(grepl("nlcd_5 ", combo.j) & grepl("poly(nlcd_5", combo.j, fixed=T)) &
+       !(grepl("nlcd_6 ", combo.j) & grepl("poly(nlcd_6", combo.j, fixed=T)) &
+       !(grepl("nlcd_7 ", combo.j) & grepl("poly(nlcd_7", combo.j, fixed=T)) &
+       !(grepl("nlcd_8 ", combo.j) & grepl("poly(nlcd_8", combo.j, fixed=T)) &
+       !(grepl("nlcd_9 ", combo.j) & grepl("poly(nlcd_9", combo.j, fixed=T))){
       var.sets <- c(var.sets,combo.j)} ## add it to the list of variable sets
   }
   
@@ -131,11 +147,11 @@ for(s in 1:length(sp.list)){ ## Loop through species list
   
   species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
 
-  if(species.code !="HIAU" &
-     species.code != "CYSC4" &
-     species.code != "VIVI" &
-     species.code != "CICA" & species.code != "SEPU7" & species.code != "MESA" &
-     species.code != "RUAC3") {
+    #if(species.code !="HIAU" &
+    #   species.code != "CYSC4" &
+    #   species.code != "VIVI" &
+    #   species.code != "CICA" & species.code != "SEPU7" & species.code != "MESA" &
+    #   species.code != "RUAC3") {
     species <- edd[edd$species == species.code,]## subset to species of the iteration
     #species <- data.frame(cbind(species$abundance, species$latitude, species$longitude)) ## select only variables needed to save computation time
     species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3))
@@ -205,17 +221,20 @@ for(s in 1:length(sp.list)){ ## Loop through species list
     ## concatenate into master data.frame
     
     for (i in 1:length(formulae.s)){ ##loop through all formulae in the formula list
-      
-      M <- polr(formula(formulae.s[i]), data = species, Hess=T)
-      # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
-      
-      edf <- M$edf ## REPLACE n
-      aic <- AIC(M) ## extract aic score
-      
-      model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
-      model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-      #print(i) ## keep track of place in loop
+      #tryCatch(c=x, call=x, cond=x, expr=x)
+      tryCatch({
+        
+        M <- polr(formula(formulae.s[i]), data = species, Hess=T)
+        edf <- M$edf ## REPLACE n
+        aic <- AIC(M) ## extract aic score
+        model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
+        model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
+        
+      },error=function(e){cat(species.code,conditionMessage(e), "\n")})
+    
     }
+
+    # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
 
     ###################  AIC comparison  #####################
     model.sel <- model.sel[model.sel$i != -1,]
@@ -462,4 +481,17 @@ plot(bio_6$bio_6, p1, lwd=4,type='l', ylab='Prob', main="Linear",ylim=c(0,max(p1
 lines(bio_6$bio_6, p2,lwd=4, col='turquoise')
 lines(bio_6$bio_6, p3,lwd=4, col='green')
 lines(bio_6$bio_6, p4,lwd=4, col='orange')
+
+
+
+
+reg <- "regina phyllange"
+#####################################
+for (i in 1:10) {
+tryCatch({
+  print(i)
+  p <- i+1
+  if (i==7) stop("Urgh, the iphone is in the blender !")
+}, error=function(e){cat(reg, conditionMessage(e), "\n")})
+}
 
