@@ -5,7 +5,7 @@
 
 library(rgdal)
 library(raster)
-setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 extentShape = readOGR(dsn = "ArcFiles_2_2_2018/us_shape", layer = "us_shape")
 #extentShape2 <- spTransform(extentShape, "+init=epsg:4326")
@@ -277,14 +277,6 @@ head(fids)
 summary(fids)
 
 
-#ext <- extract(cellid, fishnet, cellnumbers=T)
-#write.csv(ext, "extract_1.csv", row.names=T)
-#head(ext)
-#library(reshape2)
-#ext2 <- melt(ext)
-#ext2
-
-
 length(roaDs$us_roads_2_5_2018[!is.na(roaDs$us_roads_2_5_2018)])
 roaDs$total[!is.na(roaDs$us_roads_2_5_2018)] <- tabulate$total
 
@@ -352,15 +344,15 @@ total <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=pro
 
 plot(total)
 #nlcd <- stack(nlcd1,nlcd2,nlcd3,nlcd4,nlcd5,nlcd6,nlcd7,nlcd8,nlcd9)
-plot( (nlcd1))
-plot( (nlcd2))
-plot( (nlcd3))
-plot( (nlcd4))
-plot( (nlcd5))
-plot( (nlcd6))
-plot( (nlcd7))
-plot( (nlcd8))
-plot( (nlcd9))
+plot(nlcd1)
+plot(nlcd2)
+plot(nlcd3)
+plot(nlcd4)
+plot(nlcd5)
+plot(nlcd6)
+plot(nlcd7)
+plot(nlcd8)
+plot(nlcd9)
 
 #dir.create("nlcd")
 writeRaster(nlcd1, "nlcd/nlcd1.asc", format="ascii", prj=T, overwrite=T) ## unsuitable
@@ -393,52 +385,162 @@ bio <- stack("C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_
              "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_17.asc",
              "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_18.asc",
              "C:/Users/mwone/Documents/geodata/clipped_climate_data/current/bio_19.asc")
-proj4string(bio) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
+proj4string(bio) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
 
+nlcd <- stack("MaxEntFiles/us_pop_2_5_2018.asc",
+              "MaxEntFiles/us_roads_2_5_2018.asc")#,#)#,
+#              "nlcd/nlcd1.asc",
+#              "nlcd/nlcd2.asc",
+#              "nlcd/nlcd3.asc",
+#              "nlcd/nlcd4.asc",
+#              "nlcd/nlcd5.asc",
+#              "nlcd/nlcd6.asc",
+#              "nlcd/nlcd7.asc",
+#              "nlcd/nlcd8.asc",
+#              "nlcd/nlcd9.asc")
 
+#test <- raster("nlcd/nlcd9.asc")
 
-stack <- stack("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/us_pop_2_5_2018.asc",
-               roads,nlcd1,nlcd2,nlcd3,nlcd4,nlcd5,nlcd6,nlcd7,nlcd8,nlcd9)
-proj4string(stack) <- proj4string(raster("C:/Users/mwone/Documents/geodata/climate_data/current/bio_1"))
-
+proj4string(nlcd) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
 
 dim(bio)
-dim(stack)
+dim(nlcd)
 
-bio <- mask(crop(bio, roads),roads)
 
-nrow(bio)==nrow(stack)
-ncol(bio)==ncol(stack)  
-extent(bio)==extent(stack) 
-proj4string(bio)==proj4string(stack) 
+#extentShape = readOGR(dsn = "ArcFiles_2_2_2018/us_shape", layer = "us_shape")
+#plot(extentShape)
+#proj4string(bio) <- proj4string(extentShape)
+#bio <- mask(crop(bio, extentShape), extentShape)
 
-ymin(bio) == ymin(stack) ## FALSE
-ymax(bio) == ymax(stack) ## TRUE
-xmin(bio) == xmin(stack) ## TRUE
-xmax(bio) == xmax(stack) ## FALSE
+bio <- mask(crop(bio, nlcd$us_pop_2_5_2018),nlcd$us_pop_2_5_2018)
+nlcd <- mask(crop(nlcd, bio$bio_1),bio$bio_1)
+#bio <- mask(crop(bio, nlcd),nlcd)
+                                                                                                                                                                                                                            dim(bio)
+dim(nlcd)
 
+nlcD <- as.data.frame(nlcd)
 bioD <- as.data.frame(bio)
-stackD <- as.data.frame(stack)
-head(stackD)
-head(bioD)
 
-full_matrix <- cbind(stackD,bioD) 
+nlcor<-cor(nlcD, use="pairwise", method="spearman")
+write.csv(nlcor,"nlcor.csv",row.names=F)
+
+ncell(bio)==ncell(nlcd)
+nrow(bio)==nrow(nlcd)
+ncol(bio)==ncol(nlcd)  
+extent(bio)==extent(nlcd) 
+proj4string(bio)==proj4string(nlcd) 
+
+ymin(bio) == ymin(nlcd) ## FALSE
+ymax(bio) == ymax(nlcd) ## TRUE
+xmin(bio) == xmin(nlcd) ## TRUE
+xmax(bio) == xmax(nlcd) ## FALSE
+
+#bioD <- as.data.frame(bio)
+#stackD <- as.data.frame(stack)
+#head(stackD)
+#head(bioD)
+
+full_matrix <- cbind(nlcD,bioD) 
 head(full_matrix)
 
-writeRaster(stack$layer.1,"checkNLCD.asc", format="ascii",prj=T)
-writeRaster(bio$bio_2 ,"checkBIO.asc", format="ascii",prj=T)
+length(full_matrix$nlcd1[is.na(full_matrix$nlcd1) & !is.na(full_matrix$bio_1)])
+length(full_matrix$nlcd1[!is.na(full_matrix$nlcd1) & is.na(full_matrix$bio_1)])
+#writeRaster(stack$layer.1,"checkNLCD.asc", format="ascii",prj=T)
+#writeRaster(bio$bio_2 ,"checkBIO.asc", format="ascii",prj=T)
 
 cor.matrix <- cor(full_matrix, use="pairwise", method="spearman")
 write.csv(cor.matrix,"nlcd_bio.csv",row.names=F)
 
+plot(nlcd$nlcd1, col="blue")
+plot(bio$bio_2, col="orange", add=T)
 
 
-##### try new extentshape w/ buffer
 
-bio <- raster("C:/Users/Localadmin/Documents/checkAlignment/bio_2.asc")
-extentShape2 = readOGR(dsn = "C:/Users/Localadmin/Documents/checkAlignment/us_shape_buff", layer = "us_shape_buff")
-plot(extentShape2)
-proj4string(bio) <- proj4string(extentShape2)
-bio <- mask(crop(bio, extentShape2), extentShape2)
-plot(bio, add=T)
-writeRaster(bio, "C:/Users/Localadmin/Documents/checkAlignment/biobuff2.asc", format="ascii", prj=T)
+dir.create("C:/Users/mwone/Documents/Environmental_Data_2_8_2018")
+writeRaster(nlcd$nlcd3, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_3.asc", format="ascii")
+writeRaster(nlcd$nlcd4, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_4.asc", format="ascii")
+writeRaster(nlcd$nlcd5, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_5.asc", format="ascii")
+writeRaster(nlcd$nlcd6, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_6.asc", format="ascii")
+writeRaster(nlcd$nlcd7, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_7.asc", format="ascii")
+writeRaster(nlcd$nlcd8, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_8.asc", format="ascii")
+writeRaster(nlcd$nlcd9, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_9.asc", format="ascii")
+writeRaster(bio$bio_2, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_2.asc", format="ascii")
+writeRaster(bio$bio_5, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_5.asc", format="ascii")
+writeRaster(bio$bio_6, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_6.asc", format="ascii")
+writeRaster(bio$bio_8, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_8.asc", format="ascii")
+writeRaster(bio$bio_12, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_12.asc", format="ascii")
+writeRaster(bio$bio_15, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_15.asc", format="ascii")
+writeRaster(nlcd$us_roads_2_5_2018, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/us_roads.asc", format="ascii")
+writeRaster(nlcd$us_pop_2_5_2018, "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/us_pop.asc", format="ascii")
+
+
+envi <- stack( "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_8.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_9.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_2.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_5.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_6.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_8.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_15.asc" )
+
+
+abun <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/Abun_model_pts.csv",
+                   sep=",", stringsAsFactors = F, header=T)
+head(abun)
+coordinates(abun)<-c(2,3)
+proj4string(abun)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+ext <- extract(envi$nlcd_3, abun)
+summary(ext)## no NAs!
+
+
+######## FINALIZE MAXENT DATASETS
+#full_modeling   <- read.table("MaxEntFiles/full_model_pts.csv", header=T, sep=",", stringsAsFactors =F)
+full_occurences <- read.table("MaxEntFiles/full_bias_pts.csv", header=T, sep=",", stringsAsFactors =F)
+abun_occurences <- read.table("MaxEntFiles/Abun_bias_pts.csv", header=T, sep=",", stringsAsFactors =F)
+abun_modeling   <- read.table("MaxEntFiles/Abun_model_pts.csv", header=T, sep=",", stringsAsFactors =F)
+
+summary(full_modeling)
+summary(full_occurences)
+summary(abun_occurences)
+summary(abun_modeling)
+
+#full_modeling$DATA_SOURCE <- NULL
+full_occurences$DATA_SOURCE <- NULL
+abun_occurences$DATA_SOURCE <- NULL
+abun_modeling$DATA_SOURCE <- NULL
+
+
+full_occurences$PLANT_CODE <- "BIAS"
+abun_occurences$PLANT_CODE <- "BIAS"
+
+
+#coordinates(full_modeling) <- c(2,3)
+coordinates(full_occurences) <- c(2,3)
+coordinates(abun_occurences) <- c(2,3)
+coordinates(abun_modeling) <- c(2,3)
+
+#proj4string(full_modeling) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(full_occurences) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(abun_occurences) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(abun_modeling) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+extentShape = readOGR(dsn = "ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+plot(extentShape)
+proj4string(extentShape) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+#full_modeling <- edd[states, ]                   ##306206  to
+full_occurences <- full_occurences[extentShape, ] ##1452468 to 1452182
+abun_occurences <- abun_occurences[extentShape, ] ##521954  to 521945
+abun_modeling <- abun_modeling[extentShape, ]     ##99586   to 99586 
+
+
+#write.csv(full_modeling, "MaxEntFiles/thinned_pts_2_9_2018.csv")
+write.csv(full_occurences, "MaxEntFiles/full_pts_2_9_2018.csv", row.names = F)
+write.csv(abun_occurences, "MaxEntFiles/full_abundance_pts_2_9_2018.csv", row.names = F)
+write.csv(abun_modeling,"MaxEntFiles/thinned_abundance_pts_2_9_2018.csv", row.names = F)
