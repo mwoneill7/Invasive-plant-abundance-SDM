@@ -1053,3 +1053,60 @@ ed.listing3[ed.listing3$loss4P > 0.05 & ed.listing3$loss.prop <0.05,]
 
 edd.list <- read.table("SpeciesList_11_20_2017.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
 
+####################################################################################
+############ double check the species list
+
+library(rgdal);library(raster)
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+## read in EDDMapS dataset, thinned to 5km climate grid cells (1 point per species per cell)
+ ed.listing <- read.table("species_list_12_18_17.csv", header = T, sep = ",", quote= "\"", 
+                          comment.char= "", stringsAsFactors = F, strip.white = T)
+
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_1_25_2017.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+edd$abundance <- ceiling(edd$med)
+edd <- edd[edd$species %in% ed.listing$usda.code[ed.listing$useable==1],]
+coordinates(edd) <- c(5,4)
+proj4string(edd) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+envi <- stack( "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_8.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_9.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_2.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_5.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_6.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_8.asc", 
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+               "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_15.asc" )
+proj4string(envi) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+ext <- extract(envi, edd) ## extract climate values to points
+edd <- cbind(as.data.frame(edd),ext) ## append extracted climate data to point data
+head(edd)
+
+ed.listing <- ed.listing[ed.listing$useable==1,]
+sp <- ed.listing$usda.code[ed.listing$useable==1]
+
+for (i in 1:length(sp)){
+  edd.sp <- edd[edd$species == sp[i],]
+  ed.listing$no.1a[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 1])
+  ed.listing$no.2a[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 2])
+  ed.listing$no.3a[ed.listing$usda.code == sp[i]] <- length(edd.sp$species[edd.sp$abundance == 3])
+  ed.listing$no.pts[ed.listing$usda.code == sp[i]] <- nrow(edd.sp)
+  
+  if(length(unique(edd.sp$abundance))==3){
+    ed.listing$rarest.bina[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+    #ed.listing$second.bin[ed.listing$usda.code == sp[i]] <- min(summary(as.factor(edd.sp$abundance)))
+  } else {
+    ed.listing$rarest.bina[ed.listing$usda.code == sp[i]] <- 0
+  }
+  
+  print(i)
+}
+
+species.codes <- ed.listing$usda.code[ed.listing$rarest.bina >= 10]
+write.csv(species.codes, "species.codes.2.08.18.csv", row.names=F)
