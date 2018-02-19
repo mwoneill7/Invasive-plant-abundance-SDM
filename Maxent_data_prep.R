@@ -5,7 +5,7 @@
 
 library(rgdal)
 library(raster)
-setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 extentShape = readOGR(dsn = "ArcFiles_2_2_2018/us_shape", layer = "us_shape")
 #extentShape2 <- spTransform(extentShape, "+init=epsg:4326")
@@ -120,7 +120,7 @@ abun_occurences <- as.data.frame(abun_occurences)
 
 
 ### ABUNDANCE DATASET FOR MODELLING
-edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_1_25_2017.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_1_25_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 edd <- edd[edd$species %in% codes$x,]
 abun_modeling <- data.frame(cbind(edd$species,edd$longitude,edd$latitude,rep("EDDMaps2016", NROW(edd))), stringsAsFactors=F)
@@ -141,12 +141,9 @@ write.csv(abun_modeling,  "MaxEntFiles/Abun_model_pts.csv", row.names=F)
 rm(full_occurences, abun_occurences, abun_modeling, biasD, codes, full_occurence, hotspots, bias, extentShape, pop, roads, states, spp)
 
 
-###### ABUNDANCE MODELING DATASET ######################
-
-edd <- full_occurences
-coordinates(edd) <- c(3,4) ## specifies long, lat
-
-proj4string(edd) <- proj4string(extentShape)
+###### OCCURENCE MODELING DATASET ######################
+edd <- read.table("MaxEntFiles/full_bias_pts.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
 
 ## read in fishnet (square polygons corresponding to grid cells)
 fishnet <- readOGR(dsn = "ArcFiles_2_2_2018/fishnet", layer = "fishnet2018")
@@ -168,15 +165,28 @@ edd$id <- row.names(edd)
 edd <- data.frame(merge(edd, tab, by.x = "id", by.y = "ptID", all=F))
 ## for each point (row) in the eddmaps database, merge the cellID corresponding to that
 ## point from table produced from overlaying the eddmaps points with the fishnet cells
-write.csv(edd, "full_occurence_wgrids.csv",row.names=F)
+#write.csv(edd, "full_occurence_wgrids.csv",row.names=F)
+#################################################################################
 edd <- read.table("full_occurence_wgrids.csv", sep=",", header=T, stringsAsFactors = F)
 #colnames(edd) <- c(as.character(edd[1,])
+
+head(edd)
+coordinates(edd) <- c(3,4) ## specifies long, lat
+proj4string(edd) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
+
+extentShape <- readOGR(dsn = "ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+proj4string(extentShape) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
+
+edd <- edd[extentShape, ]
 
 edd$optional <- NULL ## remove meaningless column
 edd <- edd[!is.na(edd$cellID) & !is.na(edd$PLANT_CODE),] ##1452460 to 1452460
 ## exclude rows without a usda code or where the point did not fall in a grid cell
 edd$PLANT_CODE <- as.character(edd$PLANT_CODE)
 rm(fishnet,fishnetD,tab,cellID) ## garbage cleaning
+
+edd <- as.data.frame(edd)
+head(edd)
 
 #### THIN DATA TO GRID CELL (WITHIN SPECIES)
 PLANT_CODE <- "TEMPLATE"
@@ -199,7 +209,7 @@ for (i in 1:length(sp.list)){ ## loop through all species
     
     PLANT_CODE <- cell.j$PLANT_CODE[1]
     LONGITUDE_DECIMAL <- mean(cell.j$LONGITUDE_DECIMAL)
-    LATITUDE_DECIMAL <- mean(cell.j$LONGITUDE_DECIMAL)
+    LATITUDE_DECIMAL <- mean(cell.j$LATITUDE_DECIMAL)
     DATA_SOURCE <- cell.j$DATA_SOURCE[1]
     
     #keep <- data.frame(species,med,no.pts,no.best,source,latitude,longitude,cellID, stringsAsFactors = F) 
@@ -500,7 +510,7 @@ summary(ext)## no NAs!
 
 
 ######## FINALIZE MAXENT DATASETS
-#full_modeling   <- read.table("MaxEntFiles/full_model_pts.csv", header=T, sep=",", stringsAsFactors =F)
+full_modeling   <- read.table("MaxEntFiles/full_model_pts.csv", header=T, sep=",", stringsAsFactors =F)
 full_occurences <- read.table("MaxEntFiles/full_bias_pts.csv", header=T, sep=",", stringsAsFactors =F)
 abun_occurences <- read.table("MaxEntFiles/Abun_bias_pts.csv", header=T, sep=",", stringsAsFactors =F)
 abun_modeling   <- read.table("MaxEntFiles/Abun_model_pts.csv", header=T, sep=",", stringsAsFactors =F)
@@ -510,7 +520,7 @@ summary(full_occurences)
 summary(abun_occurences)
 summary(abun_modeling)
 
-#full_modeling$DATA_SOURCE <- NULL
+full_modeling$DATA_SOURCE <- NULL
 full_occurences$DATA_SOURCE <- NULL
 abun_occurences$DATA_SOURCE <- NULL
 abun_modeling$DATA_SOURCE <- NULL
@@ -520,12 +530,12 @@ full_occurences$PLANT_CODE <- "BIAS"
 abun_occurences$PLANT_CODE <- "BIAS"
 
 
-#coordinates(full_modeling) <- c(2,3)
+coordinates(full_modeling) <- c(2,3)
 coordinates(full_occurences) <- c(2,3)
 coordinates(abun_occurences) <- c(2,3)
 coordinates(abun_modeling) <- c(2,3)
 
-#proj4string(full_modeling) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(full_modeling) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 proj4string(full_occurences) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 proj4string(abun_occurences) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 proj4string(abun_modeling) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
@@ -534,13 +544,23 @@ extentShape = readOGR(dsn = "ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_s
 plot(extentShape)
 proj4string(extentShape) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 
-#full_modeling <- edd[states, ]                   ##306206  to
+full_modeling <- full_modeling[extentShape, ]     ##306206  to 305949
 full_occurences <- full_occurences[extentShape, ] ##1452468 to 1452182
 abun_occurences <- abun_occurences[extentShape, ] ##521954  to 521945
 abun_modeling <- abun_modeling[extentShape, ]     ##99586   to 99586 
 
 
-#write.csv(full_modeling, "MaxEntFiles/thinned_pts_2_9_2018.csv")
+write.csv(full_modeling, "MaxEntFiles/thinned_pts_2_9_2018.csv")
 write.csv(full_occurences, "MaxEntFiles/full_pts_2_9_2018.csv", row.names = F)
 write.csv(abun_occurences, "MaxEntFiles/full_abundance_pts_2_9_2018.csv", row.names = F)
 write.csv(abun_modeling,"MaxEntFiles/thinned_abundance_pts_2_9_2018.csv", row.names = F)
+
+##Remove "optional" column
+full_occurences <- read.table("MaxEntFiles/full_pts_2_9_2018.csv", 
+                       header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+abun_occurences <- read.table("MaxEntFiles/full_abundance_pts_2_9_2018.csv", 
+                              header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+full_occurences$optional <- NULL
+abun_occurences$optional <- NULL
+write.csv(full_occurences, "MaxEntFiles/full_pts_2_15_2018.csv", row.names = F)
+write.csv(abun_occurences, "MaxEntFiles/full_abundance_pts_2_15_2018.csv", row.names = F)
