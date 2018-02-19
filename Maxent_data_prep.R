@@ -544,3 +544,76 @@ abun_modeling <- abun_modeling[extentShape, ]     ##99586   to 99586
 write.csv(full_occurences, "MaxEntFiles/full_pts_2_9_2018.csv", row.names = F)
 write.csv(abun_occurences, "MaxEntFiles/full_abundance_pts_2_9_2018.csv", row.names = F)
 write.csv(abun_modeling,"MaxEntFiles/thinned_abundance_pts_2_9_2018.csv", row.names = F)
+
+
+
+
+
+
+########################################
+### separating into individual files
+########################################
+
+full_modeling <- read.table("MaxEntFiles/thinned_pts_2_9_2018.csv", header = T, sep = ",", 
+                           quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+abun_modeling <- read.table("MaxEntFiles/thinned_abundance_pts_2_9_2018.csv", header = T, sep = ",", 
+                           quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+full_modeling$X <- NULL
+abun_modeling$X <- NULL
+full_modeling$optional <- NULL
+abun_modeling$optional <- NULL
+
+sp.list <- unique(full_modeling$PLANT_CODE)
+#dir.create("MaxEntFiles/abun")
+#dir.create("MaxEntFiles/full")
+
+for(i in 1:length(sp.list)){
+  spec.abun <- abun_modeling[abun_modeling$PLANT_CODE == sp.list[i],]
+  filename.abun <- paste("MaxEntFiles/abun", paste(sp.list[i], "csv", sep="."), sep="/")
+  write.csv(spec.abun, filename.abun, row.names=F)
+  
+
+  spec.full <- full_modeling[full_modeling$PLANT_CODE == sp.list[i],]
+  filename.full <- paste("MaxEntFiles/full", paste(sp.list[i], "csv", sep="."), sep="/")
+  write.csv(spec.full, filename.full, row.names=F)
+  
+  print(i)
+}
+
+
+sp.list <- sp.list[order(sp.list)]
+head(sp.list)
+write.csv(sp.list, "MaxEntFiles/speciesList.csv", row.names=F)
+
+
+sp.list <- read.table("MaxEntFiles/speciesList.csv", header = T, sep = ",", 
+           quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+sp.list <- sp.list$x
+head(sp.list)
+
+for(i in 1:length(sp.list))
+
+ignore.variable <- MAKE LISTS
+spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature -N pop_2_5_us -N road_2_5_us biastype=3")
+
+samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/FULL/species", 
+                                    paste(sp.list[i], "csv", sep="."), sep="/"), sep="")
+directory(paste("C:/Users/Localadmin/Documents/Maxent_modeling/FULL/FINAL_OUTPUT", sp.list[i], sep="/"))
+dir.create(directory)
+output=paste("outputdirectory=", directory, sep="")
+
+bias=paste("biasfile=","C:/Users/Localadmin/Documents/Maxent_modeling/FULL/BIAS_OUTPUT/enter_name_here.asc",sep="")
+## average bias ascii
+
+
+
+samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/ABUN/species", 
+                                    paste(sp.list[i], "csv", sep="."), sep="/"), sep="")
+directory <- paste("C:/Users/Localadmin/Documents/Maxent_modeling/ABUN/FINAL_OUTPUT", sp.list[i], sep="/")
+dir.create(directory)
+output=paste("outputdirectory=", directory, sep="")
+
+bias=paste("biasfile=","C:/Users/Localadmin/Documents/Maxent_modeling/ABUN/BIAS_OUTPUT/enter_name_here.asc",sep="")
+## average bias ascii
