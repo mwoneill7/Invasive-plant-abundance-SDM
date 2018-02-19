@@ -154,6 +154,70 @@ bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_
 system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
 #########################################################################################
 
+## define directory of environmental data for fitting
+environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs",sep="")
+
+sp.list <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/speciesList.csv", header = T, sep = ",", 
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+head(sp.list)
+sp.list<- sp.list[order(sp.list$code),]
+head(sp.list)
+
+for(i in 2:4){#length(sp.list$code)){
+  
+  ## set up model options, linear and quadratic features only, use sampling bias surface
+  spp_bias_log=paste0("java -jar ",maxent.location, 
+                      " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature ",
+                      sp.list$ignore[i], " biastype=3")
+  ##spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature -N pop_2_5_us -N road_2_5_us biastype=3")
+  
+  ### ALL SPECIES ###
+  ## define point location samples (all species in one .csv), must be set up with three columns (species, lon, lat, in that order)
+  samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/FULL/species", 
+                                      paste(sp.list$code[i], "csv", sep="."), sep="/"), sep="")
+  ## define output directory
+  directory<- paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/FINAL_OUTPUT_FULL", sp.list$code[i], sep="/")
+  dir.create(directory)
+  output=paste("outputdirectory=", directory, sep="")
+  
+  bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc",sep="")
+  ## average bias ascii
+  
+  ## call model to run
+  system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+  
+  
+  
+  ### REPEAT FOR ONLY ABUNDANCE POINTS ###
+  ## define point location samples (all species in one .csv), must be set up with three columns (species, lon, lat, in that order)
+  samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/species", 
+                                      paste(sp.list$code[i], "csv", sep="."), sep="/"), sep="")
+  ## define output directory
+  directory <- paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/FINAL_OUTPUT_ABUN", sp.list$code[i], sep="/")
+  dir.create(directory)
+  output=paste("outputdirectory=", directory, sep="")
+  
+  bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc",sep="")
+  ## average bias ascii
+  
+  ## call model to run
+  system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+  
+  print(i)
+
+}
+
+
+################################################################################################################
+
+
+
+
+
+
+
+
+
 
 
 
