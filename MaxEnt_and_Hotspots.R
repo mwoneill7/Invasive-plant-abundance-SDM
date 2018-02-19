@@ -9,6 +9,16 @@ library(maptools)
 library(raster)
 library(rgdal)
 library(colorRamps)
+
+### memory ################################################################################
+#memory.limit()     #16341
+#memory.size()      #640.54
+#memory.size(max=T) #695.69
+#memory.size(max=F) #642.95
+
+#options(java.parameters = "-Xmx14g" )
+#memory.limit(size=NA)
+
 #install.packages("colorRamps")
 ## download MaxEnt: https://biodiversityinformatics.amnh.org/open_source/maxent/
 ## note that this code was developed with MaxEnt v.3.3.1 and has not been tested with the new release
@@ -17,75 +27,179 @@ library(colorRamps)
 #maxent.location='C:/Users/mwone/Google Drive/Ordinal/Occurence/MaxEnt/maxent.jar'
 #maxent.location='C:/Users/Localadmin/Google Drive/Ordinal/Occurence/MaxEnt/maxent.jar'
 #maxent.location='C:/Users/mwone/Desktop/MaxEnt/maxent.jar'
-maxent.location='C:/Users/Localadmin/Documents/MaxEnt/maxent.jar'
+#########################################################################################
 
+maxent.location='C:/Users/Localadmin/Documents/MaxEnt/maxent.jar'
 ## put all environmental data in one folder-- all files must be ascii, with EXACT same resolution and extent
 
-##################################################################################
+#########################################################################################
 ## MaxEnt: Sampling bias model, raw output
-###############################################################################
+#########################################################################################
 ## this is one way to estimate sampling bias
 ## the model estimates where invasive plants are likely to have been sampled based on "ease of access" variables
 ## use ALL points (including duplicates within a climate grid cell) for ALL species in your analysis for this step
 ## we call this target group sampling
 
 ## set up model options, only non-climate predictors in the environmental directory, linear and quadratic features only
-bias_TG=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=raw noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature -N ann_precip -N tmax_jul -N tmin_jan")
+bias_TG=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=raw noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature")
+#bias_TG=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=raw noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature -N ann_precip -N tmax_jul -N tmin_jan")
 
 ## define output directory
 #output=paste("outputdirectory=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/TG_allPts",sep="")
-output=paste("outputdirectory=","C:/Users/Localadmin/Desktop/Ordinal/Occurence/Hotspots_output/TG_allPts",sep="")
+output=paste("outputdirectory=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL",sep="")
 
 ## define directory of environmental data for fitting
 #environmental=paste("environmentallayers=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs",sep="")
-environmental=paste("environmentallayers=","C:/Users/Localadmin/Desktop/Ordinal/Occurence/Hotspots_output/US_ASCIIs",sep="")
+environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/bias_ASCIIs",sep="")
 ## put in all of the environmental data
 
 ## define point location samples (all species in one .csv, give all the same name, e.g., bias)
 ## otherwise each species will be treated seperately (good for later, but want bias across ALL species here)
 #samples=paste("samplesfile=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/IAS_bias_points_maxent.csv",sep="")
-samples=paste("samplesfile=","C:/Users/Localadmin/Desktop/Ordinal/Occurence/Hotspots_output/IAS_bias_points_maxent.csv",sep="")
+samples=paste("samplesfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/TG_allPts_FULL/full_pts_2_15_2018.csv",sep="")
 
 ## call model to run
 system(paste(bias_TG,output,environmental,samples, "autorun"))
 
 ## fair warning: maxEnt dumps a ton of files into the output directory
-
- ias <- read.csv("C:/Users/Localadmin/Google Drive/Ordinal/Occurence/Hotspots_output/IAS_occurences_final_analysis.csv")
- head(ias)
- ias$PLANT_CODE <- "bias"
- summary(ias$DATA_SOURCE)
- ias$DATA_SOURCE <- NULL
- head(ias)
- write.csv(ias, "C:/Users/Localadmin/Google Drive/Ordinal/Occurence/Hotspots_output/IAS_bias_points_maxent.csv", eol="\r\n", row.names=F, quote = F)
- #file("C:/Users/Localadmin/Google Drive/Ordinal/Occurence/Hotspots_output/IAS_bias_points_maxent.csv", "wb"), row.names = F, eol = "\r\n")
-
 ## the output of this model will be your bias layer for the species-level models
 ## this is NOT what we did in the hotspots paper, so don't get confused
+
+#########################################################################################
+## MaxEnt: Current Climate, species richness bias, logistic output
+#########################################################################################
+
+## set up model options, linear and quadratic features only, use sampling bias surface
+spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature")
+
+## define output directory
+output=paste("outputdirectory=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/Bias_Logistic_FULL",sep="")
+
+## define directory of environmental data for fitting
+environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/bias_ASCIIs",sep="")
+
+## define point location samples (all species in one .csv)
+## must be set up with three columns (species, lon, lat, in that order)
+samples=paste("samplesfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/TG_allPts_FULL/full_pts_2_15_2018.csv",sep="")
+
+## define sampling bias surface
+## this should be the average ascii file from your bias model above
+bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/RENAME.asc",sep="")
+
+## call model to run
+system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+
+
+
+
+
+
+#########################################################################################
+## REPEAT FOR JUST ABUN POINTS
+#########################################################################################
+
+## RAW SAMPLING BIAS
+## this is one way to estimate sampling bias
+## the model estimates where invasive plants are likely to have been sampled based on "ease of access" variables
+## use ALL points (including duplicates within a climate grid cell) for ALL species in your analysis for this step
+## we call this target group sampling
+
+## set up model options, only non-climate predictors in the environmental directory, linear and quadratic features only
+bias_TG=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=raw noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature")
+#bias_TG=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=raw noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature -N ann_precip -N tmax_jul -N tmin_jan")
+
+## define output directory
+#output=paste("outputdirectory=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/TG_allPts",sep="")
+output=paste("outputdirectory=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN",sep="")
+
+## define directory of environmental data for fitting
+#environmental=paste("environmentallayers=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs",sep="")
+environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/bias_ASCIIs",sep="")
+## put in all of the environmental data
+
+## define point location samples (all species in one .csv, give all the same name, e.g., bias)
+## otherwise each species will be treated seperately (good for later, but want bias across ALL species here)
+#samples=paste("samplesfile=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/IAS_bias_points_maxent.csv",sep="")
+samples=paste("samplesfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/TG_allPts_ABUN/full_abundance_pts_2_15_2018.csv",sep="")
+
+## call model to run
+system(paste(bias_TG,output,environmental,samples, "autorun"))
+
+## fair warning: maxEnt dumps a ton of files into the output directory
+## the output of this model will be your bias layer for the species-level models
+## this is NOT what we did in the hotspots paper, so don't get confused
+
+#########################################################################################
+## MaxEnt: Current Climate, species richness bias, logistic output
+#########################################################################################
+
+## set up model options, linear and quadratic features only, use sampling bias surface
+spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature")
+                   #"java -jar ",maxent.location, " nowarnings noprefixes -E responsecurveS jackknife outputformat=raw      noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature"
+## define output directory
+output=paste("outputdirectory=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/Bias_Logistic_ABUN",sep="")
+
+## define directory of environmental data for fitting
+environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/bias_ASCIIs",sep="")
+
+## define point location samples (all species in one .csv)
+## must be set up with three columns (species, lon, lat, in that order)
+samples=paste("samplesfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/TG_allPts_ABUN/full_abundance_pts_2_15_2018.csv",sep="")
+
+## define sampling bias surface
+## this should be the average ascii file from your bias model above
+bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/RENAME.asc",sep="")
+
+## call model to run
+system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+#########################################################################################
+
+
+
+
+
 
 ########################################################################################
 ## MaxEnt: Current Climate, species richness bias, logistic output
 #########################################################################################
 
 ## set up model options, linear and quadratic features only, use sampling bias surface
-spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature -N pop_2_5_us -N road_2_5_us biastype=3")
+spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature")
 
 ## define output directory
-output=paste("outputdirectory=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/CtyRich_Logistic",sep="")
+output=paste("outputdirectory=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/Bias_Logistic_FULL",sep="")
 
 ## define directory of environmental data for fitting
-environmental=paste("environmentallayers=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/US_ASCIIs",sep="")
+environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/bias_ASCIIs",sep="")
 
 ## define point location samples (all species in one .csv)
 ## must be set up with three columns (species, lon, lat, in that order)
-samples=paste("samplesfile=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/IAS_occurences_final_analysis.csv",sep="")
+samples=paste("samplesfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/TG_allPts_FULL/full_pts_2_15_2018.csv",sep="")
 
 ## define sampling bias surface
 ## this should be the average ascii file from your bias model above
-bias=paste("biasfile=","C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/spprich_cty_final.asc",sep="")
+bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/RENAME.asc",sep="")
 
 ## call model to run
 system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ####################################################################################
