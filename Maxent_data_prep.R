@@ -601,38 +601,111 @@ for(i in 1:length(sp.list)){
 }
 
 
-sp.list <- sp.list[order(sp.list)]
+#sp.list <- sp.list[order(sp.list)]
+#head(sp.list)
+#write.csv(sp.list, "MaxEntFiles/speciesList.csv", row.names=F)
+
+#### make list of strings to add to each species' model specification (variables to ignore)
+library(glue)
+sp.list <- read.table("ordsums2_13_2018.csv", header = T, sep = ",", 
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+sp.list <- data.frame(sp.list$species.code, sp.list$formu2, stringsAsFactors = F)
+colnames(sp.list) <- c("code","model")
+str(sp.list)
+head(sp.list)
+
+var.list <- c("bio_2", "bio_5", "bio_6", "bio_8", "bio_12","bio_15",
+              "nlcd_3","nlcd_4","nlcd_5","nlcd_6","nlcd_7","nlcd_8")
+
+              
+for (i in 1:NROW(ordsums)){
+  ignore <- c("")
+  for(j in 1:length(var.list)){
+   if(!grepl(var.list[j], sp.list$model[i], fixed=T)){
+     ignore <- cbind(ignore,var.list[j])
+     }
+  }
+  sp.list$ignore[i] <- collapse(ignore, sep= " -N ")
+  print(i)
+}
+
 head(sp.list)
 write.csv(sp.list, "MaxEntFiles/speciesList.csv", row.names=F)
 
 
-sp.list <- read.table("MaxEntFiles/speciesList.csv", header = T, sep = ",", 
-           quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
-sp.list <- sp.list$x
-head(sp.list)
+###########################################
+library(raster)
 
-for(i in 1:length(sp.list))
+i <- 0
+miny <- -9
+maxy <- -9
+minx <- -9
+maxx <- -9
+rows <- -9
+cols <- -9
+cels <- -9
+rasterSum <- data.frame(i,miny,maxy,minx,maxx,rows,cols,cels)
 
-ignore.variable <- "#"#MAKE LISTS
-spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature -N pop_2_5_us -N road_2_5_us biastype=3")
+rasterList <- c(list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/", full.names = T),
+                "C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc",
+                "C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc")
 
-samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/FULL/species", 
-                                    paste(sp.list[i], "csv", sep="."), sep="/"), sep="")
-directory(paste("C:/Users/Localadmin/Documents/Maxent_modeling/FULL/FINAL_OUTPUT", sp.list[i], sep="/"))
-dir.create(directory)
-output=paste("outputdirectory=", directory, sep="")
+for (i in 8:15){  ##1-7, 8-15
+  lyr <- raster(rasterList[i])
+  miny <- ymin(lyr)
+  maxy <- ymax(lyr)
+  minx <- xmin(lyr)
+  maxx <- xmax(lyr)
+  rows <- nrow(lyr)
+  cols <- ncol(lyr)
+  cels <- ncell(lyr)
+  rasterSum.i <- data.frame(i,miny,maxy,minx,maxx,rows,cols,cels)
+  rasterSum <- rbind(rasterSum,rasterSum.i)
+  print(i)
+}
 
-bias=paste("biasfile=","C:/Users/Localadmin/Documents/Maxent_modeling/FULL/BIAS_OUTPUT/enter_name_here.asc",sep="")
-## average bias ascii
+rasterSum <- rasterSum[rasterSum$i > 0,]
+rasterSum
+summary(rasterSum)
+max(rasterSum$miny) - min(rasterSum$miny) == 0
+max(rasterSum$maxy) - min(rasterSum$maxy) == 0
+max(rasterSum$minx) - min(rasterSum$minx) == 0
+max(rasterSum$maxx) - min(rasterSum$maxx) == 0 #### difference???
+max(rasterSum$cols) - min(rasterSum$cols) == 0
+max(rasterSum$rows) - min(rasterSum$rows) == 0
+max(rasterSum$cels) - min(rasterSum$cels) == 0
 
-samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/ABUN/species", 
-                                    paste(sp.list[i], "csv", sep="."), sep="/"), sep="")
-directory <- paste("C:/Users/Localadmin/Documents/Maxent_modeling/ABUN/FINAL_OUTPUT", sp.list[i], sep="/")
-dir.create(directory)
-output=paste("outputdirectory=", directory, sep="")
+rasterSum$maxxDIFF <- (rasterSum$maxx-mean(rasterSum$maxx))*1000000000
+unique(rasterSum$maxxDIFF)
+#rasterList
+rasterSum$maxx[1]-rasterSum$maxx[12]
+rasterSum$maxx[11]-rasterSum$maxx[13]
+## Diff of 0.000000001 decimal degrees
 
-bias=paste("biasfile=","C:/Users/Localadmin/Documents/Maxent_modeling/ABUN/BIAS_OUTPUT/enter_name_here.asc",sep="")
-## average bias ascii
-
-
-
+# wrong.ext <- stack("C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_3.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_4.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_5.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_6.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_7.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_8.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc", ## renamed in files then changed back
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc")
+# 
+# right.ext <- stack("C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_2.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_5.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_6.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_8.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_12.asc",
+#                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_15.asc")
+# 
+# wrong.ext2right <- resample(wrong.ext, right.ext, method="ngb") ##nearest neighbor
+# 
+writeRaster(w2r$nlcd_3,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_3.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$nlcd_4,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_4.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$nlcd_5,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_5.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$nlcd_6,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_6.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$nlcd_7,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_7.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$nlcd_8,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_8.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$BIAS_avgFULL,"C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$BIAS_avgABUN,"C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc", format="ascii", prj=F, overwrite=T)
