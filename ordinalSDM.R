@@ -3,7 +3,7 @@
 ##   last modified: 12/19/2017
 #    Mitch O'Neill
 
-setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 library(rgdal)
 library(raster)   ## for Raster climate data
@@ -11,12 +11,12 @@ library(rgeos)    ## for extractig climate data to points
 library(reshape2) ## for reformatting model predictions
 library(combinat) ## for generating pairs of covariates for assessment of collinearity 
 library(glue)     ## for collapsing lists of variables into equations
-#library(modEvA)
 library(stringr)
 library(MASS)
 library(irr)
-#library(rms)
 library(ordinal)
+#library(rms)
+#library(modEvA)
 
 #install.packages("ordinal")
 #install.packages("rms")
@@ -24,9 +24,6 @@ library(ordinal)
 #install.packages("irr")
 #install.packages("glue")
 #install.packages("combinat")
-
-
-setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 ## list candidate terms (all six variables + quadratics)
 var.list <- c("bio_2", "poly(bio_2, 2)",
@@ -161,22 +158,22 @@ edd <- edd[extentShape, ] ##100,306 to 99,586
 
 #hist(edd$abundance)
 ## read in Worldclim climate rasters clipped to L48; 6 variables manually selected by assessing correlations
-bio <- stack("C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc" )
+bio <- stack("C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_8.asc" )
 ## assign proj4string to that of one of the raw files before clipping
 proj4string(bio) <-  "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
-bioD <- as.data.frame(bio)
-bioD[,1:4] <- bioD[,1:4]/10
+#bioD <- as.data.frame(bio)
+#bioD[,1:4] <- bioD[,1:4]/10
 
 #edd <- spTransform(edd, proj4string(bio)) ## project point data to proj4string of climate data
 ext <- extract(bio, edd) ## extract climate values to points
@@ -565,7 +562,7 @@ ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
 ## found that centering+scaling data gets rid of error, does not change AIC or p-vals
 
 
-######################################################################
+#################################
 ordsums<- read.table("ordsums2_13_2018.csv", header = T, sep = ",", quote= "\"", 
                      comment.char= "", stringsAsFactors = F, strip.white = T)
 
@@ -684,52 +681,53 @@ drop1(M, test="Chi")
 summary(M)
 M$Hessian
 
-speciesR <- species
-head(species)
-speciesR[,7:18] <- scale(speciesR[,7:18])
-head(speciesR)
-Mr <- clm(abundance ~ bio_5 + bio_12 + poly(bio_15, 2), data=speciesR)
-coef(summary(M))
-coef(summary(Mr))
-summary(M);summary(Mr)
+#################################
+ordsums <- read.table("ordsums2_13_2018.csv", header = T, sep = ",", 
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+sp.list <- ordsums$species.code[ordsums$kappaP2 < 0.05];sp.list <- sp.list[!is.na(sp.list)]
+fo.list <- ordsums$formu2[ordsums$kappaP2 < 0.05];fo.list <- fo.list[!is.na(fo.list)]
 
+
+
+
+bio <- stack("C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_15.asc")#,
+              
+nlcd <- stack("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcdACRES/nlcd3.asc",
+              "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcdACRES/nlcd4.asc",
+              "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcdACRES/nlcd5.asc",
+              "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcdACRES/nlcd6.asc",
+              "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcdACRES/nlcd7.asc",
+              "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcdACRES/nlcd8.asc" )
+## assign proj4string to that of one of the raw files before clipping
+proj4string(bio) <-  "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
+proj4string(nlcd) <-"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
+
+#bioD <- as.data.frame(bio)
+#bioD[,1:4] <- bioD[,1:4]/10
+
+#edd <- spTransform(edd, proj4string(bio)) ## project point data to proj4string of climate data
+ext <- extract(bio, edd) ## extract climate values to points
+ext2 <- extract(nlcd, edd) ## extract climate values to points
+edd <- cbind(as.data.frame(edd), ext, ext2) ## append extracted climate data to point data
+#edd <- cbind(as.data.frame(edd), ext2) ## append extracted climate data to point data
+
+coordinates(edd) <- c(5,4)
+proj4string(edd) <- CRS("+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" ) ## from transformations during data prep
+
+colnames(edd)<-c("species", "med","nopts","lat","lon","cel","bio_2","bio_5","bio_6","bio_8","bio_12","bio_15","nlcd_3","nlcd_4","nlcd_5","nlcd_6","nlcd_7","nlcd_8")
+
+
+edd[,(ncol(edd)-11):(ncol(edd)-8)] <- edd[,(ncol(edd)-11):(ncol(edd)-8)]/10
+head(edd)
+edd$abundance <- ceiling(edd$med)
+ 
 eddR<-edd
-eddR[,7:18] <- scale(eddR[,7:18])
-
-### AIC is not affected?
-
-
-
-
-
-
-
-
-
-hist(as.numeric(species$abundance))
-pm <- predict(M, species, type="class")
-pm <- melt(pm)
-pm <- pm[,1]
-#length(pm$)
-
-pm <- data.frame(cbind(species$abundance,pm))
-colnames(pm) <- c("observed", "predicted")
-summary(pm)
-
-plot(species$bio_5,species$abundance)
-plot(species$bio_12,species$abundance)
-plot(species$bio_15,species$abundance)
-
-kappa2 <- kappa2(pm)
-kappaP2 <- kappa2$p.value
-kappa2 <- kappa2$value
-
-
-#edd$species <- as.character(edd$species)
-sp.list <- ordsums$species.code[ordsums$kappaP2 < 0.05]
-sp.list <- sp.list[!is.na(sp.list)]
-fo.list <- ordsums$formu2[ordsums$kappaP2 < 0.05]
-fo.list <- fo.list[!is.na(fo.list)]
+#eddR[,7:18] <- scale(eddR[,7:18], center=T, scale=T) ##(x-mean)/stdev
 
 for(i in 1:119){
   
@@ -912,7 +910,7 @@ aa.OK <- aa[is.OK]
 lapply(aa.OK,function(x) x@optinfo$conv$lme4$messages)
 
 
-###########
+##########################################
 
 
 
@@ -1003,7 +1001,7 @@ nrow(ordsums[ordsums$kappa == 0 ,])
 
 
 
-###########################################################
+##########################################
 
 for (i in 1:length(ordsums$species.code)){
   linear <- data.frame(c(ordsums$c2[i], ordsums$c5[i], ordsums$c6[i], ordsums$c8[i], ordsums$c12[i], ordsums$c15[i]))
@@ -1055,7 +1053,7 @@ lines(bio_6$bio_6, p4,lwd=4, col='orange')
 
 
 reg <- "regina phyllange"
-#####################################
+##########################################
 for (i in 1:10) {
 tryCatch({
   print(i)
