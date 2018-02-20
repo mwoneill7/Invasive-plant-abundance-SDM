@@ -267,11 +267,8 @@ head(tabulate)
 tabulate$total <- rowSums(tabulate, na.rm = FALSE, dims = 1)
 head(tabulate)
 
-
 roads <- raster("MaxEntFiles/us_roads_2_5_2018.asc")
 proj4string(roads) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
-#"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
-#proj4string(roads) <-
 roaDs <- as.data.frame(roads)
 head(roaDs)
 
@@ -399,15 +396,15 @@ proj4string(bio) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 
 nlcd <- stack("MaxEntFiles/us_pop_2_5_2018.asc",
               "MaxEntFiles/us_roads_2_5_2018.asc")#,#)#,
-#              "nlcd/nlcd1.asc",
-#              "nlcd/nlcd2.asc",
-#              "nlcd/nlcd3.asc",
-#              "nlcd/nlcd4.asc",
-#              "nlcd/nlcd5.asc",
-#              "nlcd/nlcd6.asc",
-#              "nlcd/nlcd7.asc",
-#              "nlcd/nlcd8.asc",
-#              "nlcd/nlcd9.asc")
+# "nlcd/nlcd1.asc",
+# "nlcd/nlcd2.asc",
+# "nlcd/nlcd3.asc",
+# "nlcd/nlcd4.asc",
+# "nlcd/nlcd5.asc",
+# "nlcd/nlcd6.asc",
+# "nlcd/nlcd7.asc",
+# "nlcd/nlcd8.asc",
+# "nlcd/nlcd9.asc")
 
 #test <- raster("nlcd/nlcd9.asc")
 
@@ -701,6 +698,39 @@ rasterSum$maxx[11]-rasterSum$maxx[13]
 # 
 # wrong.ext2right <- resample(wrong.ext, right.ext, method="ngb") ##nearest neighbor
 # 
+#writeRaster(w2r$nlcd_3,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_3.asc", format="ascii", prj=F, overwrite=T)
+#writeRaster(w2r$nlcd_4,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_4.asc", format="ascii", prj=F, overwrite=T)
+#writeRaster(w2r$nlcd_5,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_5.asc", format="ascii", prj=F, overwrite=T)
+#writeRaster(w2r$nlcd_6,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_6.asc", format="ascii", prj=F, overwrite=T)
+#writeRaster(w2r$nlcd_7,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_7.asc", format="ascii", prj=F, overwrite=T)
+#writeRaster(w2r$nlcd_8,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_8.asc", format="ascii", prj=F, overwrite=T)
+#writeRaster(w2r$BIAS_avgFULL,"C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc", format="ascii", prj=F, overwrite=T)
+#writeRaster(w2r$BIAS_avgABUN,"C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc", format="ascii", prj=F, overwrite=T)
+
+ wrong.ext <- stack("C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_5.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_6.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_8.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_12.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_15.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_3.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_4.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_5.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_6.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_7.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_8.asc", ## renamed in files then 
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc", ## changed
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc") ## back
+ 
+ right.ext <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_2.asc")
+ 
+w2r <- resample(wrong.ext, right.ext, method="ngb") ##nearest neighbor 
+ 
+writeRaster(right.ext$bio_2,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_2.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$bio_5,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_5.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$bio_6,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_6.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$bio_8,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_8.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$bio_12,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_12.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$bio_15,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_15.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$nlcd_3,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_3.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$nlcd_4,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_4.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$nlcd_5,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_5.asc", format="ascii", prj=F, overwrite=T)
@@ -709,3 +739,89 @@ writeRaster(w2r$nlcd_7,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCII
 writeRaster(w2r$nlcd_8,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/nlcd_8.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$BIAS_avgFULL,"C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$BIAS_avgABUN,"C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc", format="ascii", prj=F, overwrite=T)
+ 
+
+
+################# try with #sqmeter
+roads <- raster("MaxEntFiles/us_roads_2_5_2018.asc")
+proj4string(roads) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+roaDs <- as.data.frame(roads)
+head(roaDs)
+cellid <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=crs(roads), vals=seq(1:ncell(roads)))
+plot(cellid)
+#writeRaster(cellid, "cellIDraster.asc", format="ascii", prj=T)
+
+fishnet <- readOGR(dsn = "ArcFiles_2_2_2018/fishnet", layer = "fishnet2018")
+fidraster <- raster("ArcFiles_2_2_2018/FIDraster_2_8/rasterFID.tif")
+#plot(fidraster)
+fids <- as.data.frame(fidraster)
+#head(fids)
+#summary(fids)
+#length(fids)
+#length(roaDs$us_roads_2_5_2018[!is.na(roaDs$us_roads_2_5_2018)])
+
+fids$cellID <- as.numeric(row.names(fids))
+fids <- fids[!is.na(fids$rasterFID),]
+colnames(fids) <- c("FID","cellID")
+head(fids)
+
+head(tabulate)
+#tabulate <- tabulate[,10:19]
+tabulate$FID <- as.numeric(row.names(tabulate)) -1 #tabulate$row - 1
+head(tabulate)
+
+summary(fids$FID)
+summary(tabulate$FID)
+nlcd2fid <- merge(fids,tabulate,by="FID")
+
+head(nlcd2fid)
+nlcd2fid <- nlcd2fid[order(nlcd2fid$cellID),]
+head(nlcd2fid)
+#plot(nlcd2fid$total~nlcd2fid$cellID)
+#newdata <- mtcars[order(mpg),]
+
+roaDs$nlcd1[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_1
+roaDs$nlcd2[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_2
+roaDs$nlcd3[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_3
+roaDs$nlcd4[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_4
+roaDs$nlcd5[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_5
+roaDs$nlcd6[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_6
+roaDs$nlcd7[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_7
+roaDs$nlcd8[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_8
+roaDs$nlcd9[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$BIN_9
+#roaDs$total[!is.na(roaDs$us_roads_2_5_2018)] <- nlcd2fid$total
+summary(roaDs)
+
+nlcd1 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd1)
+nlcd2 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd2)
+nlcd3 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd3)
+nlcd4 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd4)
+nlcd5 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd5)
+nlcd6 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd6)
+nlcd7 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd7)
+nlcd8 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd8)
+nlcd9 <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$nlcd9)
+#total <- raster(nrows=nrow(roads), ncols=ncol(roads), ext=extent(roads), crs=proj4string(roads), vals=roaDs$total)
+
+#plot(total)
+#nlcd <- stack(nlcd1,nlcd2,nlcd3,nlcd4,nlcd5,nlcd6,nlcd7,nlcd8,nlcd9)
+plot(nlcd1)
+plot(nlcd2)
+plot(nlcd3)
+plot(nlcd4)
+plot(nlcd5)
+plot(nlcd6)
+plot(nlcd7)
+plot(nlcd8)
+plot(nlcd9)
+
+#dir.create("nlcdACRES")
+writeRaster(nlcd1, "nlcdACRES/nlcd1.asc", format="ascii", prj=F, overwrite=T) ## unsuitable
+writeRaster(nlcd2, "nlcdACRES/nlcd2.asc", format="ascii", prj=F, overwrite=T) ## develop
+writeRaster(nlcd3, "nlcdACRES/nlcd3.asc", format="ascii", prj=F, overwrite=T) ## forest
+writeRaster(nlcd4, "nlcdACRES/nlcd4.asc", format="ascii", prj=F, overwrite=T) ## evergreen
+writeRaster(nlcd5, "nlcdACRES/nlcd5.asc", format="ascii", prj=F, overwrite=T) ## shrub
+writeRaster(nlcd6, "nlcdACRES/nlcd6.asc", format="ascii", prj=F, overwrite=T) ## herbaceous
+writeRaster(nlcd7, "nlcdACRES/nlcd7.asc", format="ascii", prj=F, overwrite=T) ## pasture/hay
+writeRaster(nlcd8, "nlcdACRES/nlcd8.asc", format="ascii", prj=F, overwrite=T) ## cropland
+writeRaster(nlcd9, "nlcdACRES/nlcd9.asc", format="ascii", prj=F, overwrite=T) ## wetland
