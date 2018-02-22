@@ -707,7 +707,8 @@ rasterSum$maxx[11]-rasterSum$maxx[13]
 #writeRaster(w2r$BIAS_avgFULL,"C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc", format="ascii", prj=F, overwrite=T)
 #writeRaster(w2r$BIAS_avgABUN,"C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc", format="ascii", prj=F, overwrite=T)
 
- wrong.ext <- stack("C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_5.asc",
+ wrong.ext <- stack("C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_2.asc",
+                    "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_5.asc",
                     "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_6.asc",
                     "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_8.asc",
                     "C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_12.asc",
@@ -725,7 +726,7 @@ rasterSum$maxx[11]-rasterSum$maxx[13]
  
 w2r <- resample(wrong.ext, right.ext, method="ngb") ##nearest neighbor 
  
-writeRaster(right.ext$bio_2,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_2.asc", format="ascii", prj=F, overwrite=T)
+writeRaster(w2r$bio_2,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_2.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$bio_5,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_5.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$bio_6,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_6.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$bio_8,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs/bio_8.asc", format="ascii", prj=F, overwrite=T)
@@ -740,8 +741,8 @@ writeRaster(w2r$nlcd_8,"C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCII
 writeRaster(w2r$BIAS_avgFULL,"C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc", format="ascii", prj=F, overwrite=T)
 writeRaster(w2r$BIAS_avgABUN,"C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc", format="ascii", prj=F, overwrite=T)
  
-
-
+plot(raster("C:/Users/Localadmin/Desktop/ACJA_avg.asc"))
+plot(raster("C:/Users/Localadmin/Desktop/ACJA_avgFULL.asc"))
 ################# try with #sqmeter
 roads <- raster("MaxEntFiles/us_roads_2_5_2018.asc")
 proj4string(roads) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"

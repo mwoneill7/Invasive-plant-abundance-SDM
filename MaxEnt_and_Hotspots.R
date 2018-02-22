@@ -163,7 +163,7 @@ head(sp.list)
 sp.list<- sp.list[order(sp.list$code),]
 head(sp.list)
 
-for(i in 2:4){#length(sp.list$code)){
+for(i in 1:2){#length(sp.list$code)){
   
   ## set up model options, linear and quadratic features only, use sampling bias surface
   spp_bias_log=paste0("java -jar ",maxent.location, 
