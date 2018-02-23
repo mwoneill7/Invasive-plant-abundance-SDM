@@ -157,7 +157,7 @@ system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
 ## define directory of environmental data for fitting
 environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs",sep="")
 
-sp.list <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/speciesList.csv", header = T, sep = ",", 
+sp.list <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/spForms2_23_2018.csv", header = T, sep = ",", 
                       quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 head(sp.list)
 sp.list<- sp.list[order(sp.list$code),]
