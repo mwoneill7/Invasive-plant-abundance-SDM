@@ -84,6 +84,26 @@ write.csv(formulae,"formulas2_22_2018.csv",row.names=F)
 
 rm(var.sets, combo.j, i, j, var.list) ## garbage cleaning
 
+formulae <- read.table("formulas2_22_2018.csv", header = T, sep = ",", quote= "\"", 
+                       comment.char= "", stringsAsFactors = F, strip.white = T)
+colnames(formulae) <- c("formula")
+formulae$bio_2 <- sapply(formulae$formula, grepl, pattern="bio_2", fixed=T)
+formulae$bio_5 <- sapply(formulae$formula, grepl, pattern="bio_5", fixed=T)
+formulae$bio_6 <- sapply(formulae$formula, grepl, pattern="bio_6", fixed=T)
+formulae$bio_8 <- sapply(formulae$formula, grepl, pattern="bio_8", fixed=T)
+formulae$bio_12 <- sapply(formulae$formula, grepl, pattern="bio_12", fixed=T)
+formulae$bio_15 <- sapply(formulae$formula, grepl, pattern="bio_15", fixed=T)
+formulae$nlcd_3 <- sapply(formulae$formula, grepl, pattern="nlcd_3", fixed=T)
+formulae$nlcd_4 <- sapply(formulae$formula, grepl, pattern="nlcd_4", fixed=T)
+formulae$nlcd_5 <- sapply(formulae$formula, grepl, pattern="nlcd_5", fixed=T)
+formulae$nlcd_6 <- sapply(formulae$formula, grepl, pattern="nlcd_6", fixed=T)
+formulae$nlcd_7 <- sapply(formulae$formula, grepl, pattern="nlcd_7", fixed=T)
+formulae$nlcd_8 <- sapply(formulae$formula, grepl, pattern="nlcd_8", fixed=T)
+#head(formulae)
+head(formulae)
+
+write.csv(formulae,"formulas2_22_2018.csv",row.names=F)
+
 
 ######################################
 ###### EXTRACT ENVIRONMENAL
@@ -134,9 +154,9 @@ write.csv(edd, "edd_w_environmental.csv", row.names = F)
 
 ######################################
 
-formulae <- read.table("formulas2_22_2018.csv", header = T, sep = ",", quote= "\"", 
+formulae.s <- read.table("formulas2_22_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
-colnames(formulae) <- c("formula")
+
 
 edd <- read.table("edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
@@ -201,7 +221,7 @@ ordsums <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, 
                        null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
 sp.list <- as.character(unique(edd$species))
 
-for(s in 2:length(sp.list)){ ## Loop through species list
+for(s in 1:length(sp.list)){ ## Loop through species list
   
   species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
 
@@ -229,8 +249,8 @@ for(s in 2:length(sp.list)){ ## Loop through species list
       
       rho <- abs(rhos[var.pairs[1,i], var.pairs[2,i]]) 
       ## absolute value of spearman's rho at the row and column corresponding to the pair in the iteration
-      var1 <- row.names(rhos[var.pairs[1,i],]) ## name of the first variable in the pair
-      var2 <- row.names(rhos[var.pairs[2,i],]) ## name of the second variable in the pair
+      var1 <- var.pairs[1,i]#row.names(rhos[var.pairs[1,i],]) ## name of the first variable in the pair
+      var2 <- var.pairs[2,i]#(rhos[var.pairs[2,i],]) ## name of the second variable in the pair
       
       corr.pairs.i <- data.frame(var1,var2,rho, stringsAsFactors = F) ## concatenate data from the interation
       corr.pairs <- rbind(corr.pairs, corr.pairs.i) ## append data from iteraction to the master data frame
@@ -241,31 +261,32 @@ for(s in 2:length(sp.list)){ ## Loop through species list
     corr.pairs <- corr.pairs[corr.pairs$var1 != "TEMPLATE",] ## remove template row
     corr.pairs <- corr.pairs[corr.pairs$rho >= .6, ] ## select all pairwise correlations where collinearity is likely 
     
-    formulae.s <- formulae
-    #formulae.s <- data.frame(formulae, stringsAsFactors = F)
-    formulae.s$collinear <- 0
-    
-    if(length(corr.pairs$rho) > 0){ ## if there were any pairs where rho >= 0.8
-      for (i in 1:length(corr.pairs$rho)){ ## then loop through those pairs
-        #formulae.s <- formulae[1:12] #initialize
-        for (j in 25:length(formulae.s$formula)){ ## for each pair, loop through all of the possible models
-          ## and if the two highly correlated variables appear together in a model,
-          if(grepl(corr.pairs$var1[i], formulae.s$formula[j], fixed=T) & 
-             grepl(corr.pairs$var2[i], formulae.s$formula[j], fixed=T)) { 
-            formulae.s$collinear[j] <- 1
-          } 
-          #print(j)
-        } 
-      }
-    } 
-    
-    
-    formulae.s <- formulae.s[formulae.s$collinear == 0,]
-    rm(rhos, var1, var2, corr.pairs, var.pairs) ## garbage cleaning
-    print("removed collinearity")
+    ####################
+    # formulae.s <- formulae
+    # #formulae.s <- data.frame(formulae, stringsAsFactors = F)
+    # formulae.s$collinear <- 0
+    # 
+    # if(length(corr.pairs$rho) > 0){ ## if there were any pairs where rho >= 0.8
+    #   for (i in 1:length(corr.pairs$rho)){ ## then loop through those pairs
+    #     #formulae.s <- formulae[1:12] #initialize
+    #     for (j in 25:length(formulae.s$formula)){ ## for each pair, loop through all of the possible models
+    #       ## and if the two highly correlated variables appear together in a model,
+    #       if(grepl(corr.pairs$var1[i], formulae.s$formula[j], fixed=T) & 
+    #          grepl(corr.pairs$var2[i], formulae.s$formula[j], fixed=T)) { 
+    #         formulae.s$collinear[j] <- 1
+    #       } 
+    #       #print(j)
+    #     } 
+    #   }
+    # } 
+    #
+    #
+    # formulae.s <- formulae.s[formulae.s$collinear == 0,]
+    # rm(rhos, var1, var2, corr.pairs, var.pairs) ## garbage cleaning
+    # print("removed collinearity")
     
     ####################
-    ### POLR
+    ##### POLR
     ####################
     #    
     #    #### MODEL SELECTION
@@ -398,11 +419,10 @@ for(s in 2:length(sp.list)){ ## Loop through species list
     
     
     
-    
-    
-    ################################################
-    ########### CLM
-    ################################################
+
+    ####################
+    ##### CLM
+    ####################
     i <- -1 ## keep track of place in formula list
     edf <- -1 ## number of variables
     aic <- -1 ## Akaike's info criterion
@@ -414,18 +434,28 @@ for(s in 2:length(sp.list)){ ## Loop through species list
     for (i in 1:length(formulae.s$formula)){ ##loop through all formulae in the formula list
       #tryCatch(c=x, call=x, cond=x, expr=x)
       #tryCatch({
+      
+      acceptable <- TRUE
+      
+      for (c in 1:length(corr.pairs)){
+        
+        if(formulae.s[i,(as.numeric(corr.pairs$var1[c])+1)] == T & 
+           formulae.s[i,(as.numeric(corr.pairs$var2[c])+1)] == T){
+          acceptable <- FALSE
+        }
+      }
+
+      if(acceptable){
         
         M <- clm(formula(formulae.s$formula[i]), data = species)
         edf <- length(M$coefficients) ## REPLACE n
         aic <- AIC(M) ## extract aic score
         model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
         model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-        
+        print(i)
+      }  
       #},error=function(e){cat(species.code,conditionMessage(e), "\n")})
-      
-    }
-    
-    # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
+    } # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
     
     ###################  AIC comparison  #####################
     model.sel <- model.sel[model.sel$i != -1,]
@@ -447,7 +477,7 @@ for(s in 2:length(sp.list)){ ## Loop through species list
     #M <- polr(formula(formulae.s[3]), data = species, Hess = T)
     ## reconstruct the best model, using the formula number (i) to re-access it|#library(rms)|#M2 <- clm(formula(formulae.s[model.sel2$i]), data=species)|#M2$coefficients|#M2$coefficients|#AIC(M2)|#AIC(M)|#species$abundance <- ordered(as.numeric(as.character(species$abundance)), levels = c("1","2","3"))|#edf <- M$edf ## REPLACE n
     
-    print("selected model")
+    #print("selected model")
     
     ## extract summary of the model to access model-fit values
     Msum <- coef(summary(M))
@@ -527,8 +557,10 @@ for(s in 2:length(sp.list)){ ## Loop through species list
                             null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
     
     ordsums <- rbind(ordsums,ordsums.i) 
-    print(s)
+    #print(s)
+    #print("SPECIES")
   # if statement to remove vmin species}
+    write.csv(s,"progress.csv",row.names=F)
 }
 
 ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
@@ -561,8 +593,8 @@ head(sp.list)
 write.csv(sp.list, "MaxEntFiles/spForms2_23_2018.csv", row.names=F)
 
 
-## **PROCEED WITH CAUTION**
-## **CODE WASTELAND AHEAD **
+## **PROCEED WITH CAUTION** ##
+## **CODE WASTELAND AHEAD** ##
 
 
 #################################
