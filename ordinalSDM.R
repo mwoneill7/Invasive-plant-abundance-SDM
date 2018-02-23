@@ -452,7 +452,7 @@ for(s in 1:length(sp.list)){ ## Loop through species list
         aic <- AIC(M) ## extract aic score
         model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
         model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-        print(i)
+        #print(i)
       }  
       #},error=function(e){cat(species.code,conditionMessage(e), "\n")})
     } # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
