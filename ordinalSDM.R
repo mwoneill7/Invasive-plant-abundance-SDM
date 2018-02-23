@@ -3,7 +3,7 @@
 ##   last modified: 12/19/2017
 #    Mitch O'Neill
 
-setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 library(rgdal)
 library(raster)   ## for Raster climate data
@@ -25,6 +25,10 @@ library(ordinal)
 #install.packages("glue")
 #install.packages("combinat")
 
+######################################
+###### CREATE FORMULAE 
+######################################
+
 ## list candidate terms (all six variables + quadratics)
 var.list <- c("bio_2", "poly(bio_2, 2)",
               "bio_5", "poly(bio_5, 2)",
@@ -43,7 +47,7 @@ var.list <- c("bio_2", "poly(bio_2, 2)",
 var.sets <- c("variable sets") ## initialize list of variable sets
 
 ## loop through all possible numbers of variables (half #vars to avoid duplicating 1st order terms)
-for(i in 6:12){
+for(i in 1:12){
   combos.i <-(combn(var.list, i, simplify=F)) ## all combinations for that # of vars
   
   for (j in 1:length(combos.i)){ ## go through each combination with that # of vars
@@ -76,75 +80,20 @@ for(i in 6:12){
 
 formulae <- paste("abundance", var.sets[2:length(var.sets)], sep = " ~ ")
 ## add response part of formulaes, excluding the initial row
-write.csv(formulae,"formulas2_16_2018.csv",row.names=F)
+write.csv(formulae,"formulas2_22_2018.csv",row.names=F)
+
+rm(var.sets, combo.j, i, j, var.list) ## garbage cleaning
 
 
-rm(var.sets, combo.j, combos.i, i, j, var.list) ## garbage cleaning
+######################################
+###### EXTRACT ENVIRONMENAL
+######################################
 
-#formulae[46655]
 
-###############################################################
-###### add in singular terms
-#var.list <- c("bio_2", #"poly(bio_2, 2)",
-#              "bio_5", #"poly(bio_5, 2)",
-#              "bio_6", #"poly(bio_6, 2)",
-#              "bio_8", #"poly(bio_8, 2)",
-#              "bio_12",# "poly(bio_12, 2)",
-#              "bio_15",# "poly(bio_15, 2)",
-#              "nlcd_3",# "poly(nlcd_3 ,2)",
-#              "nlcd_4",# "poly(nlcd_4 ,2)",
-#              "nlcd_5",# "poly(nlcd_5 ,2)",
-#              "nlcd_6",# "poly(nlcd_6 ,2)",
-#              "nlcd_7",# "poly(nlcd_7 ,2)",
-#              "nlcd_8")# "poly(nlcd_8 ,2)")
-#var.sets <- c("variable sets")
-#for(i in 9:12){
-#  combos.i <-(combn(var.list, i, simplify=F)) ## all combinations for that # of vars
-#  
-#  for (j in 1:length(combos.i)){ ## go through each combination with that # of vars
-#    combo.j <- as.character(collapse(combos.i[[j]], sep= " + ")) 
-#    ## collapse the combination of vars into a single char string (easier to deal with)
-#    
-#    ## As long as the combination does not duplicate the 1st order term; (i.e. bio_5 + poly(bio_5, 2))
-#    #if(!(grepl("bio_2 ", combo.j) & grepl("poly(bio_2", combo.j, fixed=T)) &
-#    #   !(grepl("bio_5 ", combo.j) & grepl("poly(bio_5", combo.j, fixed=T)) &
-#    #   !(grepl("bio_6 ", combo.j) & grepl("poly(bio_6", combo.j, fixed=T)) &
-#    #   !(grepl("bio_8 ", combo.j) & grepl("poly(bio_8", combo.j, fixed=T)) &
-#    #   !(grepl("bio_12 ", combo.j) & grepl("poly(bio_12", combo.j, fixed=T)) &
-#    #   !(grepl("bio_15 ", combo.j) & grepl("poly(bio_15", combo.j, fixed=T)) &
-#    #   #!(grepl("nlcd_2 ", combo.j) & grepl("poly(nlcd_2", combo.j, fixed=T)) &
-#    #   !(grepl("nlcd_3 ", combo.j) & grepl("poly(nlcd_3", combo.j, fixed=T)) &
-#    #   !(grepl("nlcd_4 ", combo.j) & grepl("poly(nlcd_4", combo.j, fixed=T)) &
-#    #   !(grepl("nlcd_5 ", combo.j) & grepl("poly(nlcd_5", combo.j, fixed=T)) &
-#    #   !(grepl("nlcd_6 ", combo.j) & grepl("poly(nlcd_6", combo.j, fixed=T)) &
-#    #   !(grepl("nlcd_7 ", combo.j) & grepl("poly(nlcd_7", combo.j, fixed=T)) &
-#    #   !(grepl("nlcd_8 ", combo.j) & grepl("poly(nlcd_8", combo.j, fixed=T))){ #&
-#    #  #!(grepl("nlcd_9 ", combo.j) & grepl("poly(nlcd_9", combo.j, fixed=T))
-#      var.sets <- c(var.sets,combo.j)#} ## add it to the list of variable sets
-#    #print(j)
-#  }
-#  
-#  print(i)
-#}
-#
-#
-#formulae2 <- paste("abundance", var.sets[2:length(var.sets)], sep = " ~ ")
-## add response part of formulaes, excluding the initial row
-
-#formulae <- c(formulae,formulae2)
-#head(formulae3)
-
-#rm(var.sets, combo.j, combos.i, i, j, var.list,formulae2,formulae3) ## garbage cleaning
-
-#setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
-## read in EDDMapS dataset, thinned to 5km climate grid cells (1 point per species per cell)
-
-##################################################
 edd <- read.table("eddmaps_thinned_1_25_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 codes <- read.table("species.codes.1.31.18.csv", header=T, sep=",")
 edd <- edd[edd$species %in% codes$x, ]
-length(unique(edd$species))
 head(edd)
 
 coordinates(edd) <- c(5,4)
@@ -154,22 +103,21 @@ extentShape <- readOGR(dsn = "ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_
 proj4string(extentShape) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
 
 edd <- edd[extentShape, ] ##100,306 to 99,586
-####################################################
 
 #hist(edd$abundance)
 ## read in Worldclim climate rasters clipped to L48; 6 variables manually selected by assessing correlations
-bio <- stack("C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_2.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_5.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_6.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_8.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_12.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_15.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
-             "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_8.asc" )
+bio <- stack("C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc" )
 ## assign proj4string to that of one of the raw files before clipping
 proj4string(bio) <-  "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
 #bioD <- as.data.frame(bio)
@@ -182,39 +130,60 @@ edd[,(ncol(edd)-11):(ncol(edd)-8)] <- edd[,(ncol(edd)-11):(ncol(edd)-8)]/10
 head(edd)
 edd$abundance <- ceiling(edd$med)
 
+write.csv(edd, "edd_w_environmental.csv", row.names = F)
+
+######################################
+
+formulae <- read.table("formulas2_22_2018.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+colnames(formulae) <- c("formula")
+
+edd <- read.table("edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+
 
 species.code <- "TEMPLATE" ## initialize master file to contain summaries of GAMs (final model for each species)
 aic <- -99 ## adjusted R-squared of models
 no.pts <- -99
 no.terms <- -99
 no.vars <- -99
-#p05 <- -99
-#p10 <- -99
 formu <- "TEMPLATE"
 c.up <- -99
 c.down <- -99
 pS <- -99
+pS10 <- -99
 pI <- -99
+pI10 <- -99
 null <- -99
 kappa <- -99
 kappaP <- -99
-#kappaW <- -99
-regS <- -99
-regI <-99
+bin1o <- -99
+bin2o <- -99
+bin3o <- -99
+bin1p <- -99
+bin2p <- -99
+bin3p <- -99
 
-aic2 <- -99
-no.terms2 <- -99
-no.vars2 <- -99
-formu2 <- "TEMPLATE"
-c.up2 <- -99
-c.down2 <- -99
-pS2 <- -99
-pI2 <- -99
-null2 <- -99
-kappa2 <- -99
-kappaP2 <-99
-regS2 <- -99
-regI2 <- -99
+##########################
+#p05 <- -99
+#p10 <- -99
+#kappaW <- -99
+#regS <- -99
+#regI <-99
+#
+#aic2 <- -99
+#no.terms2 <- -99
+#no.vars2 <- -99
+#formu2 <- "TEMPLATE"
+#c.up2 <- -99
+#c.down2 <- -99
+#pS2 <- -99
+#pI2 <- -99
+#null2 <- -99
+#kappa2 <- -99
+#kappaP2 <-99
+#regS2 <- -99
+#regI2 <- -99
 #c2    <- -999
 #c2.2  <- -999
 #c5    <- -999
@@ -227,22 +196,15 @@ regI2 <- -99
 #c12.2 <- -999
 #c15   <- -999
 #c15.2 <- -999
-
-ordsums <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pI, null, kappa, kappaP, regS, regI, 
-                                           aic2,no.terms2,no.vars2,formu2,c.up2,c.down2,pS2,pI2,null2,kappa2,kappaP2,regS2,regI2, stringsAsFactors = F)
-#ordsums <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c2,c2.2,c5,c5.2,c6,c6.2,c8,c8.2,c12,c12.2,c15,c15.2, stringsAsFactors = F)
-#ordsums <- data.frame(species.code,aic,no.pts,no.terms,no.vars,p05s,p10s,p05i,p10i,formu,stringsAsFactors = F)
+##########################
+ordsums <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pS10, pI, pI10,
+                       null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
 sp.list <- as.character(unique(edd$species))
 
-for(s in 1:length(sp.list)){ ## Loop through species list
+for(s in 2:length(sp.list)){ ## Loop through species list
   
   species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
 
-    #if(species.code !="HIAU" &
-    #   species.code != "CYSC4" &
-    #   species.code != "VIVI" &
-    #   species.code != "CICA" & species.code != "SEPU7" & species.code != "MESA" &
-    #  species.code != "RUAC3") {
     species <- edd[edd$species == species.code,]## subset to species of the iteration
     #species <- data.frame(cbind(species$abundance, species$latitude, species$longitude)) ## select only variables needed to save computation time
     species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3))
@@ -279,156 +241,167 @@ for(s in 1:length(sp.list)){ ## Loop through species list
     corr.pairs <- corr.pairs[corr.pairs$var1 != "TEMPLATE",] ## remove template row
     corr.pairs <- corr.pairs[corr.pairs$rho >= .6, ] ## select all pairwise correlations where collinearity is likely 
     
-    formulae.s <- data.frame(formulae, stringsAsFactors = F)
+    formulae.s <- formulae
+    #formulae.s <- data.frame(formulae, stringsAsFactors = F)
     formulae.s$collinear <- 0
     
     if(length(corr.pairs$rho) > 0){ ## if there were any pairs where rho >= 0.8
       for (i in 1:length(corr.pairs$rho)){ ## then loop through those pairs
         #formulae.s <- formulae[1:12] #initialize
-        for (j in 2:length(formulae)){ ## for each pair, loop through all of the possible models
+        for (j in 25:length(formulae.s$formula)){ ## for each pair, loop through all of the possible models
           ## and if the two highly correlated variables appear together in a model,
-          if(grepl(corr.pairs$var1[i], formulae[j], fixed=T) & grepl(corr.pairs$var2[i], formulae[j], fixed=T)) { 
+          if(grepl(corr.pairs$var1[i], formulae.s$formula[j], fixed=T) & 
+             grepl(corr.pairs$var2[i], formulae.s$formula[j], fixed=T)) { 
             formulae.s$collinear[j] <- 1
-          }
+          } 
+          #print(j)
         } 
       }
     } 
     
     
-    formulae.s <- formulae.s$formulae[formulae.s$collinear == 0]
-    
+    formulae.s <- formulae.s[formulae.s$collinear == 0,]
     rm(rhos, var1, var2, corr.pairs, var.pairs) ## garbage cleaning
+    print("removed collinearity")
     
-    #### MODEL SELECTION #####
-    ## initialize template masterfile to contain summaries of each model for this species
-    i <- -1 ## keep track of place in formula list
-    edf <- -1 ## number of variables
-    aic <- -1 ## Akaike's info criterion
-    #nonsig <- -1
-    #bios <- "TEMPLATE" ## list of climate covariates|#nonsig <- -1 ## 1: there is a non-sig variable, 2: all variables are signif|#conc.up <- -1
+    ####################
+    ### POLR
+    ####################
+    #    
+    #    #### MODEL SELECTION
+    #    ## initialize template masterfile to contain summaries of each model for this species
+    #    i <- -1 ## keep track of place in formula list
+    #    edf <- -1 ## number of variables
+    #    aic <- -1 ## Akaike's info criterion
+    #    #nonsig <- -1
+    #    #bios <- "TEMPLATE" ## list of climate covariates|#nonsig <- -1 ## 1: there is a non-sig variable, 2: all variables are signif|#conc.up <- -1
+    #    
+    #    model.sel <- data.frame(i, edf, aic, stringsAsFactors = F)    
+    #    #model.sel <- data.frame(i, n, aic, bios, nonsig, conc.up, stringsAsFactors = F)
+    #    ## concatenate into master data.frame
+    #    for (i in 1:length(formulae.s)){ ##loop through all formulae in the formula list
+    #      #tryCatch(c=x, call=x, cond=x, expr=x)
+    #      tryCatch({
+    #        
+    #        M <- polr(formula(formulae.s[i]), data = species, Hess=T)
+    #        edf <- M$edf ## REPLACE n
+    #        aic <- AIC(M) ## extract aic score
+    #        model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
+    #        model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
+    #        
+    #      },error=function(e){cat(species.code,conditionMessage(e), "\n")})
+    #
+    #    }
+    #
+    #    # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
+    #
+    #    ###################  AIC comparison
+    #    model.sel <- model.sel[model.sel$i != -1,]
+    #    model.sel$dAIC <- model.sel$aic - min(model.sel$aic) ## calculate delta AIC
+    #    #model.sel <- model.sel[order(model.sel$dAIC),]
+    #    model.sel2 <- model.sel[model.sel$dAIC <= 2,] ## select the model with the best score, 
+    #    ## as well as models with scores that are not significantly worse
+    #    
+    #    #if(min(model.sel2$nonsig == 0)){
+    #    #  model.sel2 <- model.sel2[model.sel2$nonsig ==0]
+    #    #}
+    #    rm(model.sel, edf, i)
+    #    
+    #    model.sel2 <- model.sel2[model.sel2$edf == min(model.sel2$edf),] 
+    #    ## of the models with the best scores (<= min + 2), select the simplest models
+    #    
+    #    model.sel2 <- model.sel2[model.sel2$dAIC == min(model.sel2$dAIC),]
+    #    ## select the model with the best AIC score if there are multiple models
+    #    ## with similar scores and the same complexity (variable number)
+    #    
+    #    M <- polr(formula(formulae.s[model.sel2$i]), data = species, Hess = T)
+    #    #M <- polr(formula(formulae.s[3]), data = species, Hess = T)
+    #    ## reconstruct the best model, using the formula number (i) to re-access it|#library(rms)|#M2 <- clm(formula(formulae.s[model.sel2$i]), data=species)|#M2$coefficients|#M2$coefficients|#AIC(M2)|#AIC(M)|#species$abundance <- ordered(as.numeric(as.character(species$abundance)), levels = c("1","2","3"))|#edf <- M$edf ## REPLACE n
+    #
+    #    ## extract summary of the model to access model-fit values
+    #    Msum <- coef(summary(M))
+    #    p <- pnorm(abs(Msum[, "t value"]), lower.tail = FALSE) * 2
+    #    Msum <- data.frame(cbind(Msum, "p_value" = p))
+    #    
+    #    MsumI <- Msum[(nrow(Msum)-1):nrow(Msum),] ## 1 back to 2
+    #    pI <- length(MsumI$p_value[MsumI$p_value>0.05])
+    #    
+    #    MsumS <- Msum[1:(nrow(Msum)-2),] ## 2 back to 3
+    #    pS <- length(MsumS$p_value[MsumS$p_value>0.05])
+    #    
+    #    MsumS$name <- as.character(row.names(MsumS))
+    #    MsumS$poly <- sapply(MsumS$name, grepl, pattern="2)2")
+    #
+    #    c.up <- length(MsumS$Value[MsumS$Value > 0 & MsumS$poly == T])
+    #    c.down <- length(MsumS$Value[MsumS$Value < 0 & MsumS$poly == T])
+    #
+    #    aic <- AIC(M)          ## extract adjusted R-square value of model #adjDsq <-  Dsquared(M,adjust=T) ## extract deviance explained by model
+    #    no.pts <- nrow(species)
+    #    no.terms <- NROW(Msum) ## extract the number of terms
+    #    no.vars <- no.terms - 2 - str_count(formulae.s[model.sel2$i], "poly")
+    #    formu <- formulae.s[model.sel2$i]
+    #    #p05s<- length(MsumS$p.value[MsumS$p.value >= 0.05])
+    #    #p10s<- length(MsumS$p.value[MsumS$p.value > 0.1])
+    #    #p05i<- length(MsumI$p.value[MsumI$p.value >= 0.05])
+    #    #p10i<- length(MsumI$p.value[MsumI$p.value > 0.1])
+    #
+    #    #c2    <- Msum$Value[Msum$name == "poly(bio_2, 2)1" | Msum$name == "bio_2"]
+    #    #c2.2  <- Msum$Value[Msum$name == "poly(bio_2, 2)2"]
+    #    #c5    <- Msum$Value[Msum$name == "poly(bio_5, 2)1" | Msum$name == "bio_5"]
+    #    #c5.2  <- Msum$Value[Msum$name == "poly(bio_5, 2)2"]
+    #    #c6    <- Msum$Value[Msum$name == "poly(bio_6, 2)1" | Msum$name == "bio_6"]
+    #    #c6.2  <- Msum$Value[Msum$name == "poly(bio_6, 2)2"]
+    #    #c8    <- Msum$Value[Msum$name == "poly(bio_8, 2)1" | Msum$name == "bio_8"]
+    #    #c8.2  <- Msum$Value[Msum$name == "poly(bio_8, 2)2"]
+    #    #c12   <- Msum$Value[Msum$name == "poly(bio_12, 2)1" | Msum$name == "bio_12"]
+    #    #c12.2 <- Msum$Value[Msum$name == "poly(bio_12, 2)2"]
+    #    #c15   <- Msum$Value[Msum$name == "poly(bio_15, 2)1" | Msum$name == "bio_15"]
+    #    #c15.2 <- Msum$Value[Msum$name == "poly(bio_15, 2)2"]
+    #    #if(length(c2) == 0){c2 <- 0}
+    #    #if(length(c2.2) == 0){c2.2 <- 0}
+    #    #if(length(c5) == 0){c5 <- 0}
+    #    #if(length(c5.2) == 0){c5.2 <- 0}
+    #    #if(length(c6) == 0){c6 <- 0}
+    #    #if(length(c6.2) == 0){c6.2 <- 0}
+    #    #if(length(c8) == 0){c8 <- 0}
+    #    #if(length(c8.2) == 0){c8.2 <- 0}
+    #    #if(length(c12) == 0){c12 <- 0}
+    #    #if(length(c12.2) == 0){c12.2 <- 0}
+    #    #if(length(c15) == 0){c15 <- 0}
+    #    #if(length(c15.2) == 0){c15.2 <- 0}    
+    #    
+    #    ###check against NULL
+    #    null <- polr(abundance~1,data=species, Hess=T)
+    #    if(AIC(null) > (AIC(M) + 2)){null <- 0} else {null <- 1}  
+    #    
+    #    pm <- predict(M, species)
+    #    pm <- melt(pm)
+    #    pm <- cbind(species$abundance,pm)
+    #    colnames(pm) <- c("observed", "predicted")
+    #
+    #    
+    #    kappa <- kappa2(pm)
+    #    kappaP <- kappa$p.value
+    #    kappa <- kappa$value
+    #
+    #    
+    #    reg <- summary(glm(as.numeric(predicted)~as.numeric(observed), data=pm))$coefficients
+    #    regI <- reg[1,1]
+    #    reg2 <- reg[2,1]
     
-    model.sel <- data.frame(i, edf, aic, stringsAsFactors = F)    
-    #model.sel <- data.frame(i, n, aic, bios, nonsig, conc.up, stringsAsFactors = F)
-    ## concatenate into master data.frame
     
-    for (i in 1:length(formulae.s)){ ##loop through all formulae in the formula list
-      #tryCatch(c=x, call=x, cond=x, expr=x)
-      tryCatch({
-        
-        M <- polr(formula(formulae.s[i]), data = species, Hess=T)
-        edf <- M$edf ## REPLACE n
-        aic <- AIC(M) ## extract aic score
-        model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
-        model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-        
-      },error=function(e){cat(species.code,conditionMessage(e), "\n")})
-
-    }
-
-    # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
-
-    ###################  AIC comparison  #####################
-    model.sel <- model.sel[model.sel$i != -1,]
-    model.sel$dAIC <- model.sel$aic - min(model.sel$aic) ## calculate delta AIC
-    #model.sel <- model.sel[order(model.sel$dAIC),]
-    model.sel2 <- model.sel[model.sel$dAIC <= 2,] ## select the model with the best score, 
-    ## as well as models with scores that are not significantly worse
     
-    #if(min(model.sel2$nonsig == 0)){
-    #  model.sel2 <- model.sel2[model.sel2$nonsig ==0]
-    #}
-    rm(model.sel, edf, i)
     
-    model.sel2 <- model.sel2[model.sel2$edf == min(model.sel2$edf),] 
-    ## of the models with the best scores (<= min + 2), select the simplest models
     
-    model.sel2 <- model.sel2[model.sel2$dAIC == min(model.sel2$dAIC),]
-    ## select the model with the best AIC score if there are multiple models
-    ## with similar scores and the same complexity (variable number)
     
-    M <- polr(formula(formulae.s[model.sel2$i]), data = species, Hess = T)
-    #M <- polr(formula(formulae.s[3]), data = species, Hess = T)
-    ## reconstruct the best model, using the formula number (i) to re-access it|#library(rms)|#M2 <- clm(formula(formulae.s[model.sel2$i]), data=species)|#M2$coefficients|#M2$coefficients|#AIC(M2)|#AIC(M)|#species$abundance <- ordered(as.numeric(as.character(species$abundance)), levels = c("1","2","3"))|#edf <- M$edf ## REPLACE n
-
-    ## extract summary of the model to access model-fit values
-    Msum <- coef(summary(M))
-    p <- pnorm(abs(Msum[, "t value"]), lower.tail = FALSE) * 2
-    Msum <- data.frame(cbind(Msum, "p_value" = p))
     
-    MsumI <- Msum[(nrow(Msum)-1):nrow(Msum),] ## 1 back to 2
-    pI <- length(MsumI$p_value[MsumI$p_value>0.05])
     
-    MsumS <- Msum[1:(nrow(Msum)-2),] ## 2 back to 3
-    pS <- length(MsumS$p_value[MsumS$p_value>0.05])
     
-    MsumS$name <- as.character(row.names(MsumS))
-    MsumS$poly <- sapply(MsumS$name, grepl, pattern="2)2")
-
-    c.up <- length(MsumS$Value[MsumS$Value > 0 & MsumS$poly == T])
-    c.down <- length(MsumS$Value[MsumS$Value < 0 & MsumS$poly == T])
-
-    aic <- AIC(M)          ## extract adjusted R-square value of model #adjDsq <-  Dsquared(M,adjust=T) ## extract deviance explained by model
-    no.pts <- nrow(species)
-    no.terms <- NROW(Msum) ## extract the number of terms
-    no.vars <- no.terms - 2 - str_count(formulae.s[model.sel2$i], "poly")
-    formu <- formulae.s[model.sel2$i]
-    #p05s<- length(MsumS$p.value[MsumS$p.value >= 0.05])
-    #p10s<- length(MsumS$p.value[MsumS$p.value > 0.1])
-    #p05i<- length(MsumI$p.value[MsumI$p.value >= 0.05])
-    #p10i<- length(MsumI$p.value[MsumI$p.value > 0.1])
-
-#M2 <- lrm(abundance ~ poly(bio_2, 2) + bio_12 + poly(bio_15, 2) + nlcd_5 + nlcd_6, data=species)
-#AIC(M2)    
     
-    #############################################################################
-    #c2    <- Msum$Value[Msum$name == "poly(bio_2, 2)1" | Msum$name == "bio_2"]
-    #c2.2  <- Msum$Value[Msum$name == "poly(bio_2, 2)2"]
-    #c5    <- Msum$Value[Msum$name == "poly(bio_5, 2)1" | Msum$name == "bio_5"]
-    #c5.2  <- Msum$Value[Msum$name == "poly(bio_5, 2)2"]
-    #c6    <- Msum$Value[Msum$name == "poly(bio_6, 2)1" | Msum$name == "bio_6"]
-    #c6.2  <- Msum$Value[Msum$name == "poly(bio_6, 2)2"]
-    #c8    <- Msum$Value[Msum$name == "poly(bio_8, 2)1" | Msum$name == "bio_8"]
-    #c8.2  <- Msum$Value[Msum$name == "poly(bio_8, 2)2"]
-    #c12   <- Msum$Value[Msum$name == "poly(bio_12, 2)1" | Msum$name == "bio_12"]
-    #c12.2 <- Msum$Value[Msum$name == "poly(bio_12, 2)2"]
-    #c15   <- Msum$Value[Msum$name == "poly(bio_15, 2)1" | Msum$name == "bio_15"]
-    #c15.2 <- Msum$Value[Msum$name == "poly(bio_15, 2)2"]
-    #if(length(c2) == 0){c2 <- 0}
-    #if(length(c2.2) == 0){c2.2 <- 0}
-    #if(length(c5) == 0){c5 <- 0}
-    #if(length(c5.2) == 0){c5.2 <- 0}
-    #if(length(c6) == 0){c6 <- 0}
-    #if(length(c6.2) == 0){c6.2 <- 0}
-    #if(length(c8) == 0){c8 <- 0}
-    #if(length(c8.2) == 0){c8.2 <- 0}
-    #if(length(c12) == 0){c12 <- 0}
-    #if(length(c12.2) == 0){c12.2 <- 0}
-    #if(length(c15) == 0){c15 <- 0}
-    #if(length(c15.2) == 0){c15.2 <- 0}    
-    #############################################################################
-    
-    ###check against NULL
-    null <- polr(abundance~1,data=species, Hess=T)
-    if(AIC(null) > (AIC(M) + 2)){null <- 0} else {null <- 1}  
-    
-    pm <- predict(M, species)
-    pm <- melt(pm)
-    pm <- cbind(species$abundance,pm)
-    colnames(pm) <- c("observed", "predicted")
-
-    
-    kappa <- kappa2(pm)
-    kappaP <- kappa$p.value
-    kappa <- kappa$value
-
-    
-    reg <- summary(glm(as.numeric(predicted)~as.numeric(observed), data=pm))$coefficients
-    regI <- reg[1,1]
-    reg2 <- reg[2,1]
     
     
     ################################################
-    ########### Repeat for lrm #####################
+    ########### CLM
     ################################################
     i <- -1 ## keep track of place in formula list
     edf <- -1 ## number of variables
@@ -438,17 +411,17 @@ for(s in 1:length(sp.list)){ ## Loop through species list
     #model.sel <- data.frame(i, n, aic, bios, nonsig, conc.up, stringsAsFactors = F)
     ## concatenate into master data.frame
     
-    for (i in 1:length(formulae.s)){ ##loop through all formulae in the formula list
+    for (i in 1:length(formulae.s$formula)){ ##loop through all formulae in the formula list
       #tryCatch(c=x, call=x, cond=x, expr=x)
-      tryCatch({
+      #tryCatch({
         
-        M <- clm(formula(formulae.s[i]), data = species)
+        M <- clm(formula(formulae.s$formula[i]), data = species)
         edf <- length(M$coefficients) ## REPLACE n
         aic <- AIC(M) ## extract aic score
         model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
         model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
         
-      },error=function(e){cat(species.code,conditionMessage(e), "\n")})
+      #},error=function(e){cat(species.code,conditionMessage(e), "\n")})
       
     }
     
@@ -470,9 +443,11 @@ for(s in 1:length(sp.list)){ ## Loop through species list
     ## select the model with the best AIC score if there are multiple models
     ## with similar scores and the same complexity (variable number)
     
-    M <- clm(formula(formulae.s[model.sel2$i]), data = species)
+    M <- clm(formula(formulae.s$formula[model.sel2$i]), data = species)
     #M <- polr(formula(formulae.s[3]), data = species, Hess = T)
     ## reconstruct the best model, using the formula number (i) to re-access it|#library(rms)|#M2 <- clm(formula(formulae.s[model.sel2$i]), data=species)|#M2$coefficients|#M2$coefficients|#AIC(M2)|#AIC(M)|#species$abundance <- ordered(as.numeric(as.character(species$abundance)), levels = c("1","2","3"))|#edf <- M$edf ## REPLACE n
+    
+    print("selected model")
     
     ## extract summary of the model to access model-fit values
     Msum <- coef(summary(M))
@@ -480,26 +455,27 @@ for(s in 1:length(sp.list)){ ## Loop through species list
     #Msum <- data.frame(cbind(Msum, "p_value" = p))
     
     MsumS <- data.frame(Msum[3:nrow(Msum),]) ## 1 back to 2
-    pS2 <- length(MsumS$Estimate[MsumS$Pr...z..>0.05])
- 
+    pS <- length(MsumS$Estimate[MsumS$Pr...z..>0.05])
+    pS10 <- length(MsumS$Estimate[MsumS$Pr...z..>0.1])
      
     MsumI <- data.frame(Msum[1:2,]) ## 2 back to 3
-    pI2 <- length(MsumI$Estimate[MsumI$Pr...z..>0.05])
+    pI <- length(MsumI$Estimate[MsumI$Pr...z..>0.05])
+    pI10 <- length(MsumI$Estimate[MsumI$Pr...z..>0.1])
     
     MsumS$name <- as.character(row.names(MsumS))
     MsumS$poly <- sapply(MsumS$name, grepl, pattern="2)2")
     
-    c.up2 <- length(MsumS$Estimate[MsumS$Estimate > 0 & MsumS$poly == T])
-    c.down2 <- length(MsumS$Estimate[MsumS$Estimate < 0 & MsumS$poly == T])
+    c.up <- length(MsumS$Estimate[MsumS$Estimate > 0 & MsumS$poly == T])
+    c.down <- length(MsumS$Estimate[MsumS$Estimate < 0 & MsumS$poly == T])
     
-    aic2 <- AIC(M)          ## extract adjusted R-square value of model #adjDsq <-  Dsquared(M,adjust=T) ## extract deviance explained by model
+    aic <- AIC(M)          ## extract adjusted R-square value of model #adjDsq <-  Dsquared(M,adjust=T) ## extract deviance explained by model
     #no.pts2 <- nrow(species)
-    no.terms2 <- NROW(Msum) ## extract the number of terms
-    no.vars2 <- no.terms2 - 2 - str_count(formulae.s[model.sel2$i], "poly")
-    formu2 <- formulae.s[model.sel2$i]
+    no.terms <- NROW(Msum) ## extract the number of terms
+    no.vars <- no.terms - 2 - str_count(formulae.s$formula[model.sel2$i], "poly")
+    formu <- formulae.s$formula[model.sel2$i]
     
-    null2 <- polr(abundance~1,data=species, Hess=T)
-    if(AIC(null2) > (AIC(M) + 2)){null2 <- 0} else {null2 <- 1}  
+    null <- polr(abundance~1,data=species, Hess=T)
+    if(AIC(null) > (AIC(M) + 2)){null <- 0} else {null <- 1}  
     
     pm <- predict(M, species, type="class")
     pm <- melt(pm)
@@ -509,20 +485,22 @@ for(s in 1:length(sp.list)){ ## Loop through species list
     pm <- data.frame(cbind(species$abundance,pm))
     colnames(pm) <- c("observed", "predicted")
     
-    kappa2 <- kappa2(pm)
-    kappaP2 <- kappa2$p.value
-    kappa2 <- kappa2$value
+    kappa <- kappa2(pm)
+    kappaP <- kappa$p.value
+    kappa <- kappa$value
     
-    reg2 <- summary(glm(as.numeric(predicted)~as.numeric(observed), data=pm))$coefficients
-    regI2 <- reg2[1,1]
-    regS2 <- reg2[2,1]
-    
-    
-    
-    
-    
+    bin1o <- length(pm$observed[pm$observed == 1])
+    bin2o <- length(pm$observed[pm$observed == 2])
+    bin3o <- length(pm$observed[pm$observed == 3])
+    bin1p <- length(pm$predicted[pm$predicted == 1])
+    bin2p <- length(pm$predicted[pm$predicted == 2])
+    bin3p <- length(pm$predicted[pm$predicted == 3])
+
     
     ###############################
+       #reg2 <- summary(glm(as.numeric(predicted)~as.numeric(observed), data=pm))$coefficients
+    #regI2 <- reg2[1,1]
+    #regS2 <- reg2[2,1]
    # one <- c(length(pm$observed[pm$predicted == 1 & pm$observed == 1]),
    #          length(pm$observed[pm$predicted == 1 & pm$observed == 2]),
    #          length(pm$observed[pm$predicted == 1 & pm$observed == 3]),
@@ -545,9 +523,8 @@ for(s in 1:length(sp.list)){ ## Loop through species list
    # 
    # confus <- data.frame(one,two,thr,fou)
     ###############################
-    #ordsums.i <- data.frame(species.code,aic,no.pts,no.terms,no.vars,formu,c2,c2.2,c5,c5.2,c6,c6.2,c8,c8.2,c12,c12.2,c15,c15.2,kappa,kappaW,regS,regI,p, stringsAsFactors = F)
-    ordsums.i <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pI, null, kappa, kappaP, regS, regI, 
-                                                 aic2,no.terms2,no.vars2,formu2,c.up2,c.down2,pS2,pI2,null2,kappa2,kappaP2,regS2,regI2, stringsAsFactors = F)
+    ordsums.i <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pS10, pI, pI10,
+                            null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
     
     ordsums <- rbind(ordsums,ordsums.i) 
     print(s)
@@ -555,11 +532,37 @@ for(s in 1:length(sp.list)){ ## Loop through species list
 }
 
 ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
-#write.csv(ordsums,"ordsums2_13_2018.csv", row.names=F)
+write.csv(ordsums,"ordsums2_23_2018.csv", row.names=F)
 
-## Messy exploration below
-## Large eigenvalue warning for 1/4-1/3 of best fit models
-## found that centering+scaling data gets rid of error, does not change AIC or p-vals
+#library(glue)
+#sp.list <- read.table("ordsums2_13_2018.csv", header = T, sep = ",", 
+#                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+sp.list <- data.frame(ordsums$species.code, ordsums$formu, stringsAsFactors = F)
+colnames(sp.list) <- c("code","model")
+str(sp.list)
+head(sp.list)
+
+var.list <- c("bio_2", "bio_5", "bio_6", "bio_8", "bio_12","bio_15",
+              "nlcd_3","nlcd_4","nlcd_5","nlcd_6","nlcd_7","nlcd_8")
+
+for (i in 1:NROW(ordsums)){
+  ignore <- c("")
+  for(j in 1:length(var.list)){
+    if(!grepl(var.list[j], sp.list$model[i], fixed=T)){
+      ignore <- cbind(ignore,var.list[j])
+    }
+  }
+  sp.list$ignore[i] <- collapse(ignore, sep= " -N ")
+  print(i)
+}
+
+head(sp.list)
+write.csv(sp.list, "MaxEntFiles/spForms2_23_2018.csv", row.names=F)
+
+
+## **PROCEED WITH CAUTION**
+## **CODE WASTELAND AHEAD **
 
 
 #################################
