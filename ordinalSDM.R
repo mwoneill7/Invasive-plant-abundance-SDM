@@ -453,7 +453,7 @@ for(s in 1:3){#:length(sp.list)){ ## Loop through species list
           aic <- AIC(M) ## extract aic score
           model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
           model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-          #print(i)
+          print(i)
         }  
         #},error=function(e){cat(species.code,conditionMessage(e), "\n")})
       } # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
@@ -582,7 +582,7 @@ write.csv(ordsums,"ordsums3_3_2018.csv", row.names=F)
 sp.list <- read.table("ordsums_FINAL.csv", header = T, sep = ",", 
                       quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 
-sp.list <- data.frame(ordsums$species.code, ordsums$formu, stringsAsFactors = F)
+sp.list <- data.frame(sp.list$species.code, sp.list$formu, stringsAsFactors = F)
 colnames(sp.list) <- c("code","model")
 str(sp.list)
 head(sp.list)
@@ -590,7 +590,7 @@ head(sp.list)
 var.list <- c("bio_2", "bio_5", "bio_6", "bio_8", "bio_12","bio_15",
               "nlcd_3","nlcd_4","nlcd_5","nlcd_6","nlcd_7","nlcd_8")
 
-for (i in 1:NROW(ordsums)){
+for (i in 1:NROW(sp.list)){
   ignore <- c("")
   for(j in 1:length(var.list)){
     if(!grepl(var.list[j], sp.list$model[i], fixed=T)){
