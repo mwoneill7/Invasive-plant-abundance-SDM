@@ -33,6 +33,464 @@ maxent.location='C:/Users/Localadmin/Documents/MaxEnt/maxent.jar'
 ## put all environmental data in one folder-- all files must be ascii, with EXACT same resolution and extent
 
 #########################################################################################
+
+## define directory of environmental data for fitting
+environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs",sep="")
+
+sp.list <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/spForms3_4_2018.csv", header = T, sep = ",", 
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+head(sp.list)
+#sp.list<- sp.list[order(sp.list$code),]
+#head(sp.list)
+
+for(i in 1:length(sp.list$code)){
+  
+  ## set up model options, linear and quadratic features only, use sampling bias surface
+  spp_bias_log=paste0("java -jar ",maxent.location, 
+                      " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature ",
+                      sp.list$ignore[i], " biastype=3")
+  ##spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature -N pop_2_5_us -N road_2_5_us biastype=3")
+  
+  ### ALL SPECIES ###
+  ## define point location samples (all species in one .csv), must be set up with three columns (species, lon, lat, in that order)
+  samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/FULL/species", 
+                                      paste(sp.list$code[i], "csv", sep="."), sep="/"), sep="")
+  ## define output directory
+  directory<- paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/FINAL_OUTPUT_FULL", sp.list$code[i], sep="/")
+  dir.create(directory)
+  output=paste("outputdirectory=", directory, sep="")
+  
+  bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc",sep="")
+  ## average bias ascii
+  
+  ## call model to run
+  system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+  
+  
+  
+  ### REPEAT FOR ONLY ABUNDANCE POINTS ###
+  ## define point location samples (all species in one .csv), must be set up with three columns (species, lon, lat, in that order)
+  samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/species", 
+                                      paste(sp.list$code[i], "csv", sep="."), sep="/"), sep="")
+  ## define output directory
+  directory <- paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/FINAL_OUTPUT_ABUN", sp.list$code[i], sep="/")
+  dir.create(directory)
+  output=paste("outputdirectory=", directory, sep="")
+  
+  bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc",sep="")
+  ## average bias ascii
+  
+  ## call model to run
+  system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+  
+  print(i)
+  write.csv(i,"progressMAXENT.csv",row.names=F)
+}
+
+
+####################################################################################
+## Find 95% threshold for each species AND get training/test sample sizes
+###################################################################################
+## maxent output represents relative occurence rate (ROR)
+## we want a binary map, so we need to know what ROR value to use to define "suitable" vs "unsuitable"
+## all maxent surfaces must sum to 1, so the threshold value can vary from species to species
+## therefore we need to calculate the threshold by species (below)
+
+## create list of modeled species
+#d=read.table("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/IAS_occurences_final_analysis.csv",sep=",",header=T)
+
+#setwd("C:/Users/Localadmin/Documents/MaxEnt_modeling/")
+
+ordsums <- sp.list <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance/ordsums2_23_2018.csv", header = T, sep = ",",  
+                                 quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+spp=ordsums$species.code[ordsums$kappa > 0 & ordsums$kappaP < 0.05]
+colnames(spp)="PLANT_CODE"
+spp$PLANT_CODE=as.character(spp$PLANT_CODE)
+head(spp)
+str(spp)
+dim(spp)
+
+
+dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis")
+dataset_type <- c("FULL","ABUN")
+
+for (type in dataset_type) {
+  
+  
+  #create dataframe to hold 95% MTP logistic threshold values for each run
+  spp_val=data.frame("Species",15,0,"CtySppRich_Bias",100000, 100000,stringsAsFactors=F) 
+  colnames(spp_val)=c("Species", "Run", "X95_MTP_thresh_logistic","Bias", "test_n","train_n")
+  #spp_val$Species=as.character(spp_val$Species)
+  #spp_val$Bias=as.character(spp_val$Bias)
+  
+  ## get all output files (to deal with any skipped spp and variable run number) C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/FINAL_OUTPUT_ABUN
+  setwd(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/",type,"/FINAL_OUTPUT_",type))
+  #a=list.files(path = ".", pattern = NULL, all.files = FALSE, full.names = FALSE, recursive = FALSE)
+  
+  for (i in unique(spp$PLANT_CODE)){        #loop for each species
+    for (j in 0:9){                        #loop for each iteration within a species
+      
+      #spp_iter=paste(i,"_",j,"_samplePredictions.csv",sep="")
+      
+      #if(spp_iter %in% a == TRUE) {
+      file=paste(i,"/",i,"_",j,"_samplePredictions.csv",sep="") #iteration j point-level model output 
+      
+      d=read.table(file, sep=",",header=T)
+      d$run=j
+      dt=d[d$test.or.train == "train",]  #subset iteration data to training data only
+      dtest=d[d$test.or.train == "test",]  #subset iteration data to testing data only
+      
+      samp=dim(dt)
+      samp1=dim(dtest)
+      
+      train_n=samp[1] #get training sample size for this iteration
+      test_n=samp1[1]  #get test sample size for this iteration
+      
+      tp=round(0.95*samp[1], 0) #number of points for 95% threshold in each iteration
+      
+      dt=dt[order(dt$Logistic.prediction, decreasing=T),] #order the logistic output largest to smallest
+      
+      sp_runs=data.frame(i, j, dt$Logistic.prediction[tp], "CtySppRich_Bias", test_n, train_n) #create dataframe with species, run, logistic value of the point that bounds the 95% percentile, bias model, test and train n
+      colnames(sp_runs)=c("Species", "Run", "X95_MTP_thresh_logistic","Bias", "test_n", "train_n")
+      
+      spp_val=rbind(spp_val,sp_runs) 
+      #}
+      
+      print(j)
+    }
+    print(i)
+  }
+  
+  ## trim junk row from spp_val
+  head(spp_val)
+  tail(spp_val)
+  dim(spp_val)
+  #spp_val1=spp_val[2:8900,]
+  spp_val1=spp_val[spp_val$Species=="Species",]
+  
+  
+  ## calculate mean threshold per species per range from spp_val1
+  thresh=as.data.frame(tapply(spp_val1$X95_MTP_thresh_logistic, list(spp_val1$Species, spp_val1$Bias), mean))
+  thresh$Species=rownames(thresh)
+  head(thresh)
+  dim(thresh)
+  
+  test=as.data.frame(tapply(spp_val1$test_n, list(spp_val1$Species, spp_val1$Bias), mean))
+  test$Species=rownames(test)
+  colnames(test)=c("test_n","Species")
+  head(test)
+  dim(test)
+  
+  train=as.data.frame(tapply(spp_val1$train_n, list(spp_val1$Species, spp_val1$Bias), mean))
+  train$Species=rownames(train)
+  colnames(train)=c("train_n","Species")
+  head(train)
+  dim(train)
+  
+  samples=cbind(test, train)
+  head(samples)
+  colnames(samples)=c("test_n","Species","train_n","Species1")
+  samples$match[samples$Species == samples$Species1]="TRUE"
+  table(samples$match)
+  
+  samples1=subset(samples, select=c("Species","test_n","train_n"))
+  samples1$total_n=samples1$test_n + samples1$train_n
+  samples1$Bias="CtySppRich"
+  samples1$Climate="Current"
+  head(samples1)
+  dim(samples1)
+  
+  write.table(thresh, file=paste0("C:/Users/Localadmin/Documents/Maxent_modeling/thresholds",type,".csv"),sep=",",row.names=F)
+  write.table(samples1,file=paste0("C:/Users/Localadmin/Documents/Maxent_modeling/sample_sizes",type,".csv"),sep=",",row.names=F) 
+  
+  #########################################################################
+  ### Create binary maps for each species
+  #########################################################################
+  
+  ## use the thresholds above to go from ROR to binary
+  
+  ### create dataset to hold suitable cell counts for each species 
+  range_size=data.frame(-100,-100,"NA","NA")
+  colnames(range_size)=c("Var1","Freq","spp","bias")
+  range_size
+  
+  dir.create("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/",type)
+  
+  
+  ###### create binary rasters based on 95% MTP
+  
+  for (i in unique(thresh$Species)){  
+    file=paste(i,"/",i,"_avg.asc",sep="")
+    d1=readAsciiGrid(file) 
+    
+    d1@data[d1@data >= thresh$CtySppRich_Bias[thresh$Species==i]]=1
+    d1@data[d1@data < thresh$CtySppRich_Bias[thresh$Species==i]]=0
+    
+    out_file=paste("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/",type,"/",i,type,".asc",sep="")
+    write.asciigrid(d1, out_file)
+    
+    tab=as.data.frame(table(d1@data))
+    tab$spp=i
+    tab$bias="CtySppRich_Bias"
+    
+    range_size=rbind(range_size,tab)
+    
+    #image(d1, col=c("grey","blue"))
+    
+    rm(d1)
+    gc()
+    print(i)
+  }
+  
+  head(range_size)
+  dim(range_size)
+  #range_size1=range_size[2:1793,]
+  range_size1=range_size[range_size$Var1 == -100,]
+  
+  range_size2=range_size1[range_size1$Var1 ==1,]
+  head(range_size2)
+  dim(range_size2)
+  
+  print(type)
+}
+
+
+
+####################################################
+##### compare Maxent Full VS Abun w/in and across sp
+####################################################
+
+setwd("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis")
+
+
+species     <- "TEMPLATE"
+auc         <- -99
+
+ncell_abun  <- -99
+lat_abun    <- -99
+lon_abun    <- -99
+
+ncell_full  <- -99
+lat_full    <- -99
+lon_full    <- -99
+
+abun1_full1 <- -99
+abun0_full1 <- -99
+abun1_full0 <- -99
+
+compare <- data.frame(species,auc,ncell_abun,lat_abun,lon_abun,ncell_full,lat_full,lon_full,abun1_full1,abun0_full1,abun1_full0)
+
+for(i in spp$PLANT_CODE){
+  
+  abun <- raster(paste0("ABUN/",i,"ABUN.asc"))
+  fill <- raster(paste0("FULL/",i,"FULL.asc"))
+  
+  
+  #### get range size + lat/lin extents
+  
+  comp <- as.data.frame(stack(abun,fill)) 
+  abun1_full0 <- NROW(comp[comp$abun == 1 & comp$full == 1,])
+  abun0_full1 <- NROW(comp[comp[comp$abun == 0 & comp$full == 1,]])
+  abun1_full0 <- NROW(comp[comp[comp$abun == 1 & comp$full == 0,]])  
+  
+  
+  compare.i <- data.frame(species,auc,ncell_abun,lat_abun,lon_abun,ncell_full,lat_full,lon_full,abun1_full1,abun0_full1,abun1_full0)
+  compare <- rbind(compare,compare.i)
+}
+
+summary(compare)
+## CALIFORNIA?
+
+## broad comparison
+## species richness continuous map and hotspot map
+## correlation between species richness?
+## based on richness maps here, adapt to summed abundance maps
+
+########################################################
+## Create Species Richness Map 
+######################################################
+
+#(adapt for abundance sums once you have prediction maps from ordinal regression)
+### Sum binary maps 
+
+filenames = list.files("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/FULL/",pattern="*.asc", full.names=TRUE)
+ldf=stack(filenames)
+
+overlap=calc(ldf, sum)
+
+out_file="Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_FULL.asc"
+writeRaster(overlap, filename=out_file)
+
+pdf(file="Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_FULL.pdf",width=11,height=8.5)
+colors=rev(heat.colors(100))
+spplot(overlap, col.regions=colors)
+dev.off()
+
+### repeat for abundance points Maxent
+filenames = list.files("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/ABUN/",pattern="*.asc", full.names=TRUE)
+ldf=stack(filenames)
+
+overlap2=calc(ldf, sum)
+
+out_file="Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_ABUN.asc"
+writeRaster(overlap2, filename=out_file)
+
+pdf(file="Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_ABUN.pdf",width=11,height=8.5)
+colors=rev(heat.colors(100))
+spplot(overlap2, col.regions=colors)
+dev.off()
+
+## may have to do a more complicated calculation, involving
+## conversion into dataframes
+overlap3 <- overlap$sum-overlap2$sum
+
+plot(overlap3)
+summary(overlap3$sum)
+
+###############################################################################################################
+### Hotspot maps
+################################################################################################################
+
+## based on richness maps here, adapt to summed abundance maps
+
+##### Current Richness
+current_rich=raster("Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_FULL.asc")
+proj4string(current_rich) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+#"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs""+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+quantile(current_rich, probs=seq(0,1,0.05)) #get quantiles of richness
+
+## set up the matrix required for the function reclassify
+from=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+to=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+becomes=matrix(seq(0,1,0.05), nrow=21,ncol=1)
+rcl=cbind(from,to,becomes)
+colnames(rcl)=c("from","to","becomes")
+rcl
+
+for (i in 2:21){
+  rcl[i,1]= rcl[i-1,2]+0.00000001
+}
+rcl[1,1]=0
+rcl
+
+# reclassify richness raster to quantiles
+curr_rich_quant <- reclassify(current_rich, rcl)
+
+## plot quantiles map
+pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantilesFULL.pdf",width=11,height=8.5)
+cuts=quantile(curr_rich_quant, probs=seq(0,1,0.05))
+colors=rev(heat.colors(length(cuts)))
+colors=matlab.like2(length(cuts))
+legend=c(0,0.25,0.5,0.75,1)
+legend_place=c(0,0.25,0.5,0.75,1)
+print(spplot(curr_rich_quant,  col.regions=colors, at=cuts, colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) ))
+dev.off()
+
+### create binary hotspot map with top 25%
+## create reclass table
+from1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+to1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+becomes1=matrix(c(rep(0,16),rep(1,5)), nrow=21,ncol=1)
+rcl1=cbind(from1,to1,becomes1)
+colnames(rcl1)=c("from","to","becomes")
+rcl1
+
+
+for (i in 2:21){
+  rcl1[i,1]= rcl1[i-1,2]+0.001
+}
+rcl1
+
+#reclassify to hotspots
+curr_rich_hot <- reclassify(curr_rich_quant, rcl1)
+
+## plot hotspots map
+pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspotFULL.pdf",width=11,height=8.5)
+cuts=c(0,0.5,1)
+colors=c("grey70","red")
+legend=c("","Hotspot")
+legend_place=c(0,0.75)
+print(spplot(curr_rich_hot,  col.regions=colors, at=cuts,colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) )) #
+dev.off()
+
+out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantile_richness_FULL.asc"
+writeRaster(curr_rich_quant, filename=out_file)
+
+out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspot_richness_FULL.asc"
+writeRaster(curr_rich_hot, filename=out_file)
+
+##################################
+#### repeat for abun maxent models
+##### Current Richness
+current_rich=raster("Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_ABUN.asc")
+proj4string(current_rich) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+#"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs""+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+quantile(current_rich, probs=seq(0,1,0.05)) #get quantiles of richness
+
+## set up the matrix required for the function reclassify
+from=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+to=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+becomes=matrix(seq(0,1,0.05), nrow=21,ncol=1)
+rcl=cbind(from,to,becomes)
+colnames(rcl)=c("from","to","becomes")
+rcl
+
+for (i in 2:21){
+  rcl[i,1]= rcl[i-1,2]+0.00000001
+}
+rcl[1,1]=0
+rcl
+
+# reclassify richness raster to quantiles
+curr_rich_quant <- reclassify(current_rich, rcl)
+
+## plot quantiles map
+pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantilesABUN.pdf",width=11,height=8.5)
+cuts=quantile(curr_rich_quant, probs=seq(0,1,0.05))
+colors=rev(heat.colors(length(cuts)))
+colors=matlab.like2(length(cuts))
+legend=c(0,0.25,0.5,0.75,1)
+legend_place=c(0,0.25,0.5,0.75,1)
+print(spplot(curr_rich_quant,  col.regions=colors, at=cuts, colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) ))
+dev.off()
+
+### create binary hotspot map with top 25%
+## create reclass table
+from1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+to1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
+becomes1=matrix(c(rep(0,16),rep(1,5)), nrow=21,ncol=1)
+rcl1=cbind(from1,to1,becomes1)
+colnames(rcl1)=c("from","to","becomes")
+rcl1
+
+
+for (i in 2:21){
+  rcl1[i,1]= rcl1[i-1,2]+0.001
+}
+rcl1
+
+#reclassify to hotspots
+curr_rich_hot <- reclassify(curr_rich_quant, rcl1)
+
+## plot hotspots map
+pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspotABUN.pdf",width=11,height=8.5)
+cuts=c(0,0.5,1)
+colors=c("grey70","red")
+legend=c("","Hotspot")
+legend_place=c(0,0.75)
+print(spplot(curr_rich_hot,  col.regions=colors, at=cuts,colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) )) #
+dev.off()
+
+out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantile_richness_ABUN.asc"
+writeRaster(curr_rich_quant, filename=out_file)
+
+out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspot_richness_ABUN.asc"
+writeRaster(curr_rich_hot, filename=out_file)
+
+
+
+#########################################################################################
 ## MaxEnt: Sampling bias model, raw output
 #########################################################################################
 ## this is one way to estimate sampling bias
@@ -135,7 +593,7 @@ system(paste(bias_TG,output,environmental,samples, "autorun"))
 
 ## set up model options, linear and quadratic features only, use sampling bias surface
 spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature")
-                   #"java -jar ",maxent.location, " nowarnings noprefixes -E responsecurveS jackknife outputformat=raw      noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature"
+#"java -jar ",maxent.location, " nowarnings noprefixes -E responsecurveS jackknife outputformat=raw      noremoveduplicates noaskoverwrite replicates=10 nothreshold nohinge noautofeature"
 ## define output directory
 output=paste("outputdirectory=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/Bias_Logistic_ABUN",sep="")
 
@@ -152,78 +610,9 @@ bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_
 
 ## call model to run
 system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
+
+
 #########################################################################################
-
-## define directory of environmental data for fitting
-environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs",sep="")
-
-sp.list <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/MaxEntFiles/spForms2_23_2018.csv", header = T, sep = ",", 
-                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
-head(sp.list)
-sp.list<- sp.list[order(sp.list$code),]
-head(sp.list)
-
-for(i in 1:2){#length(sp.list$code)){
-  
-  ## set up model options, linear and quadratic features only, use sampling bias surface
-  spp_bias_log=paste0("java -jar ",maxent.location, 
-                      " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature ",
-                      sp.list$ignore[i], " biastype=3")
-  ##spp_bias_log=paste0("java -jar ",maxent.location, " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 nothreshold nohinge writeplotdata noautofeature -N pop_2_5_us -N road_2_5_us biastype=3")
-  
-  ### ALL SPECIES ###
-  ## define point location samples (all species in one .csv), must be set up with three columns (species, lon, lat, in that order)
-  samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/FULL/species", 
-                                      paste(sp.list$code[i], "csv", sep="."), sep="/"), sep="")
-  ## define output directory
-  directory<- paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/FINAL_OUTPUT_FULL", sp.list$code[i], sep="/")
-  dir.create(directory)
-  output=paste("outputdirectory=", directory, sep="")
-  
-  bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc",sep="")
-  ## average bias ascii
-  
-  ## call model to run
-  system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
-  
-  
-  
-  ### REPEAT FOR ONLY ABUNDANCE POINTS ###
-  ## define point location samples (all species in one .csv), must be set up with three columns (species, lon, lat, in that order)
-  samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/species", 
-                                      paste(sp.list$code[i], "csv", sep="."), sep="/"), sep="")
-  ## define output directory
-  directory <- paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/FINAL_OUTPUT_ABUN", sp.list$code[i], sep="/")
-  dir.create(directory)
-  output=paste("outputdirectory=", directory, sep="")
-  
-  bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/ABUN/BIAS_OUTPUT_ABUN/BIAS_avgABUN.asc",sep="")
-  ## average bias ascii
-  
-  ## call model to run
-  system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
-  
-  print(i)
-
-}
-
-
-################################################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-########################################################################################
 ## MaxEnt: Current Climate, species richness bias, logistic output
 #########################################################################################
 
@@ -292,81 +681,81 @@ colnames(spp_val)=c("Species", "Run", "X95_MTP_thresh_logistic","Bias", "test_n"
 ## get all output files (to deal with any skipped spp and variable run number)
 setwd("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/CtyRich_Logistic")
 a=list.files(path = ".", pattern = NULL, all.files = FALSE, full.names = FALSE, recursive = FALSE)
-             
+
 for (i in unique(spp$PLANT_CODE)){        #loop for each species
-   for (j in 0:9){                        #loop for each iteration within a species
-                 
-                 spp_iter=paste(i,"_",j,"_samplePredictions.csv",sep="")
-                 
-                 if(spp_iter %in% a == TRUE) {
-                   file=paste("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/CtyRich_Logistic/",i,"_",j,"_samplePredictions.csv",sep="") #iteration j point-level model output 
-                   
-                   d=read.table(file, sep=",",header=T)
-                   d$run=j
-                   dt=d[d$test.or.train == "train",]  #subset iteration data to training data only
-                   dtest=d[d$test.or.train == "test",]  #subset iteration data to testing data only
-                   
-                   samp=dim(dt)
-                   samp1=dim(dtest)
-                   
-                   train_n=samp[1] #get training sample size for this iteration
-                   test_n=samp1[1]  #get test sample size for this iteration
-                   
-                   tp=round(0.95*samp[1], 0) #number of points for 95% threshold in each iteration
-                   
-                   dt=dt[order(dt$Logistic.prediction, decreasing=T),] #order the logistic output largest to smallest
-                   
-                   sp_runs=data.frame(i, j, dt$Logistic.prediction[tp], "CtySppRich_Bias", test_n, train_n) #create dataframe with species, run, logistic value of the point that bounds the 95% percentile, bias model, test and train n
-                   colnames(sp_runs)=c("Species", "Run", "X95_MTP_thresh_logistic","Bias", "test_n", "train_n")
-                   
-                   spp_val=rbind(spp_val,sp_runs) 
-                 }
-                 
-                 print(j)
-               }
-               print(i)
-             }
-             
+  for (j in 0:9){                        #loop for each iteration within a species
+    
+    spp_iter=paste(i,"_",j,"_samplePredictions.csv",sep="")
+    
+    if(spp_iter %in% a == TRUE) {
+      file=paste("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/CtyRich_Logistic/",i,"_",j,"_samplePredictions.csv",sep="") #iteration j point-level model output 
+      
+      d=read.table(file, sep=",",header=T)
+      d$run=j
+      dt=d[d$test.or.train == "train",]  #subset iteration data to training data only
+      dtest=d[d$test.or.train == "test",]  #subset iteration data to testing data only
+      
+      samp=dim(dt)
+      samp1=dim(dtest)
+      
+      train_n=samp[1] #get training sample size for this iteration
+      test_n=samp1[1]  #get test sample size for this iteration
+      
+      tp=round(0.95*samp[1], 0) #number of points for 95% threshold in each iteration
+      
+      dt=dt[order(dt$Logistic.prediction, decreasing=T),] #order the logistic output largest to smallest
+      
+      sp_runs=data.frame(i, j, dt$Logistic.prediction[tp], "CtySppRich_Bias", test_n, train_n) #create dataframe with species, run, logistic value of the point that bounds the 95% percentile, bias model, test and train n
+      colnames(sp_runs)=c("Species", "Run", "X95_MTP_thresh_logistic","Bias", "test_n", "train_n")
+      
+      spp_val=rbind(spp_val,sp_runs) 
+    }
+    
+    print(j)
+  }
+  print(i)
+}
+
 ## trim junk row from spp_val
 head(spp_val)
 tail(spp_val)
 dim(spp_val)
 spp_val1=spp_val[2:8900,]
-             
+
 ## calculate mean threshold per species per range from spp_val1
 thresh=as.data.frame(tapply(spp_val1$X95_MTP_thresh_logistic, list(spp_val1$Species, spp_val1$Bias), mean))
 thresh$Species=rownames(thresh)
 head(thresh)
 dim(thresh)
-             
+
 test=as.data.frame(tapply(spp_val1$test_n, list(spp_val1$Species, spp_val1$Bias), mean))
 test$Species=rownames(test)
 colnames(test)=c("test_n","Species")
 head(test)
 dim(test)
-             
+
 train=as.data.frame(tapply(spp_val1$train_n, list(spp_val1$Species, spp_val1$Bias), mean))
 train$Species=rownames(train)
 colnames(train)=c("train_n","Species")
 head(train)
 dim(train)
-             
+
 samples=cbind(test, train)
 head(samples)
 colnames(samples)=c("test_n","Species","train_n","Species1")
 samples$match[samples$Species == samples$Species1]="TRUE"
 table(samples$match)
-             
+
 samples1=subset(samples, select=c("Species","test_n","train_n"))
 samples1$total_n=samples1$test_n + samples1$train_n
 samples1$Bias="CtySppRich"
 samples1$Climate="Current"
 head(samples1)
 dim(samples1)
-             
+
 write.table(thresh, file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/IAS_95Perc_thresholds_CtySppRichBias_Current_FINAL.csv",sep=",",row.names=F)
 write.table(samples1,file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/IAS_Model_SampleSize_Current_FINAL.csv",sep=",",row.names=F) 
-             
+
 #########################################################################
 ### Create binary maps for each species
 #########################################################################
@@ -410,6 +799,10 @@ range_size1=range_size[2:1793,]
 range_size2=range_size1[range_size1$Var1 ==1,]
 head(range_size2)
 dim(range_size2)
+
+
+
+
 
 
 ##################################################################
