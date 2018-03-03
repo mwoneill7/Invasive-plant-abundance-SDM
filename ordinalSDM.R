@@ -221,7 +221,7 @@ ordsums <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, 
                        null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
 sp.list <- as.character(unique(edd$species))
 
-for(s in 1:length(sp.list)){ ## Loop through species list
+for(s in 1:3){#:length(sp.list)){ ## Loop through species list
   
   species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
 
@@ -430,33 +430,45 @@ for(s in 1:length(sp.list)){ ## Loop through species list
     model.sel <- data.frame(i, edf, aic, stringsAsFactors = F)    
     #model.sel <- data.frame(i, n, aic, bios, nonsig, conc.up, stringsAsFactors = F)
     ## concatenate into master data.frame
+    if(length(corr.pairs$var1)>0) {
     
-    for (i in 1:length(formulae.s$formula)){ ##loop through all formulae in the formula list
-      #tryCatch(c=x, call=x, cond=x, expr=x)
-      #tryCatch({
-      
-      acceptable <- TRUE
-      
-      for (c in 1:length(corr.pairs)){
+      for (i in 1:length(formulae.s$formula)){ ##loop through all formulae in the formula list
+        #tryCatch(c=x, call=x, cond=x, expr=x)
+        #tryCatch({
         
-        if(formulae.s[i,(as.numeric(corr.pairs$var1[c])+1)] == T & 
-           formulae.s[i,(as.numeric(corr.pairs$var2[c])+1)] == T){
-          acceptable <- FALSE
-        }
-      }
+        acceptable <- TRUE
 
-      if(acceptable){
-        
+        for (c in 1:length(corr.pairs$var1)){
+          
+          if(formulae.s[i,(as.numeric(corr.pairs$var1[c])+1)] == T & 
+             formulae.s[i,(as.numeric(corr.pairs$var2[c])+1)] == T){
+            acceptable <- FALSE
+          }
+        }
+  
+        if(acceptable){
+          
+          M <- clm(formula(formulae.s$formula[i]), data = species)
+          edf <- length(M$coefficients) ## REPLACE n
+          aic <- AIC(M) ## extract aic score
+          model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
+          model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
+          #print(i)
+        }  
+        #},error=function(e){cat(species.code,conditionMessage(e), "\n")})
+      } # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
+    } else {
+      
+      for (i in 1:length(formulae.s$formula)){
         M <- clm(formula(formulae.s$formula[i]), data = species)
         edf <- length(M$coefficients) ## REPLACE n
         aic <- AIC(M) ## extract aic score
         model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
-        model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-        #print(i)
-      }  
-      #},error=function(e){cat(species.code,conditionMessage(e), "\n")})
-    } # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
-    
+        model.sel <- rbind(model.sel, model.sel.i)
+      }
+      
+      
+    }
     ###################  AIC comparison  #####################
     model.sel <- model.sel[model.sel$i != -1,]
     model.sel$dAIC <- model.sel$aic - min(model.sel$aic) ## calculate delta AIC
@@ -564,11 +576,11 @@ for(s in 1:length(sp.list)){ ## Loop through species list
 }
 
 ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
-write.csv(ordsums,"ordsums2_23_2018.csv", row.names=F)
+write.csv(ordsums,"ordsums3_3_2018.csv", row.names=F)
 
 #library(glue)
-#sp.list <- read.table("ordsums2_13_2018.csv", header = T, sep = ",", 
-#                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+sp.list <- read.table("ordsums_FINAL.csv", header = T, sep = ",", 
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 
 sp.list <- data.frame(ordsums$species.code, ordsums$formu, stringsAsFactors = F)
 colnames(sp.list) <- c("code","model")
@@ -590,9 +602,9 @@ for (i in 1:NROW(ordsums)){
 }
 
 head(sp.list)
-write.csv(sp.list, "MaxEntFiles/spForms2_23_2018.csv", row.names=F)
+write.csv(sp.list, "MaxEntFiles/spForms3_4_2018.csv", row.names=F)
 
-
+#write.csv(model.sel,"TARA_133.csv", row.names=F)
 ## **PROCEED WITH CAUTION** ##
 ## **CODE WASTELAND AHEAD** ##
 
