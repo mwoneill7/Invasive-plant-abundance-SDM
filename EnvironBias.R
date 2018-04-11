@@ -293,17 +293,294 @@ for (i in 2:length(eco)){
 
 
 ##################################
-#### Mess analysis from abun pts to full pts
+#     #### Mess analysis from abun pts to full pts
+#     library(rgdal)
+#     library(raster)
+#     #install.packages('dismo')
+#     library(dismo)
+#     
+#     
+#     ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_FINAL.csv", header = T, sep = ",",  
+#                           quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+#     ## best fit models for each species
+#     #ordsums <- ordsums[ordsums$kappa >0 & ordsums$kappaP <0.05,]
+#     
+#     formulae <- data.frame(cbind(ordsums$species.code,ordsums$formu), stringsAsFactors = F)
+#     str(formulae)
+#     colnames(formulae) <- c("species","formula")
+#     formulae$bio_2 <- sapply(formulae$formula, grepl, pattern="bio_2", fixed=T)
+#     formulae$bio_5 <- sapply(formulae$formula, grepl, pattern="bio_5", fixed=T)
+#     formulae$bio_6 <- sapply(formulae$formula, grepl, pattern="bio_6", fixed=T)
+#     formulae$bio_8 <- sapply(formulae$formula, grepl, pattern="bio_8", fixed=T)
+#     formulae$bio_12 <- sapply(formulae$formula, grepl, pattern="bio_12", fixed=T)
+#     formulae$bio_15 <- sapply(formulae$formula, grepl, pattern="bio_15", fixed=T)
+#     formulae$nlcd_3 <- sapply(formulae$formula, grepl, pattern="nlcd_3", fixed=T)
+#     formulae$nlcd_4 <- sapply(formulae$formula, grepl, pattern="nlcd_4", fixed=T)
+#     formulae$nlcd_5 <- sapply(formulae$formula, grepl, pattern="nlcd_5", fixed=T)
+#     formulae$nlcd_6 <- sapply(formulae$formula, grepl, pattern="nlcd_6", fixed=T)
+#     formulae$nlcd_7 <- sapply(formulae$formula, grepl, pattern="nlcd_7", fixed=T)
+#     formulae$nlcd_8 <- sapply(formulae$formula, grepl, pattern="nlcd_8", fixed=T)
+#     head(formulae)
+#     
+#     
+#     spp <- formulae$species
+#     
+#     bio <- stack("C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+#                  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc" )
+#     
+#     cellIDs <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=seq(1:ncell(bio)))
+#     #plot(cellIDs)
+#     #plot(bio$bio_2, add=T)
+#     
+#     bio <- stack(bio,cellIDs) # "layer" = cellID
+#     # bio$
+#     # abun_all <-
+#     # <-  
+#     #full <- read.table("C:/Users/Localadmin/Documents/Google_Drive_Overflow_3_9_2018/MaxEntFiles/full_model_pts.csv", sep=",", header=T)
+#     #abun <- read.table("C:/Users/Localadmin/Documents/Google_Drive_Overflow_3_9_2018/MaxEntFiles/thinned_abundance_pts_2_9_2018.csv", sep=",", header=T)
+#     
+#     full_all <- read.table("C:/Users/Localadmin/Documents/Google_Drive_Overflow_3_9_2018/MaxEntFiles/full_model_pts.csv", sep=",", header=T,
+#                            stringsAsFactors = F)
+#     full_all$DATA_SOURCE <- NULL
+#     
+#     
+#     
+#     abun_all <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
+#                       comment.char= "", stringsAsFactors = F, strip.white = T)
+#     abun_all <- data.frame(cbind(abun_all$species,abun_all$longitude,abun_all$latitude), stringsAsFactors = F)
+#     colnames(abun_all) <- colnames(full_all)
+#     abun_all <- abun_all[abun_all$PLANT_CODE %in% spp,]
+#     abun_all$LONGITUDE_DECIMAL <- as.numeric(abun_all$LONGITUDE_DECIMAL)
+#     abun_all$LATITUDE_DECIMAL <- as.numeric(abun_all$LATITUDE_DECIMAL)
+#     
+#     
+#     full_all <- rbind(full_all, abun_all)
+#     
+#     
+#     coordinates(abun_all) <- c(2,3)
+#     ext <- extract(bio, abun_all) ## extract climate values to points
+#     abun_all <- data.frame(cbind(abun_all,ext))
+#     abun_all$optional <- NULL
+#     
+#     head(abun_all)
+#     abun_all[,(ncol(abun_all)-14):(ncol(abun_all)-11)] <- abun_all[,(ncol(abun_all)-14):(ncol(abun_all)-11)]/10 
+#     
+#     coordinates(full_all) <- c(2,3)
+#     extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+#     full_all <- full_all[extentShape,] ## 405534, make sure that points not within extent are not used
+#     ext <- extract(bio$layer, full_all)
+#     full_all <- data.frame(cbind(full_all,ext))
+#     head(full_all)
+#     full_all$optional <-NULL
+#     colnames(full_all) <- c("PLANT_CODE", "CELL", "LONGITUDE_DECIMAL", "LATITUDE_DECIMAL")
+#     
+#     head(full_all)
+#     #length(unique(full_all$c.714442..733912..710327..708940..699188..699176..757497..715883..))
+#     
+#     
+#     
+#     
+#     
+#     for (i in 3:length(spp)){
+#       #formulae[formulae]
+#       
+#       abun <- abun_all[abun_all$PLANT_CODE==spp[i],]
+#       full <- full_all[full_all$PLANT_CODE==spp[i],]
+#      
+#       cells <- unique(full$CELL)
+#       
+#       bio_id <- data.frame(bio[bio$layer %in% cells,])
+#       #head(bio_i)
+#       bio_id[,1:4] <- bio_id[,1:4]/10 
+#       #head(bio_id)
+#       
+#       ids <- data.frame(seq(1:ncell(bio)))
+#       colnames(ids) <- c("layer")
+#       
+#       bio_id <- merge(bio_id, ids, by="layer",all=T)
+#       bio_i <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=seq(1:ncell(bio)))
+#       
+#       if(formulae$bio_2[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$bio_2)
+#         names(bio_2) <- "bio_2"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$bio_2 <- NULL
+#       }
+#       
+#       if(formulae$bio_5[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$bio_5)
+#         names(bio_2) <- "bio_5"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$bio_5 <- NULL
+#       }
+#       
+#       if(formulae$bio_6[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$bio_6)
+#         names(bio_2) <- "bio_6"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$bio_6 <- NULL
+#       }
+#       
+#       if(formulae$bio_8[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$bio_8)
+#         names(bio_2) <- "bio_8"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$bio_8 <- NULL
+#       }
+#       
+#       if(formulae$bio_12[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$bio_12)
+#         names(bio_2) <- "bio_12"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$bio_12 <- NULL
+#       }
+#       
+#       if(formulae$bio_15[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$bio_15)
+#         names(bio_2) <- "bio_15"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$bio_15 <- NULL
+#       }
+#       
+#       if(formulae$nlcd_3[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_3)
+#         names(bio_2) <- "nlcd3"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$nlcd_3 <- NULL
+#       }
+#       
+#       if(formulae$nlcd_4[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_4)
+#         names(bio_2) <- "nlcd4"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$nlcd_4 <- NULL
+#       }
+#       
+#       if(formulae$nlcd_5[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_5)
+#         names(bio_2) <- "nlcd5"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$nlcd_5 <- NULL
+#       }
+#       
+#       if(formulae$nlcd_6[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_6)
+#         names(bio_2) <- "nlcd6"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$nlcd_6 <- NULL
+#       }
+#       
+#       if(formulae$nlcd_7[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_7)
+#         names(bio_2) <- "nlcd7"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$nlcd_7 <- NULL
+#       }
+#       
+#       if(formulae$nlcd_8[i]){
+#         bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_8)
+#         names(bio_2) <- "nlcd8"
+#         bio_i<- stack(bio_i, bio_2)
+#       } else {
+#         abun$nlcd_8 <- NULL
+#       }
+#       
+#       bio_i <- dropLayer(bio_i, 1)
+#       
+#       reference <- abun[,2:(NCOL(abun)-3)]
+#       
+#       mess <- mess(bio_i, reference, full=FALSE) 
+#       #plot(mess)
+#       
+#       messD <- as.data.frame(mess)
+#       colnames(messD) <- "mess"
+#       #messD <- data.frame(messD[messD$mess < Inf,])
+#       #messD <- data.frame(messD[!is.na(messD$mess),])
+#       #colnames(messD) <- "mess"
+#       messD <- messD[!is.na(messD$mess) & messD$mess < Inf,]
+#       #length(messD[messD < Inf])
+#       
+#       ordsums$mess_min[i] <- min(messD)
+#       ordsums$mess_max[i] <- max(messD)
+#       ordsums$q5[i]   <- quantile(messD, 0.05)
+#       ordsums$q10[i]  <- quantile(messD, 0.10)
+#       ordsums$g0[i]   <- length(messD[messD > 0])/length(messD)
+#       ordsums$gn5[i]  <- length(messD[messD > -5])/length(messD)
+#       ordsums$gn10[i] <- length(messD[messD > -10])/length(messD)
+#       ordsums$gn20[i] <- length(messD[messD > -20])/length(messD)
+#       ordsums$check[i]<- length(messD)/length(cells)
+#       
+#       
+#       if(length(messD) != length(cells)) {print("DANGER WILL ROBINSON")}
+#       
+#       #### write out new "full" datasets with abundance points tacked on
+#       full$CELL <- NULL
+#       file.out <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/species/",spp[i],".csv")
+#       write.csv(full, file.out, row.names=F)
+#       
+#       
+#       #ordsums$negative[ordsums$species.code==spp[i]] <- length(messD$mess[messD$mess < 0])/length(messD$mess)
+#       #write.csv(i, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/BIAS_progress.csv", row.names=F)
+#       print(i)
+#         
+#     }
+#     
+#     #head(full)
+#     #head(abun)
+#     write.csv(ordsums, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_MESS.csv", row.names=F)
+#     
+#     summary(ordsums$gn5)
+#     summary(ordsums$gn10)
+#     hist(ordsums$q5, breaks=50)
+#     hist(ordsums$q10, breaks=50)
+#     
+#     length(ordsums$species.code[ordsums$gn10 > .9])
+#     117/155
+#     min(ordsums$q10[ordsums$gn10 > .9])
+#     ## worst one included: 5% of cells ara worse than -50
+#     ## 10% of cells are worse than 10 (-9.5)
+#     
+#     summary(ordsums$mess_max) ## up to 100
+#     summary(ordsums$mess_min) ## down to -1758
+#     
+
+
+
+##################################
+####### MESS of full range #######
+##################################
+
 library(rgdal)
 library(raster)
-install.packages('dismo')
+#install.packages('dismo')
 library(dismo)
 
 
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_3_5.csv", header = T, sep = ",",  
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_5_2018.csv", header = T, sep = ",",  
                       quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 ## best fit models for each species
-ordsums <- ordsums[ordsums$kappa >0 & ordsums$kappaP <0.05,]
+#ordsums <- ordsums[ordsums$kappa >0 & ordsums$kappaP <0.05,]
 
 formulae <- data.frame(cbind(ordsums$species.code,ordsums$formu), stringsAsFactors = F)
 str(formulae)
@@ -321,7 +598,6 @@ formulae$nlcd_6 <- sapply(formulae$formula, grepl, pattern="nlcd_6", fixed=T)
 formulae$nlcd_7 <- sapply(formulae$formula, grepl, pattern="nlcd_7", fixed=T)
 formulae$nlcd_8 <- sapply(formulae$formula, grepl, pattern="nlcd_8", fixed=T)
 head(formulae)
-
 
 spp <- formulae$species
 
@@ -349,24 +625,22 @@ bio <- stack(bio,cellIDs) # "layer" = cellID
 #full <- read.table("C:/Users/Localadmin/Documents/Google_Drive_Overflow_3_9_2018/MaxEntFiles/full_model_pts.csv", sep=",", header=T)
 #abun <- read.table("C:/Users/Localadmin/Documents/Google_Drive_Overflow_3_9_2018/MaxEntFiles/thinned_abundance_pts_2_9_2018.csv", sep=",", header=T)
 
-full_all <- read.table("C:/Users/Localadmin/Documents/Google_Drive_Overflow_3_9_2018/MaxEntFiles/full_model_pts.csv", sep=",", header=T,
-                       stringsAsFactors = F)
-full_all$DATA_SOURCE <- NULL
+#full_all <- read.table("C:/Users/Localadmin/Documents/Google_Drive_Overflow_3_9_2018/MaxEntFiles/full_model_pts.csv", sep=",", header=T,
+#                       stringsAsFactors = F)
+#full_all$DATA_SOURCE <- NULL
 
 
 
 abun_all <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
-                  comment.char= "", stringsAsFactors = F, strip.white = T)
+                       comment.char= "", stringsAsFactors = F, strip.white = T)
 abun_all <- data.frame(cbind(abun_all$species,abun_all$longitude,abun_all$latitude), stringsAsFactors = F)
-colnames(abun_all) <- colnames(full_all)
+colnames(abun_all) <- c("PLANT_CODE","LONGITUDE_DECIMAL", "LATITUDE_DECIMAL")
 abun_all <- abun_all[abun_all$PLANT_CODE %in% spp,]
 abun_all$LONGITUDE_DECIMAL <- as.numeric(abun_all$LONGITUDE_DECIMAL)
 abun_all$LATITUDE_DECIMAL <- as.numeric(abun_all$LATITUDE_DECIMAL)
 
 
-full_all <- rbind(full_all, abun_all)
-
-
+#full_all <- rbind(full_all, abun_all)
 coordinates(abun_all) <- c(2,3)
 ext <- extract(bio, abun_all) ## extract climate values to points
 abun_all <- data.frame(cbind(abun_all,ext))
@@ -375,33 +649,56 @@ abun_all$optional <- NULL
 head(abun_all)
 abun_all[,(ncol(abun_all)-14):(ncol(abun_all)-11)] <- abun_all[,(ncol(abun_all)-14):(ncol(abun_all)-11)]/10 
 
-coordinates(full_all) <- c(2,3)
-ext <- extract(bio$layer, full_all)
-full_all <- data.frame(cbind(full_all,ext))
-head(full_all)
-full_all$optional <-NULL
-colnames(full_all) <- c("PLANT_CODE", "CELL", "LONGITUDE_DECIMAL", "LATITUDE_DECIMAL")
+#coordinates(full_all) <- c(2,3)
+#extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+#full_all <- full_all[extentShape,] ## 405534, make sure that points not within extent are not used
+#ext <- extract(bio$layer, full_all)
+#full_all <- data.frame(cbind(full_all,ext))
+#head(full_all)
+#full_all$optional <-NULL
+#colnames(full_all) <- c("PLANT_CODE", "CELL", "LONGITUDE_DECIMAL", "LATITUDE_DECIMAL")
+
+#head(full_all)
 #length(unique(full_all$c.714442..733912..710327..708940..699188..699176..757497..715883..))
 
 
+ids <- data.frame(seq(1:ncell(bio)))
+colnames(ids) <- c("layer")
 
 
-
-for (i in 17:length(spp)){
+for (i in 2:length(spp)){
   #formulae[formulae]
   
   abun <- abun_all[abun_all$PLANT_CODE==spp[i],]
-  full <- full_all[full_all$PLANT_CODE==spp[i],]
- 
-  cells <- unique(full$CELL)
+
+  
+  full <- raster(paste("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/",spp[i],".asc",sep=""))
+  
+  names(full) <- "suitability"
+  
+  full <- stack(full,bio)
+  
+  #full$bio_2[full$suitability==0] <- NA
+  #full$bio_5[full$suitability==0] <- NA
+  #full$bio_6[full$suitability==0] <- NA
+  #full$bio_8[full$suitability==0] <- NA
+  #full$bio_12[full$suitability==0] <- NA
+  #full$bio_15[full$suitability==0] <- NA
+  #full$nlcd_3[full$suitability==0] <- NA
+  #full$nlcd_4[full$suitability==0] <- NA
+  #full$nlcd_5[full$suitability==0] <- NA
+  #full$nlcd_6[full$suitability==0] <- NA
+  #full$nlcd_7[full$suitability==0] <- NA
+  #full$nlcd_8[full$suitability==0] <- NA
+  
+  
+  ##########################
+  cells <- unique(full$layer[full$suitability==1])
   
   bio_id <- data.frame(bio[bio$layer %in% cells,])
   #head(bio_i)
   bio_id[,1:4] <- bio_id[,1:4]/10 
   #head(bio_id)
-  
-  ids <- data.frame(seq(1:ncell(bio)))
-  colnames(ids) <- c("layer")
   
   bio_id <- merge(bio_id, ids, by="layer",all=T)
   bio_i <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=seq(1:ncell(bio)))
@@ -456,7 +753,7 @@ for (i in 17:length(spp)){
   
   if(formulae$nlcd_3[i]){
     bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_3)
-    names(bio_2) <- "nlcd3"
+    names(bio_2) <- "nlcd_3"
     bio_i<- stack(bio_i, bio_2)
   } else {
     abun$nlcd_3 <- NULL
@@ -464,7 +761,7 @@ for (i in 17:length(spp)){
   
   if(formulae$nlcd_4[i]){
     bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_4)
-    names(bio_2) <- "nlcd4"
+    names(bio_2) <- "nlcd_4"
     bio_i<- stack(bio_i, bio_2)
   } else {
     abun$nlcd_4 <- NULL
@@ -472,7 +769,7 @@ for (i in 17:length(spp)){
   
   if(formulae$nlcd_5[i]){
     bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_5)
-    names(bio_2) <- "nlcd5"
+    names(bio_2) <- "nlcd_5"
     bio_i<- stack(bio_i, bio_2)
   } else {
     abun$nlcd_5 <- NULL
@@ -480,7 +777,7 @@ for (i in 17:length(spp)){
   
   if(formulae$nlcd_6[i]){
     bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_6)
-    names(bio_2) <- "nlcd6"
+    names(bio_2) <- "nlcd_6"
     bio_i<- stack(bio_i, bio_2)
   } else {
     abun$nlcd_6 <- NULL
@@ -488,7 +785,7 @@ for (i in 17:length(spp)){
   
   if(formulae$nlcd_7[i]){
     bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_7)
-    names(bio_2) <- "nlcd7"
+    names(bio_2) <- "nlcd_7"
     bio_i<- stack(bio_i, bio_2)
   } else {
     abun$nlcd_7 <- NULL
@@ -496,33 +793,72 @@ for (i in 17:length(spp)){
   
   if(formulae$nlcd_8[i]){
     bio_2 <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=bio_id$nlcd_8)
-    names(bio_2) <- "nlcd8"
+    names(bio_2) <- "nlcd_8"
     bio_i<- stack(bio_i, bio_2)
   } else {
     abun$nlcd_8 <- NULL
   }
   
   bio_i <- dropLayer(bio_i, 1)
-  
+  ####################################
+  #full<-dropLayer(full,c(1,14))
+
   reference <- abun[,2:(NCOL(abun)-3)]
   
   mess <- mess(bio_i, reference, full=FALSE) 
   #plot(mess)
   
   messD <- as.data.frame(mess)
-  messD <- data.frame(messD[messD$mess < Inf,])
   colnames(messD) <- "mess"
+  #messD <- data.frame(messD[messD$mess < Inf,])
+  #messD <- data.frame(messD[!is.na(messD$mess),])
+  #colnames(messD) <- "mess"
+  messD <- messD[!is.na(messD$mess) & messD$mess < Inf,]
+  #length(messD[messD < Inf])
+  
+  #ordsums$ALLVARSmess_min[i] <- min(messD)
+  #ordsums$ALLVARSmess_max[i] <- max(messD)
+  #ordsums$ALLVARSq5[i]   <- quantile(messD, 0.05)
+  #ordsums$ALLVARSq10[i]  <- quantile(messD, 0.10)
+  #ordsums$ALLVARSg0[i]   <- length(messD[messD > 0])/length(messD)
+  #ordsums$ALLVARSgn5[i]  <- length(messD[messD > -5])/length(messD)
+  ordsums$MESSgn10[i] <- length(messD[messD > -10])/length(messD)
+  ordsums$MESSgn20[i] <- length(messD[messD > -20])/length(messD)
+  #ordsums$ALLVARScheck[i]<- length(messD)/length(cells)
   
   
-  ordsums$negative[ordsums$species.code==spp[i]] <- length(messD$mess[messD$mess < 0])/length(messD$mess)
+  #if(length(messD) != length(cells)) {print("DANGER WILL ROBINSON")}
   
-  write.csv(i, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/BIAS_progress.csv", row.names=F)
+  #### write out new "full" datasets with abundance points tacked on
+  #full$CELL <- NULL
+  #file.out <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/FULL/species/",spp[i],".csv")
+  #write.csv(full, file.out, row.names=F)
+  
+  
+  #ordsums$negative[ordsums$species.code==spp[i]] <- length(messD$mess[messD$mess < 0])/length(messD$mess)
+  #write.csv(i, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/BIAS_progress.csv", row.names=F)
   print(i)
-    
+  
 }
 
-#head(full)
-#head(abun)
-write.csv(ordsums, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_BIAS.csv", row.names=F)
 
-summary(ordsums$negative)
+
+length(ordsums$species.code[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.9 & ordsums$kappa >0 & ordsums$kappaP < 0.05])  ## 64
+length(ordsums$species.code[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.85 & ordsums$kappa >0 & ordsums$kappaP < 0.05]) ## 73
+length(ordsums$species.code[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.80 & ordsums$kappa >0 & ordsums$kappaP < 0.05]) ## 91
+length(ordsums$species.code[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.75 & ordsums$kappa >0 & ordsums$kappaP < 0.05]) ## 95
+
+
+
+hist(ordsums$kappa[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.9 & ordsums$kappa >0 & ordsums$kappaP < 0.05], main="All variables", xlab="kappa")
+median(ordsums$AUC)
+
+
+
+hist(ordsums$MESSgn10, xlim=c(0.1,1), main="All variables", xlab="proportion not extrapolated")
+
+hist(ordsums$AUC, xlim=c(0.3,1), main="All variables", xlab="AUC", breaks=100)
+
+write.csv(ordsums, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_5_2018.csv", row.names=F)
+
+
