@@ -46,7 +46,7 @@ spp_bias_log = paste0("java -jar ",maxent.location,
                       " nowarnings noprefixes -E responsecurves jackknife outputformat=logistic removeduplicates noaskoverwrite replicates=10 noproduct nothreshold nohinge writeplotdata noautofeature biastype=3")
 ## linear + quadratic terms, thinning, logistic, 10 reps, bias surface
 
-for(i in 1:3){#length(sp.list$code)){
+for(i in 1:length(sp.list$code)){
    ################# all vs abun points code ############################
 #  ## set up model options, linear and quadratic features only, use sampling bias surface
 #  spp_bias_log=paste0("java -jar ",maxent.location, 
@@ -832,7 +832,37 @@ colors=rev(heat.colors(100))
 spplot(overlap, col.regions=colors)
 dev.off()
 
-### ABUNDANCE-WEIGHTED RICHNESS
+
+
+
+
+
+#### 2016 Allen and Bradley binary asciis###
+
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_16_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
+
+filenames <- paste0("C:/Users/Localadmin/Google Drive/NSF_GSS_shared/Watch_Lists/range_maps/binary_asciis/sppRichCtyBias_current/sppRichCtyBias_current/sppRichCtyBias_current",ordsums$species.code[ordsums$USE==1],"_SppRichBias_FivePercMTP.asc")
+ldf <- stack(filenames)
+#plot(ldf)
+overlap =calc(ldf,sum)
+plot(overlap)
+quantile(overlap)
+
+overlapD <- as.data.frame(overlap)
+overlapD$layer[overlapD$layer <= 29 & !is.na(overlapD$layer)] <-0
+overlapD$layer[overlapD$layer > 29 & !is.na(overlapD$layer)] <-1
+overlap <-  raster(nrows=nrow(overlap), ncols=ncol(overlap), ext=extent(overlap), vals=overlapD$layer)
+plot(overlap)
+
+full_hotspot <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_FULL.asc")
+plot(full_hotspot,add=T)
+proj4string(full_hotspot)<-proj4string(overlap)
+
+
+ncell(full_hotspot)
+ncell(overlap)
+
+### ABUNDANCE-WEIGHTED RICHNESS #########
 filenames <- as.data.frame(ordsums2$species.code)
 filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/", filenames$`ordsums2$species.code`,".asc")
 
@@ -847,9 +877,9 @@ writeRaster(overlap, filename=out_file,overwrite=T)
 pdf(file="C:/Users/Localadmin/Documents/Maxent_modeling/summaries/figures/richness_map_ABUN_WEIGHT.pdf",width=11,height=8.5)
 colors=rev(heat.colors(100))
 spplot(overlap, col.regions=colors)
-dev.off()
+dev.off
 
-##### hotspot #####
+
 current_rich=raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_ABUN_WEIGHT.asc")
 quantile(current_rich$richness_map_ABUN_WEIGHT)
 
@@ -866,7 +896,7 @@ rich$richness_map_ABUN_WEIGHT[rich$richness_map_ABUN_WEIGHT >  quantile(rich$ric
 abun_wt_hotspot <- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=rich$richness_map_ABUN_WEIGHT)
 writeRaster(abun_wt_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_ABUN_WT.asc", overwrite=T)
 
-#
+########################
 comp <- as.data.frame(stack(abun_wt_hotspot,full_hotspot))
 head(comp)
 colnames(comp) <- c("layer.1", "layer.2")
@@ -1261,11 +1291,13 @@ proj4string(props)="+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 
 
 
-
+#proj4string(hi_abun_richness) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 ######################## repeat for abun (MOVE BELOW)
 abun_hotspotPOLY <- rasterToPolygons(hi_abun_hotspots, na.rm=T, dissolve=T)
 abun_hotspotPOLY <- spTransform(abun_hotspotPOLY, "+init=epsg:5070")
 #abun_hotspotPOLY$area <- area(abun_hotspotPOLY)*1e-6
+
+
 
 abun_hotspotPOLY <- gIntersection(eco,abun_hotspotPOLY, byid=T)
 gIds <- data.frame(names(abun_hotspotPOLY))
