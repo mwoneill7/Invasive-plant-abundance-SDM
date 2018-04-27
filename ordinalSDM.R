@@ -112,8 +112,11 @@ write.csv(formulae,"formulas2_22_2018.csv",row.names=F)
 
 edd <- read.table("eddmaps_thinned_1_25_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
-codes <- read.table("species.codes.1.31.18.csv", header=T, sep=",")
-edd <- edd[edd$species %in% codes$x, ]
+#codes <- read.table("species.codes.1.31.18.csv", header=T, sep=",")
+codes <- read.table("species_list_4_27.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+
+edd <- edd[edd$species %in% codes$species, ]
 head(edd)
 
 coordinates(edd) <- c(5,4)
@@ -149,42 +152,52 @@ edd <- cbind(as.data.frame(edd), ext) ## append extracted climate data to point 
 edd[,(ncol(edd)-11):(ncol(edd)-8)] <- edd[,(ncol(edd)-11):(ncol(edd)-8)]/10
 head(edd)
 edd$abundance <- ceiling(edd$med)
+edd$abundance[edd$med == 1.25] <- 1
+edd$abundance[edd$med == 2.25] <- 2
 
-write.csv(edd, "edd_w_environmental.csv", row.names = F)
+write.csv(edd, "edd_w_environmental_NEW.csv", row.names = F)
 
 ######################################
-
-formulae.s <- read.table("formulas2_22_2018.csv", header = T, sep = ",", quote= "\"", 
+library(stringr)
+formulae <- read.table("formulas2_22_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
-edd <- read.table("edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
+formulae$no.vars <- sapply(formulae$formula, str_count, pattern="\\+")
+formulae$no.poly <- sapply(formulae$formula, str_count, pattern="poly")
+formulae$no.vars <- formulae$no.vars + formulae$no.poly + 1
+
+#formulae$
+edd <- read.table("edd_w_environmenta_NEW.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
-species.code <- "TEMPLATE" ## initialize master file to contain summaries of GAMs (final model for each species)
-aic <- -99 ## adjusted R-squared of models
-no.pts <- -99
-no.terms <- -99
-no.vars <- -99
-formu <- "TEMPLATE"
-c.up <- -99
-c.down <- -99
-pS <- -99
-pS10 <- -99
-pI <- -99
-pI10 <- -99
-null <- -99
-kappa <- -99
-kappaP <- -99
-bin1o <- -99
-bin2o <- -99
-bin3o <- -99
-bin1p <- -99
-bin2p <- -99
-bin3p <- -99
 
-##########################
+
+################ 
+# species.code <- "TEMPLATE" ## initialize master file to contain summaries of GAMs (final model for each species)
+# aic <- -99 ## adjusted R-squared of models
+# no.pts <- -99
+# no.terms <- -99
+# no.vars <- -99
+# formu <- "TEMPLATE"
+# c.up <- -99
+# c.down <- -99
+# pS <- -99
+# pS10 <- -99
+# pI <- -99
+# pI10 <- -99
+# null <- -99
+# kappa <- -99
+# kappaP <- -99
+# bin1o <- -99
+# bin2o <- -99
+# bin3o <- -99
+# bin1p <- -99
+# bin2p <- -99
+# bin3p <- -99
+# 
+###########################_
 #p05 <- -99
 #p10 <- -99
 #kappaW <- -99
@@ -216,16 +229,47 @@ bin3p <- -99
 #c12.2 <- -999
 #c15   <- -999
 #c15.2 <- -999
-##########################
-ordsums <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pS10, pI, pI10,
-                       null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
-sp.list <- as.character(unique(edd$species))
+###########################~
+# ordsums <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pS10, pI, pI10,
+#                        null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
+# sp.list <- as.character(unique(edd$species))
+#####################################
+### re-do models that broke rule of 5
+#####################################
+#ordsums <- read.table("rule_of_five.csv", header = T, sep = ",", quote= "\"", 
+#                             comment.char= "", stringsAsFactors = F, strip.white = T)
+#colnames(ordsums) <- c("species.code", "max.vars.5epv")
+sums$species.code <- sums$species
+ordsums <- sums
+ordsums <- ordsums[order(ordsums$max.vars.5epv),]
+ordsums$pS <- -99
+ordsums$pS10 <- -99
+ordsums$pI <- -99
+ordsums$pI10 <- -99
+ordsums$c.up <- -99
+ordsums$c.down <- -99
+ordsums$aic <- -99
+ordsums$no.terms  <- -99
+ordsums$no.vars <- -99
+ordsums$formu <- "FILLER"
+ordsums$null <- -99
+ordsums$kappa <- -99
+ordsums$kappaP <- -99
+ordsums$bin1o <- -99
+ordsums$bin2o <- -99
+ordsums$bin3o <- -99
+ordsums$bin1p <- -99
+ordsums$bin2p <- -99
+ordsums$bin3p <- -99
 
-for(s in 1:3){#:length(sp.list)){ ## Loop through species list
+
+head(ordsums)
+
+for(s in 1:length(ordsums$species.code)){#:length(sp.list)){ ## Loop through species list
   
-  species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
+  #species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
 
-    species <- edd[edd$species == species.code,]## subset to species of the iteration
+    species <- edd[edd$species == ordsums$species.code[s],]## subset to species of the iteration
     #species <- data.frame(cbind(species$abundance, species$latitude, species$longitude)) ## select only variables needed to save computation time
     species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3))
     
@@ -423,6 +467,10 @@ for(s in 1:3){#:length(sp.list)){ ## Loop through species list
     ####################
     ##### CLM
     ####################
+    
+    
+    formulae.s <- formulae[formulae$no.vars <= ordsums$max.vars.5epv[s],]
+    
     i <- -1 ## keep track of place in formula list
     edf <- -1 ## number of variables
     aic <- -1 ## Akaike's info criterion
@@ -497,27 +545,28 @@ for(s in 1:3){#:length(sp.list)){ ## Loop through species list
     #Msum <- data.frame(cbind(Msum, "p_value" = p))
     
     MsumS <- data.frame(Msum[3:nrow(Msum),]) ## 1 back to 2
-    pS <- length(MsumS$Estimate[MsumS$Pr...z..>0.05])
-    pS10 <- length(MsumS$Estimate[MsumS$Pr...z..>0.1])
+    ordsums$pS[s] <- length(MsumS$Estimate[MsumS$Pr...z..>0.05])
+    ordsums$pS10[s] <- length(MsumS$Estimate[MsumS$Pr...z..>0.1])
      
     MsumI <- data.frame(Msum[1:2,]) ## 2 back to 3
-    pI <- length(MsumI$Estimate[MsumI$Pr...z..>0.05])
-    pI10 <- length(MsumI$Estimate[MsumI$Pr...z..>0.1])
+    ordsums$pI[s] <- length(MsumI$Estimate[MsumI$Pr...z..>0.05])
+    ordsums$pI10[s] <- length(MsumI$Estimate[MsumI$Pr...z..>0.1])
     
     MsumS$name <- as.character(row.names(MsumS))
     MsumS$poly <- sapply(MsumS$name, grepl, pattern="2)2")
     
-    c.up <- length(MsumS$Estimate[MsumS$Estimate > 0 & MsumS$poly == T])
-    c.down <- length(MsumS$Estimate[MsumS$Estimate < 0 & MsumS$poly == T])
+    ordsums$c.up[s] <- length(MsumS$Estimate[MsumS$Estimate > 0 & MsumS$poly == T])
+    ordsums$c.down[s] <- length(MsumS$Estimate[MsumS$Estimate < 0 & MsumS$poly == T])
     
-    aic <- AIC(M)          ## extract adjusted R-square value of model #adjDsq <-  Dsquared(M,adjust=T) ## extract deviance explained by model
+    ordsums$aic[s] <- AIC(M)          ## extract adjusted R-square value of model #adjDsq <-  Dsquared(M,adjust=T) ## extract deviance explained by model
     #no.pts2 <- nrow(species)
-    no.terms <- NROW(Msum) ## extract the number of terms
-    no.vars <- no.terms - 2 - str_count(formulae.s$formula[model.sel2$i], "poly")
-    formu <- formulae.s$formula[model.sel2$i]
+    ordsums$no.terms[s] <- NROW(Msum) ## extract the number of terms
+    ordsums$no.vars[s] <- ordsums$no.terms[s] - 2 - str_count(formulae.s$formula[model.sel2$i], "poly")
+    ordsums$formu[s] <- formulae.s$formula[model.sel2$i]
     
-    null <- polr(abundance~1,data=species, Hess=T)
-    if(AIC(null) > (AIC(M) + 2)){null <- 0} else {null <- 1}  
+    null <- clm(abundance~1,data=species, Hess=T)
+    
+    if(AIC(null) > (AIC(M) + 2)){ordsums$null[s] <- 0} else {ordsums$null[s] <- 1}  
     
     pm <- predict(M, species, type="class")
     pm <- melt(pm)
@@ -528,15 +577,24 @@ for(s in 1:3){#:length(sp.list)){ ## Loop through species list
     colnames(pm) <- c("observed", "predicted")
     
     kappa <- kappa2(pm)
-    kappaP <- kappa$p.value
-    kappa <- kappa$value
+    ordsums$kappaP[s] <- kappa$p.value
+    ordsums$kappa[s] <- kappa$value
     
-    bin1o <- length(pm$observed[pm$observed == 1])
-    bin2o <- length(pm$observed[pm$observed == 2])
-    bin3o <- length(pm$observed[pm$observed == 3])
-    bin1p <- length(pm$predicted[pm$predicted == 1])
-    bin2p <- length(pm$predicted[pm$predicted == 2])
-    bin3p <- length(pm$predicted[pm$predicted == 3])
+    ordsums$bin1o[s] <- length(pm$observed[pm$observed == 1])
+    ordsums$bin2o[s] <- length(pm$observed[pm$observed == 2])
+    ordsums$bin3o[s] <- length(pm$observed[pm$observed == 3])
+    ordsums$bin1p[s] <- length(pm$observed[pm$predicted == 1])
+    ordsums$bin2p[s] <- length(pm$observed[pm$predicted == 2])
+    ordsums$bin3p[s] <- length(pm$observed[pm$predicted == 3])
+    
+    write.csv(ordsums[s,], "bloop.csv",row.names=F)
+    
+    #bin1o <- length(pm$observed[pm$observed == 1])
+    #bin2o <- length(pm$observed[pm$observed == 2])
+    #bin3o <- length(pm$observed[pm$observed == 3])
+    #bin1p <- length(pm$predicted[pm$predicted == 1])
+    #bin2p <- length(pm$predicted[pm$predicted == 2])
+    #bin3p <- length(pm$predicted[pm$predicted == 3])
 
     
     ###############################
@@ -565,20 +623,29 @@ for(s in 1:3){#:length(sp.list)){ ## Loop through species list
    # 
    # confus <- data.frame(one,two,thr,fou)
     ###############################
-    ordsums.i <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pS10, pI, pI10,
-                            null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
+    #ordsums.i <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pS10, pI, pI10,
+  #                          null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
     
-    ordsums <- rbind(ordsums,ordsums.i) 
+    #ordsums <- rbind(ordsums,ordsums.i) 
     #print(s)
     #print("SPECIES")
   # if statement to remove vmin species}
-    write.csv(s,"progress.csv",row.names=F)
+    print(s)
 }
 
-ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
-write.csv(ordsums,"ordsums3_3_2018.csv", row.names=F)
+#ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
+write.csv(ordsums,"ordsums4_27_2018.csv", row.names=F)
 
+hist(ordsums$kappa)
+length(ordsums$kappa > 0 & ordsums$kappaP <0.05)
 #library(glue)
+
+#write.csv(model.sel,"TARA_133.csv", row.names=F)
+## **PROCEED WITH CAUTION** ##
+## **CODE WASTELAND AHEAD** ##
+
+
+#################################
 sp.list <- read.table("ordsums_FINAL.csv", header = T, sep = ",", 
                       quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 
@@ -603,13 +670,6 @@ for (i in 1:NROW(sp.list)){
 
 head(sp.list)
 write.csv(sp.list, "MaxEntFiles/spForms3_4_2018.csv", row.names=F)
-
-#write.csv(model.sel,"TARA_133.csv", row.names=F)
-## **PROCEED WITH CAUTION** ##
-## **CODE WASTELAND AHEAD** ##
-
-
-#################################
 ordsums<- read.table("ordsums2_13_2018.csv", header = T, sep = ",", quote= "\"", 
                      comment.char= "", stringsAsFactors = F, strip.white = T)
 

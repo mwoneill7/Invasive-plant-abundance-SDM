@@ -1110,3 +1110,139 @@ for (i in 1:length(sp)){
 
 species.codes <- ed.listing$usda.code[ed.listing$rarest.bina >= 10]
 write.csv(species.codes, "species.codes.2.08.18.csv", row.names=F)
+
+
+
+
+
+####################################
+##### 4/27 rule of 5
+setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
+
+edd <- read.table("file:///C:/Users/Localadmin/Documents/EDDMapS data/eddmaps_thinned_1_25_2018.csv", header = T, sep = ",",  
+                  quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+
+edd$abundance <- ceiling(edd$med)
+edd$abundance[edd$med == 1.25] <- 1
+edd$abundance[edd$med == 2.25] <- 2
+length(edd$abundance[edd$med == 1.25 | edd$med == 2.25])/length(edd$abundance)
+
+
+#head(cbind(edd$med,edd$abun), 80)
+
+sums <- data.frame(unique(edd$species), stringsAsFactors = F)
+colnames(sums) <- "species"
+
+for (i in 1:length(sums$species)){
+  sums$bin1[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 1])
+  sums$bin2[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 2])
+  sums$bin3[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 3])
+  sums$abun.pts[i] <- length(edd$species[edd$species == sums$species[i]] )
+  sums$rarest.bin[i] <- min(sums$bin1[i],sums$bin2[i], sums$bin3[i])
+  print(i)
+}
+
+
+length(sums$species[sums$rarest.bin >= 10])
+#length(sums$species[sums$rarest.bin >= 10 & sums$abun.pts < 40])
+length(sums$species[sums$rarest.bin >= 5])
+summary(sums$rarest.bin[sums$rarest.bin >= 10])
+
+
+
+
+#   #### IPAUS species list (Downloaded in 2014; database last updated May 2012)
+#   ipa.list <- read.table("ipa2.csv", header = T, sep = ",", 
+#                          stringsAsFactors = F, quote= "\"", comment.char= "", strip.white = T)
+#   ipa.list$IPA <- 1 ## marks that the species appeared on IPA for (upcoming merge) 
+#   head(ipa.list)
+#   
+#   
+#   
+#   #####NATIVITY
+#   
+#   usda.list <- read.table("PLANTS.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+#   usda.list$usdaCHK <- 1
+#   head(usda.list) ## to mark that this species was in the PLANTS database (for upcoming merges)
+#   
+#   #### nativity is only listed on first species name for a species code, AND
+#   #### nativity for each place (canada, alaska, etc) is lumped into one messy field, SO
+#   #### extract all rows with each of the three possibilities (I, N, I/N)
+#   
+#   
+
+invListing <- read.table("master list.csv",header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "") 
+head(invListing)
+invListing$Number.of.States[is.na(invListing$Number.of.States)]<-0
+invListing$Federal.Noxious[is.na(invListing$Federal.Noxious)]<-0
+unique(invListing$list)
+#length(invListing$list[is.na(invListing$list)])
+plants.i  <- usda.list[grep("L48(I)",   usda.list$Native.Status, fixed=TRUE), ]
+plants.n  <- usda.list[grep("L48(N)",   usda.list$Native.Status, fixed=TRUE), ]
+plants.in <- usda.list[grep("L48(I,N)", usda.list$Native.Status, fixed=TRUE), ]
+
+### make a cleaner nativity column for L48 based on what their L48 status is
+plants.i$L48  <- "I"
+plants.n$L48  <- "N"
+plants.in$L48 <- "I/N"
+### bind rows back into a single dataframe
+plants.nativity <- rbind(plants.i, plants.n, plants.in)
+head(plants.nativity)
+
+spp <- sums$species
+
+for (i in 1:length(spp)){
+  
+
+  if(length(invListing$NewCode[invListing$NewCode==spp[i]])>=1){
+    sums$state[i] <- max(invListing$Number.of.States[invListing$NewCode == spp[i]])
+    sums$Fed[i] <- max(invListing$Federal.Noxious[invListing$NewCode == spp[i]])
+    if (invListing$list[invListing$NewCode == spp[i]] == "IPAUS" |
+        invListing$list[invListing$NewCode == spp[i]] == "IPAUS_USDA") {
+      sums$ipaus[i] <- 1
+    }
+    sums$habit[i] <- invListing$habit[invListing$NewCode == spp[i]][1]
+    sums$duration[i] <- invListing$duration_final[invListing$NewCode == spp[i]][1]
+  }  
+    
+    sums$nativityL48[i] <- plants.nativity$L48[plants.nativity$Accepted.Symbol == spp[i]][1]
+  
+  print(i)
+
+  
+}
+
+
+unique(sums$habit)
+unique(sums$nativityL48)
+
+
+
+
+
+
+nativity2 <- read.table("Nativity2.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+for (i in (1:length(nativity2$usda.code))){
+  sums$nativityL48[sums$species == nativity2$usda.code[i]] <- nativity2$Nativity[nativity2$usda.code == nativity2$usda.code[i]]
+}
+
+str(sums)
+
+sums <- sums[sums$nativityL48 == "I" & sums$rarest.bin > 5 & (sums$state > 0 | sums$Fed ==1 | sums$ipaus ==1),]
+length(sums$species[sums$rarest.bin >= 10])
+summary(sums$rarest.bin)
+
+summary(as.factor(sums$duration))
+summary(as.factor(sums$habit))
+sums[sums$habit == "",]
+
+sums$habit[sums$species == "LEAR11"] <- "grass"
+sums$habit[sums$species == "CIPA6"] <- "forb_herb"
+sums$habit[sums$species == "TRSE6"] <- "tree"
+
+
+sums$max.vars.5epv<- floor(sums$rarest.bin/5)
+cbind(sums$rarest.bin,sums$max.vars.5epv)
+
+write.csv(sums, "species_list_4_27.csv", row.names=F)

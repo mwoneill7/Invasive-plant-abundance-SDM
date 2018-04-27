@@ -574,6 +574,12 @@ edd <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM
 ## best fit models for each species
 #ordsums <- ordsums[ordsums$kappa >0 & ordsums$kappaP <0.05,]
 
+ordsums <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_4_19_2018_updated.csv", header = T, sep = ",",  
+                  quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+#ordsums <- ordsums[ordsums$rule5broke == 1,]
+#summary(ordsums$kappa)
+
+
 formulae <- data.frame(cbind(ordsums$species.code,ordsums$formu), stringsAsFactors = F)
 str(formulae)
 colnames(formulae) <- c("species","formula")
@@ -605,9 +611,9 @@ bioD[,1:4] <- bioD[,1:4]/10
 
 setwd("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/") 
 ## location of maxent ranges
-dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/")
-dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN")
-dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN")
+#dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/")
+#dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN")
+#dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN")
 
 for (i in 1:length(spp)){
   
@@ -1879,6 +1885,43 @@ plot(compare, col=c("orangered2","darkslateblue","grey95", "deepskyblue1"), box=
 plot(compare, col=c("transparent",adjustcolor(c("black"),.35), "transparent", "transparent"), add=T, box=F, axes=F, legend=F, bg="transparent")
 plot(extentShape, col="transparent",lwd=2,add=T, bg="transparent")
 dev.off()                    #"deepskyblue1","black","grey95", "firebrick1"
+
+
+
+########## 3MT
+extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+
+hi_abun_hotspot <- raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_HI_ABUN.asc")
+
+
+
+
+
+png("C:/Users/Localadmin/Google Drive/GRC_figs/3MThi_hot.png",width=500,height=300, bg="transparent")
+plot(hi_abun_hotspot, col=c("grey99", "firebrick3"), box=F, axes=F, legend=F, bg="transparent")
+#plot(eco2, col="transparent",add=T)
+dev.off()
+
+
+#knotweed at high abundance
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/POCU6.asc") 
+ordinal$layer <- 0
+ordinal$layer <- ordinal$POCU6
+ordinal$layer[ordinal$POCU6==2] <- 1
+ordinal$layer[is.na(ordinal$POCU6)] <- NA
+
+#ordinal$layer2 <- 0
+#ordinal$layer2[ordinal$BRPA4==3] <- 1
+#ordinal$layer2[ordinal$BRPA4 != 3 | is.na(ordinal$BRPA4)] <- NA
+png("C:/Users/Localadmin/Google Drive/GRC_figs/3MThi_knotGREEN.png",width=600,height=400, bg="transparent")
+plot(ordinal$layer, col= c("white", "white", "darkgreen"), box=F, axes=F, legend=F )
+plot(extentShape, col="transparent",lwd=3,add=T, bg="transparent")
+dev.off()
+
+#png("C:/Users/Localadmin/Google Drive/GRC_figs/3MThi_knot.png",width=500,height=300, bg="transparent")
+#plot(ordinal$layer, col= c("white", "white", "darkgreen"), box=F, axes=F, legend=F )
+#plot(extentShape, col="transparent",lwd=3,add=T, bg="transparent")
+#dev.off()
 
 
 
