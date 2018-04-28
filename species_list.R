@@ -1117,9 +1117,9 @@ write.csv(species.codes, "species.codes.2.08.18.csv", row.names=F)
 
 ####################################
 ##### 4/27 rule of 5
-setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
 
-edd <- read.table("file:///C:/Users/Localadmin/Documents/EDDMapS data/eddmaps_thinned_1_25_2018.csv", header = T, sep = ",",  
+edd <- read.table("file:///C:/Users/mwone/Documents/EDDMapS data/eddmaps_thinned_1_25_2018.csv", header = T, sep = ",",  
                   quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
@@ -1135,15 +1135,16 @@ sums <- data.frame(unique(edd$species), stringsAsFactors = F)
 colnames(sums) <- "species"
 
 for (i in 1:length(sums$species)){
-  sums$bin1[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 1])
-  sums$bin2[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 2])
-  sums$bin3[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 3])
-  sums$abun.pts[i] <- length(edd$species[edd$species == sums$species[i]] )
-  sums$rarest.bin[i] <- min(sums$bin1[i],sums$bin2[i], sums$bin3[i])
+  #sums$bin1[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 1])
+  #sums$bin2[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 2])
+  #sums$bin3[i] <- length(edd$species[edd$species == sums$species[i] & edd$abundance == 3])
+  #sums$abun.pts[i] <- length(edd$species[edd$species == sums$species[i]] )
+  #sums$rarest.bin[i] <- min(sums$bin1[i],sums$bin2[i], sums$bin3[i])
+  sums$changes[i] <- length(edd$species[edd$species == sums$species[i] & (edd$med == 1.25 |edd$med == 2.25)])
   print(i)
 }
 
-
+summary(sums$changes)
 length(sums$species[sums$rarest.bin >= 10])
 #length(sums$species[sums$rarest.bin >= 10 & sums$abun.pts < 40])
 length(sums$species[sums$rarest.bin >= 5])
@@ -1177,6 +1178,10 @@ head(invListing)
 invListing$Number.of.States[is.na(invListing$Number.of.States)]<-0
 invListing$Federal.Noxious[is.na(invListing$Federal.Noxious)]<-0
 unique(invListing$list)
+
+#### USDA federal/State listings (Downloaded from PLANTS 5/30/2017)
+usda.list <- read.table("PLANTS.csv", header = T, sep = ",", stringsAsFactors = F, strip.white = T, quote= "\"", comment.char= "")
+
 #length(invListing$list[is.na(invListing$list)])
 plants.i  <- usda.list[grep("L48(I)",   usda.list$Native.Status, fixed=TRUE), ]
 plants.n  <- usda.list[grep("L48(N)",   usda.list$Native.Status, fixed=TRUE), ]
@@ -1229,6 +1234,8 @@ for (i in (1:length(nativity2$usda.code))){
 
 str(sums)
 
+sums[sums$species == "LECU",]
+
 sums <- sums[sums$nativityL48 == "I" & sums$rarest.bin > 5 & (sums$state > 0 | sums$Fed ==1 | sums$ipaus ==1),]
 length(sums$species[sums$rarest.bin >= 10])
 summary(sums$rarest.bin)
@@ -1245,4 +1252,9 @@ sums$habit[sums$species == "TRSE6"] <- "tree"
 sums$max.vars.5epv<- floor(sums$rarest.bin/5)
 cbind(sums$rarest.bin,sums$max.vars.5epv)
 
-write.csv(sums, "species_list_4_27.csv", row.names=F)
+
+#
+#sums2 <- sums[sums$changes >0,]
+
+sums <- sums[order(sums$max.vars.5epv),]
+write.csv(sums, "species_list_4_27b.csv", row.names=F)
