@@ -3,7 +3,7 @@
 ##   last modified: 12/19/2017
 #    Mitch O'Neill
 
-setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 library(rgdal)
 library(raster)   ## for Raster climate data
@@ -158,7 +158,7 @@ edd$abundance[edd$med == 2.25] <- 2
 write.csv(edd, "edd_w_environmental_NEW.csv", row.names = F)
 
 ######################################
-library(stringr)
+#library(stringr)
 formulae <- read.table("formulas2_22_2018.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 
@@ -168,80 +168,19 @@ formulae$no.poly <- sapply(formulae$formula, str_count, pattern="poly")
 formulae$no.vars <- formulae$no.vars + formulae$no.poly + 1
 
 #formulae$
-edd <- read.table("edd_w_environmenta_NEW.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("edd_w_environmental_NEW.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
 
 
 ################ 
-# species.code <- "TEMPLATE" ## initialize master file to contain summaries of GAMs (final model for each species)
-# aic <- -99 ## adjusted R-squared of models
-# no.pts <- -99
-# no.terms <- -99
-# no.vars <- -99
-# formu <- "TEMPLATE"
-# c.up <- -99
-# c.down <- -99
-# pS <- -99
-# pS10 <- -99
-# pI <- -99
-# pI10 <- -99
-# null <- -99
-# kappa <- -99
-# kappaP <- -99
-# bin1o <- -99
-# bin2o <- -99
-# bin3o <- -99
-# bin1p <- -99
-# bin2p <- -99
-# bin3p <- -99
-# 
-###########################_
-#p05 <- -99
-#p10 <- -99
-#kappaW <- -99
-#regS <- -99
-#regI <-99
-#
-#aic2 <- -99
-#no.terms2 <- -99
-#no.vars2 <- -99
-#formu2 <- "TEMPLATE"
-#c.up2 <- -99
-#c.down2 <- -99
-#pS2 <- -99
-#pI2 <- -99
-#null2 <- -99
-#kappa2 <- -99
-#kappaP2 <-99
-#regS2 <- -99
-#regI2 <- -99
-#c2    <- -999
-#c2.2  <- -999
-#c5    <- -999
-#c5.2  <- -999
-#c6    <- -999
-#c6.2  <- -999
-#c8    <- -999
-#c8.2  <- -999
-#c12   <- -999
-#c12.2 <- -999
-#c15   <- -999
-#c15.2 <- -999
-###########################~
-# ordsums <- data.frame(species.code,aic, no.pts, no.terms, no.vars, formu, c.up, c.down, pS, pS10, pI, pI10,
-#                        null, kappa, kappaP, bin1o, bin2o, bin3o, bin1p, bin2p, bin3p, stringsAsFactors = F)
-# sp.list <- as.character(unique(edd$species))
-#####################################
-### re-do models that broke rule of 5
-#####################################
-#ordsums <- read.table("rule_of_five.csv", header = T, sep = ",", quote= "\"", 
-#                             comment.char= "", stringsAsFactors = F, strip.white = T)
-#colnames(ordsums) <- c("species.code", "max.vars.5epv")
-sums$species.code <- sums$species
-ordsums <- sums
+ordsums <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/species_list_4_27b.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+
+ordsums$species.code <- ordsums$species
 ordsums <- ordsums[order(ordsums$max.vars.5epv),]
+
 ordsums$pS <- -99
 ordsums$pS10 <- -99
 ordsums$pI <- -99
@@ -265,7 +204,7 @@ ordsums$bin3p <- -99
 
 head(ordsums)
 
-for(s in 1:length(ordsums$species.code)){#:length(sp.list)){ ## Loop through species list
+for(s in 194:187){#length(ordsums$species.code):140){#:length(sp.list)){ ## Loop through species list
   
   #species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
 
@@ -501,8 +440,9 @@ for(s in 1:length(ordsums$species.code)){#:length(sp.list)){ ## Loop through spe
           aic <- AIC(M) ## extract aic score
           model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
           model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-          print(i)
-        }  
+          #print(i)
+        } 
+        #print(i)
         #},error=function(e){cat(species.code,conditionMessage(e), "\n")})
       } # M <- lrm(formula(formulae.s[i]), data = species)|# M <- clm(formula(formulae.s[i]), data=species)|## construct model using formula of the iteration|## use data for species of this iteration
     } else {
@@ -587,7 +527,7 @@ for(s in 1:length(ordsums$species.code)){#:length(sp.list)){ ## Loop through spe
     ordsums$bin2p[s] <- length(pm$observed[pm$predicted == 2])
     ordsums$bin3p[s] <- length(pm$observed[pm$predicted == 3])
     
-    write.csv(ordsums[s,], "bloop.csv",row.names=F)
+    write.csv(s, "bloop.csv",row.names=F)
     
     #bin1o <- length(pm$observed[pm$observed == 1])
     #bin2o <- length(pm$observed[pm$observed == 2])
@@ -634,10 +574,13 @@ for(s in 1:length(ordsums$species.code)){#:length(sp.list)){ ## Loop through spe
 }
 
 #ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
-write.csv(ordsums,"ordsums4_27_2018.csv", row.names=F)
+write.csv(ordsums,"ordsums4_27_2018laptop.csv", row.names=F)
 
 hist(ordsums$kappa)
 length(ordsums$kappa > 0 & ordsums$kappaP <0.05)
+
+ordsums$kappa[ordsums$kappa > 0 & ordsums$kappaP < 0.05 & ordsums$rarest.bin < 10,]
+ordsums$species[ordsums$kappa > 0 & ordsums$kappaP < 0.05 & ordsums$rarest.bin]
 #library(glue)
 
 #write.csv(model.sel,"TARA_133.csv", row.names=F)
