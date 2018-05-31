@@ -322,8 +322,6 @@ summary(ordsums$AUC)
 length(ordsums$AUC[ordsums$AUC > .7])
 
 
-
-
 ###################################
 ## EXPLORATION OF MODEL PERFORMANCE
 ###################################
@@ -561,10 +559,14 @@ write.csv(ordsums,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM
 ####################################################
 ########## PREDICT ORDINAL ABUNDANCE WITHIN RANGES##
 ####################################################
-
+library(maptools)
+library(raster)
+library(rgdal)
+library(colorRamps)
 library(ordinal)
 library(reshape2)
-
+library(rgeos)
+length(list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN"))
 edd <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",",  
                       quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 ## eddmaps abundance data (thinned) with environmental data
@@ -574,17 +576,20 @@ edd <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM
 ## best fit models for each species
 #ordsums <- ordsums[ordsums$kappa >0 & ordsums$kappaP <0.05,]
 
-ordsums <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_4_19_2018_updated.csv", header = T, sep = ",",  
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_5_7_2018.csv", header = T, sep = ",",  
                   quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+#ordsums <- ordsums[ordsums$rarest.bin>=10 & ordsums$kappaP <0.05 & ordsums$kappa >0,]
+
 #ordsums <- ordsums[ordsums$rule5broke == 1,]
 #summary(ordsums$kappa)
+spp <- ordsums$species.code
 
 
 formulae <- data.frame(cbind(ordsums$species.code,ordsums$formu), stringsAsFactors = F)
 str(formulae)
 colnames(formulae) <- c("species","formula")
 
-spp <- formulae$species[order(formulae$species)]
+#spp <- formulae$species[order(formulae$species)]
 edd <- edd[edd$species %in% spp,]
 length(unique(edd$species))
 
@@ -609,110 +614,223 @@ summary(bioD)
 bioD[,1:4] <- bioD[,1:4]/10
 
 
-setwd("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/") 
+#setwd("C:/Users/Localadmin/Documents/MaxEnt_modeling/") 
 ## location of maxent ranges
-#dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/")
-#dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN")
-#dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN")
+dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/")
+dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN")
+dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN")
+ordsums$class1_5_7 <- -99
+ordsums$class2_5_7 <- -99
+ordsums$class3_5_7 <- -99
+#ordsums$AUC <- -99
+ordsums$medianClass_5_7 <- -99
+ordsums$mode_5_7 <- -99
+ordsums$vr_5_7 <- -99
 
-for (i in 1:length(spp)){
+for (i in 15:length(spp)){
   
-  species <- edd[edd$species == spp[i],]
-  species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3))
-  
-  M <- clm(formula(formulae$formula[formulae$species==spp[i]]), data = species)
-  #AIC(M)
-  
-  range <- raster(paste0(spp[i],".asc"))
-  #plot(range)
-  rangeD <- as.data.frame(range)
-  colnames(rangeD) <- c("presence")
-  
-  p <- predict(M, bioD, type="class")
-  p <- melt(p)
-  p <- p[,1]
-  
-  p <- data.frame(cbind(p, rangeD$presence))
-  colnames(p) <- c("abundance","presence")
-  p$abundance_presence <- p$abundance*p$presence
-  
-  p$hi_abundance <- p$abundance_presence/3
-  p$hi_abundance[p$hi_abundance < 1] <- 0
-  
-  
-  abun <- raster(nrows=nrow(range),ncols=ncol(range),ext=extent(range),crs=proj4string(bio),vals=p$abundance_presence)
-  hi_abun <- raster(nrows=nrow(range),ncols=ncol(range),ext=extent(range),crs=proj4string(bio),vals=p$hi_abundance)
+ species <- edd[edd$species == spp[i],]
+ species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3))
+ 
+ #species[,7:10] <- species[,7:8]/10
+ 
+ M <- clm(formula(formulae$formula[formulae$species==spp[i]]), data = species)
+ #AIC(M)
+ 
+ range <- raster(paste0("Binary_asciis/",spp[i],".asc"))
+ #plot(range)
+ rangeD <- as.data.frame(range)
+ colnames(rangeD) <- c("presence")
+ 
+ p <- predict(M, bioD, type="class")
+ p <- melt(p)
+ p <- p[,1]
+ 
+ p <- data.frame(cbind(p, rangeD$presence))
+ colnames(p) <- c("abundance","presence")
+ p$abundance_presence <- p$abundance*p$presence
+ 
+ p$hi_abundance <- p$abundance_presence/3
+ p$hi_abundance[p$hi_abundance < 1] <- 0
+ 
+ 
+ abun <- raster(nrows=nrow(range),ncols=ncol(range),ext=extent(range),crs=proj4string(bio),vals=p$abundance_presence)
+ hi_abun <- raster(nrows=nrow(range),ncols=ncol(range),ext=extent(range),crs=proj4string(bio),vals=p$hi_abundance)
+ #plot(abun)
+ 
+ ordsums$class1_5_7[i] <- length(p$abundance[p$abundance_presence == 1 & !is.na(p$abundance_presence)])/length(p$abundance[!is.na(p$presence) & p$presence==1])
+ ordsums$class2_5_7[i] <- length(p$abundance[p$abundance_presence == 2 & !is.na(p$abundance_presence)])/length(p$abundance[!is.na(p$presence) & p$presence==1])
+ ordsums$class3_5_7[i] <- length(p$abundance[p$abundance_presence == 3 & !is.na(p$abundance_presence)])/length(p$abundance[!is.na(p$presence) & p$presence==1])
+ 
+ 
+ writeRaster(abun, paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/",spp[i],".asc"),overwrite=T)
+ writeRaster(hi_abun,paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/",spp[i],".asc"),overwrite=T)
+ # #  
+ # #  get.auc <- read.table(paste0("FINAL_OUTPUT/",spp[i],"/maxentResults.csv"), header = T, sep = ",", quote= "\"", 
+ # #                        comment.char= "", stringsAsFactors = F, strip.white = T)  
+ # #  ordsums$AUC[i] <- get.auc$Test.AUC[11]
+
 
   
-  ordsums$class_1[i] <- length(p$abundance[p$abundance_presence == 1 & !is.na(p$abundance_presence)])/length(p$abundance[!is.na(p$presence) & p$presence==1])
-  ordsums$class_2[i] <- length(p$abundance[p$abundance_presence == 2 & !is.na(p$abundance_presence)])/length(p$abundance[!is.na(p$presence) & p$presence==1])
-  ordsums$class_3[i] <- length(p$abundance[p$abundance_presence == 3 & !is.na(p$abundance_presence)])/length(p$abundance[!is.na(p$presence) & p$presence==1])
+     ordsums$medianClass_5_7[i] <- median(p$abundance_presence[p$presence ==1 & !is.na(p$presence)])
+
+     
+     
+     if(ordsums$class1_5_7[i] > ordsums$class2_5_7[i] & ordsums$class1_5_7[i] > ordsums$class3_5_7[i]){
+       ordsums$mode_5_7[i] <- 1
+       ordsums$vr_5_7[i] <- 1-ordsums$class1_5_7[i]
+     }
+     
+     if(ordsums$class2_5_7[i] > ordsums$class1_5_7[i] & ordsums$class2_5_7[i] > ordsums$class3_5_7[i]){
+       ordsums$mode_5_7[i] <- 2
+       ordsums$vr_5_7[i] <- 1-ordsums$class2_5_7[i]
+     }
+     
+     if(ordsums$class3_5_7[i] > ordsums$class2_5_7[i] & ordsums$class3_5_7[i] > ordsums$class1_5_7[i]){
+       ordsums$mode_5_7[i] <- 3
+       ordsums$vr_5_7[i] <- 1-ordsums$class3_5_7[i]
+     }
   
-  
-  writeRaster(abun, paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/",spp[i],".asc"),overwrite=T)
-  writeRaster(hi_abun,paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/",spp[i],".asc"),overwrite=T)
-  
-  ordsums$range_size[ordsums$species.code==spp[i]] <- length(rangeD$presence[rangeD$presence == 1 & !is.na(rangeD$presence)])
+     
+     ## range size
+     ######## calculate range size
+     #plot(range)
+     proj4string(range) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+     sp <- names(range)
+     names(range) <- "layer"
+     range <- rasterToPolygons(range, fun=function(layer){layer > 0}, na.rm=T, dissolve=T)
+     range <- spTransform(range, "+init=epsg:5070") ## Albers
+     ordsums$areaSQKM_5_7[ordsums$species.code==sp] <- area(range)*1e-6
+     
+     ######## calculate area in class 3  
+     abun.i <- hi_abun
+     proj4string(abun.i) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+     #sp <- names(abun.i)
+     names(abun.i) <- "layer"
+     abun.i <- rasterToPolygons(abun.i, fun=function(layer){layer > 0}, na.rm=T, dissolve=T)
+     
+     
+     if(!is.null(abun.i)){
+       abun.i <- spTransform(abun.i, "+init=epsg:5070") ## Albers
+       ordsums$hiAbunSQKM_5_7[ordsums$species.code==sp] <- area(abun.i)*1e-6  
+     } else {
+       ordsums$hiAbunSQKM_5_7[ordsums$species.code==sp] <- 0   
+     }
+     
+     
+     
+     
+     ## infilling
+     #species<- raster(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN/",spp[i],".asc"))
+     # writeRaster(hi_abun,paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/",spp[i],".asc"),overwrite=T)
+     #plot(species)
+     #names(hi_abun) <- "layer"
+     hi_abunD <- as.data.frame(hi_abun)
+     # colnames(speciesD) <- "layer"
+     #ncells<- 
+     
+     
+     pts <- species
+     coordinates(pts) <- c(5,4)
+     ext <- extract(hi_abun, pts) ## extract climate values to points
+     #colnames(ext)<- "impact"
+     pts<-data.frame(cbind(pts$abundance,ext))
+     colnames(pts)<- c("observ","impact")
+     ordsums$infilling[i]<- length(pts$observ[pts$observ==3 & pts$impact == 1])/length(speciesD$layer[speciesD$layer==1 &!is.na(speciesD$layer==1 )])
+     
+     #print(i)
+     
+     
+     
+     
+     
   
   print(i)
   
 }
 
+write.csv(ordsums,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5epv_up_5_7_2018.csv", row.names=F)
+#length(ordsums$species.code[ordsums$AUC > 0.70 & ordsums$kappaP < 0.05 & ordsums$MESSgn10 >0.9])
+#hist(ordsums$)
+#ordsums$range_size[ordsums$species.code==spp[i]] <- length(rangeD$presence[rangeD$presence == 1 & !is.na(rangeD$presence)])
+#ordsums$impact_range_size
+
 #ordsums$prop3 <- NULL
 #write.csv(ordsums, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_5_2018.csv", row.names=F)
 
+#### calculate size of full study region for proportional estimates
+studyregion <- hi_abun
+#names(studyregion) <- "layer"
+stuDy <- as.data.frame(studyregion)
+stuDy$layer[stuDy$layer == 1 & !is.na(stuDy$layer)] <- 0
+studyregion <- raster(nrows=nrow(studyregion), ncols=ncol(studyregion), ext=extent(studyregion), vals=stuDy$layer)
+#studyregion$layer[studyregion$layer == 1 & !is.na(studyregion$layer)] <- 0
+
+proj4string(studyregion) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+studyregion <- rasterToPolygons(studyregion, na.rm=T, dissolve=T)
+studyregion <- spTransform(studyregion, "+init=epsg:5070")
+studyregion <- area(studyregion)*1e-6
+#7843649
 
 
-#### explore variation in abundance within Range
+ordsums$estab_US <- ordsums$areaSQKM_5_7/studyregion
+ordsums$impac_US <- ordsums$hiAbunSQKM_5_7/studyregion
+ordsums$impac_estab <- ordsums$hiAbunSQKM_5_7/ordsums$areaSQKM_5_7
 
-#spp <- ("FRAL4", "ROMU", "PUMOL", "CYSC4", "LISI")
-#species <- as.data.frame(raster(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/FRAL4.asc")))
-#colnames(species) <- "class"
-#species$class <- ordered(species$class, levels=c(1,2,3))
-
-
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_6_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
-spp<- ordsums$species.code
-
-ordsums$class1 <- -99
-ordsums$class2 <- -99
-ordsums$class3 <- -99
-ordsums$medianClass <- -99
-ordsums$mode <- -99
-ordsums$vr <- -99
-
-for (i in 1:length(spp)){
-
-  species <- as.data.frame(raster(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/",spp[i],".asc")))  
-  colnames(species)<-"class"
-  species <- as.data.frame(species[!is.na(species$class) & species$class > 0,])
-  colnames(species)<-"class"
-  
-  ordsums$class1[i] <- length(species$class[species$class==1])/length(species$class)  
-  ordsums$class2[i] <- length(species$class[species$class==2])/length(species$class) 
-  ordsums$class3[i] <- length(species$class[species$class==3])/length(species$class) 
-  ordsums$medianClass[i] <- median(species$class)
-  
-  if(ordsums$class1[i] > ordsums$class2[i] & ordsums$class1[i] > ordsums$class3[i]){
-    ordsums$mode[i] <- 1
-    ordsums$vr[i] <- 1-ordsums$class1[i]
-  }
-   
-  if(ordsums$class2[i] > ordsums$class1[i] & ordsums$class2[i] > ordsums$class3[i]){
-    ordsums$mode[i] <- 2
-    ordsums$vr[i] <- 1-ordsums$class2[i]
-  }
-  
-  if(ordsums$class3[i] > ordsums$class2[i] & ordsums$class3[i] > ordsums$class1[i]){
-    ordsums$mode[i] <- 3
-    ordsums$vr[i] <- 1-ordsums$class3[i]
-  }
-
- 
-print(i)
+summary(as.factor(ordsums$USE))
+write.csv(ordsums,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5epv_up_5_7_2018.csv", row.names=F)
 
 
-}
+#### explore variation in abundance within Range ############
+
+#  #spp <- ("FRAL4", "ROMU", "PUMOL", "CYSC4", "LISI")
+#  #species <- as.data.frame(raster(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/FRAL4.asc")))
+#  #colnames(species) <- "class"
+#  #species$class <- ordered(species$class, levels=c(1,2,3))
+#  
+#  
+#  #ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_6_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
+#  #spp<- ordsums$species.code
+#  
+#  #ordsums$class1 <- -99
+#  #ordsums$class2 <- -99
+#  #ordsums$class3 <- -99
+#  ordsums$medianClass <- -99
+#  ordsums$mode <- -99
+#  ordsums$vr <- -99
+#  
+#  for (i in 1:length(spp)){
+#  
+#    species <- as.data.frame(raster(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/",spp[i],".asc")))  
+#    colnames(species)<-"class"
+#    species <- as.data.frame(species[!is.na(species$class) & species$class > 0,])
+#    colnames(species)<-"class"
+#    
+#    #ordsums$class1[i] <- length(species$class[species$class==1])/length(species$class)  
+#    #ordsums$class2[i] <- length(species$class[species$class==2])/length(species$class) 
+#    #ordsums$class3[i] <- length(species$class[species$class==3])/length(species$class) 
+#    ordsums$medianClass[i] <- median(species$class)
+#    
+#    if(ordsums$class1[i] > ordsums$class2[i] & ordsums$class1[i] > ordsums$class3[i]){
+#      ordsums$mode[i] <- 1
+#      ordsums$vr[i] <- 1-ordsums$class1[i]
+#    }
+#     
+#    if(ordsums$class2[i] > ordsums$class1[i] & ordsums$class2[i] > ordsums$class3[i]){
+#      ordsums$mode[i] <- 2
+#      ordsums$vr[i] <- 1-ordsums$class2[i]
+#    }
+#    
+#    if(ordsums$class3[i] > ordsums$class2[i] & ordsums$class3[i] > ordsums$class1[i]){
+#      ordsums$mode[i] <- 3
+#      ordsums$vr[i] <- 1-ordsums$class3[i]
+#    }
+#  
+#   
+#  print(i)
+#
+#
+#}
 
 
 summary(ordsums$class1)
@@ -796,18 +914,75 @@ summary(ordsums2$class_1)
 ########################################################
 ## Create Species Richness Map 
 ######################################################
+#ordsumsUP <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_4_2018.csv", header = T, sep = ",",  
+#                        quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+#  
+#ordsumsDOWN <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_4_29_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
+#
+#
+#form.comp <- spp70
+#for (i in 1:70){
+#  form.comp$UPform[i] <- ordsums$formu[ordsums$species.code == form.comp$x[i]]
+#  form.comp$DOform[i] <- ordsumsDOWN$formu[ordsumsDOWN$species.code == form.comp$x[i]]
+#  print(i)
+#}
+#
+#write.csv(form.comp[form.comp$DOform != form.comp$UPform,], "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/formComp.csv")
+#head(form.comp$x[form.comp$DOform == form.comp$UPform])
 
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_5_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
-ordsums2 <- ordsums[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.9 & ordsums$kappa > 0 & ordsums$kappaP < 0.05,]  
-  
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_rounded_down/ALL_ABUN/AIAL.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_rounded_down/HI_ABUN/RAFI.asc"))
+
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/ALL_ABUN/AIAL.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/ALL_ABUN/LELE10.asc"))
+
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_rounded_down/ALL_ABUN/EUES.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_rounded_down/ALL_ABUN/CEDI3.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_rounded_down/ALL_ABUN/CIAR4.asc"))
+
+
+xplot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/EUES.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/CEDI3.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/CIAR4.asc"))
+
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/FRAL4.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_rounded_down/ALL_ABUN/FRAL4.asc"))
+
+
+
+#ordsums2 <- ordsums[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.95 & ordsums$kappa > 0 & ordsums$kappaP < 0.05,]  
+spp59 <- read.csv("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/spplist59.csv", stringsAsFactors = F, header=T)
+spp70 <- read.csv("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/spplist70.csv", stringsAsFactors = F, header=T)
+filenames <- as.data.frame(spp59) 
+filenames <- as.data.frame(spp70$x[spp70$x %in% ordsumsDOWN$species[ordsumsDOWN$kappa >0 & ordsumsDOWN$kappaP<0.05]])   
+filenames <- as.data.frame(spp70) 
+
+
+
+############################################################
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5epv_up_5_7_2018.csv", header = T, sep = ",",  
+                                                quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+                        
+head(ordsums)
+ordsums2 <- ordsums[ordsums$kappa > 0 & ordsums$kappaP < 0.05 & ordsums$AUC > 0.7 & ordsums$MESS_abun2range_SEL > 0.9,]
+
+filenames <- data.frame(ordsums2$species.code)
+colnames(filenames) <- "x"
+    
 library(raster)
 library(rgdal)
 library(ordinal)
 library(reshape2)
 
 ### Abundant richness
-filenames <- as.data.frame(ordsums2$species.code)
-filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", filenames$`ordsums2$species.code`,".asc")
+#filenames <- as.data.frame(ordsums2$species.code)
+#filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", filenames$x,".asc")
+filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", filenames$x,".asc")
+
 
 ldf=stack(filenames$files)
 
@@ -817,13 +992,13 @@ plot(overlap)
 out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc"
 writeRaster(overlap, filename=out_file,overwrite=T)
 
-pdf(file="C:/Users/Localadmin/Documents/Maxent_modeling/summaries/figures/richness_map_HI_ABUN.pdf",width=11,height=8.5)
+pdf(file="C:/Users/Localadmin/Documents/Maxent_modeling/summaries/figures/richness_map_HI_ABUN.pdf",width=11)
 colors=rev(heat.colors(100))
 spplot(overlap, col.regions=colors)
 dev.off()
 
 ### Species richness
-filenames$files2 <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", filenames$`ordsums2$species.code`,".asc")
+filenames$files2 <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", filenames$x,".asc")
 
 ldf=stack(filenames$files2)
 
@@ -843,7 +1018,7 @@ dev.off()
 
 
 
-#### 2016 Allen and Bradley binary asciis###
+#### 2016 Allen and Bradley binary asciis####
 
 ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_16_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
 
@@ -902,7 +1077,7 @@ rich$richness_map_ABUN_WEIGHT[rich$richness_map_ABUN_WEIGHT >  quantile(rich$ric
 abun_wt_hotspot <- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=rich$richness_map_ABUN_WEIGHT)
 writeRaster(abun_wt_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_ABUN_WT.asc", overwrite=T)
 
-########################
+
 comp <- as.data.frame(stack(abun_wt_hotspot,full_hotspot))
 head(comp)
 colnames(comp) <- c("layer.1", "layer.2")
@@ -945,25 +1120,85 @@ writeRaster(comp_hotspot,"C:/Users/Localadmin/Documents/Maxent_modeling/summarie
 #  spplot(overlap2, col.regions=colors)
 #  dev.off()
 
-###############################################################################################################
-### Hotspot maps
-################################################################################################################
+########################################
+########### no extrap hi_abun_hotspots
+#######################################
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_4_2018.csv", header = T, sep = ",",  
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 
-current_rich=raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
+head(ordsums)
+ordsums2 <- ordsums[ordsums$kappa > 0 & ordsums$kappaP < 0.05 & ordsums$AUC > 0.7 & ordsums$MESS_abun2range_SEL > 0.9 & !is.na(ordsums$hiAbunSQKM),]
+
+filenames <- data.frame(ordsums2$species.code)
+colnames(filenames) <- "x"
+
+library(raster)
+library(rgdal)
+library(ordinal)
+library(reshape2)
+
+### Abundant richness
+#filenames <- as.data.frame(ordsums2$species.code)
+#filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", filenames$x,".asc")
+filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN_no_xtrap/", filenames$x,".asc")
+
+b <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN_no_xtrap/AIAL.asc")
+
+filenames$files[1]=="C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN_no_xtrap/AIAL.asc"
+
+filenames2 <- list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN_no_xtrap/")
+filenames2<- filenames2[filenames2 %in% paste0(filenames$x,".asc")]
+
+
+ldf=stack(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN_no_xtrap/",filenames2))
+
+overlap=calc(ldf, sum)
+plot(overlap)
+
+current_rich=overlap
+names(current_rich) <- "richness_map_HI_ABUN"
 quantile(current_rich$richness_map_HI_ABUN)
 
+rich <- as.data.frame(current_rich)
 length(rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN > quantile(current_rich$richness_map_HI_ABUN, 0.75) &
                                    !is.na(rich$richness_map_HI_ABUN)])/length(bioD$bio_2[!is.na(bioD$bio_2)]) ## 19%
 length(rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN >= quantile(current_rich$richness_map_HI_ABUN, 0.75) &
                                    !is.na(rich$richness_map_HI_ABUN)])/length(bioD$bio_2[!is.na(bioD$bio_2)]) ## 32%
 
 
-rich <- as.data.frame(current_rich)
+
 rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN <= quantile(current_rich$richness_map_HI_ABUN, 0.75)] <- 0
 rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN > quantile(current_rich$richness_map_HI_ABUN, 0.75)] <- 1
 
 hi_abun_hotspot <- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=rich$richness_map_HI_ABUN)
-writeRaster(hi_abun_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_HI_ABUN.asc")
+#writeRaster(hi_abun_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_HI_ABUN.asc",overwrite=T)
+plot(hi_abun_hotspot)
+
+
+
+
+###############################################################################################################
+### Hotspot maps
+################################################################################################################
+#current_rich<- overlap
+#names(current_rich) <- "richness_map_HI_ABUN"
+current_rich=raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
+quantile(current_rich$richness_map_HI_ABUN)
+
+rich <- as.data.frame(current_rich)
+length(rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN > quantile(current_rich$richness_map_HI_ABUN, 0.75) &
+                                   !is.na(rich$richness_map_HI_ABUN)])/length(bioD$bio_2[!is.na(bioD$bio_2)]) ## 19%
+length(rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN >= quantile(current_rich$richness_map_HI_ABUN, 0.75) &
+                                   !is.na(rich$richness_map_HI_ABUN)])/length(bioD$bio_2[!is.na(bioD$bio_2)]) ## 32%
+
+
+
+rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN <= quantile(current_rich$richness_map_HI_ABUN, 0.75)] <- 0
+rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN > quantile(current_rich$richness_map_HI_ABUN, 0.75)] <- 1
+
+hi_abun_hotspot <- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=rich$richness_map_HI_ABUN)
+writeRaster(hi_abun_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_HI_ABUN.asc",overwrite=T)
+plot(hi_abun_hotspot)
 
 #plot(current_rich, col=rev(heat.colors(100)))
 #plot(hi_abun_hotspot, col=rev(heat.colors(2)))
@@ -986,7 +1221,7 @@ rich$richness_map_FULL[rich$richness_map_FULL > quantile(current_rich$richness_m
 
 full_hotspot<- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=rich$richness_map_FULL)
 plot(full_hotspot)
-writeRaster(full_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_FULL.asc")
+writeRaster(full_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_FULL.asc", overwrite=T)
 
 ####################### other maxent runs##############
 #  current_rich=raster("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_ABUN.asc")
@@ -1053,7 +1288,8 @@ comp$x[comp$layer.1==0 & comp$layer.2==1 & !is.na(comp$layer.2)] <- "richness ho
 length(comp$x[comp$x == "both hotspots" & !is.na(comp$x)])/length(comp$layer.1[comp$layer.1 == 1 & !is.na(comp$layer.1)]) ## percent of abundance hotspot also richness
 length(comp$x[comp$x == "both hotspots" & !is.na(comp$x)])/length(comp$layer.1[comp$layer.2 == 1 & !is.na(comp$layer.1)]) ## percent of richness hotspot also abundance
 .5*(length(comp$x[comp$x == "both hotspots"& !is.na(comp$x)])/length(comp$layer.1[comp$layer.1 == 1& !is.na(comp$x)]) + length(comp$x[comp$x == "both hotspots"& !is.na(comp$x)])/length(comp$layer.1[comp$layer.2 == 1 & !is.na(comp$x)]))
-## 50% overlap
+
+## 47% overlap
 
 #Abun <- 89975
 #occ <- 111185
@@ -1066,7 +1302,7 @@ spplot(comp_hotspot)
 writeRaster(comp_hotspot,"C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc",overwrite=T)
 
 
-################## average proportion of abundant species
+################## proportion of abundant species
 abun_prop=stack("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/richness_map_FULL.asc",
                 "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
 abun_prop <- as.data.frame(abun_prop)
@@ -1075,14 +1311,14 @@ abun_prop$abun_prop <- abun_prop$richness_map_HI_ABUN/abun_prop$richness_map_FUL
 summary(abun_prop$abun_prop)
 hist(abun_prop$abun_prop)
 
-abun_prop$prop_hot[abun_prop$abun_prop >= quantile(abun_prop$abun_prop, .75, na.rm=T) & !is.na(abun_prop$abun_prop)] <- 1
-abun_prop$prop_hot[abun_prop$abun_prop < quantile(abun_prop$abun_prop, .75, na.rm=T) & !is.na(abun_prop$abun_prop)] <- 0
+#abun_prop$prop_hot[abun_prop$abun_prop >= quantile(abun_prop$abun_prop, .75, na.rm=T) & !is.na(abun_prop$abun_prop)] <- 1
+#abun_prop$prop_hot[abun_prop$abun_prop < quantile(abun_prop$abun_prop, .75, na.rm=T) & !is.na(abun_prop$abun_prop)] <- 0
 
 
 
 #comp$prop <- comp$layer.1/comp$layer.2
-abun_prop <- stack(raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=abun_prop$abun_prop),
-                   raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=abun_prop$prop_hot))
+abun_prop <- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=abun_prop$abun_prop)#,
+                   #raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=abun_prop$prop_hot))
 
 plot(abun_prop)
 
@@ -1091,8 +1327,8 @@ plot(abun_prop)
 #spplot(abun_prop, col.regions=colors, main="Proportion of highly abundant species")
 #dev.off()
 
-writeRaster(abun_prop$layer.1,"C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hi_abun_proportion.asc",overwrite=T)
-writeRaster(abun_prop$layer.2,"C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hi_abun_prop_hot.asc",overwrite=T)
+writeRaster(abun_prop,"C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hi_abun_proportion.asc",overwrite=T)
+#writeRaster(abun_prop$layer.2,"C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hi_abun_prop_hot.asc",overwrite=T)
  
 
 ###############################
@@ -1105,13 +1341,13 @@ library(rgeos)
 #filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", filenames$`ordsums2$species.code`,".asc")
 #filenames$files2 <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", filenames$`ordsums2$species.code`,".asc")
 
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_5_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
-ordsums2 <- ordsums[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.9 & ordsums$kappa > 0 & ordsums$kappaP < 0.05,]  
-
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_4_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
+ordsums2 <- ordsums[ordsums$AUC > 0.7 & ordsums$MESS_abun2range_SEL > 0.9 & ordsums$kappa > 0 & ordsums$kappaP < 0.05,]  
+head(ordsums)
 
 ### Do all 155 species
 ranges <- list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", full.names = T)
-abuns  <- list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", full.names = T)
+abuns  <- list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN/", full.names = T)
 
 #EPSG <- make_EPSG()
 #epsg <- EPSG[EPSG$code == 5070,]
@@ -1145,7 +1381,7 @@ for (i in 1:length(ranges)){
   ordsums$hiAbunSQKM[ordsums$species.code==sp] <- 0   
   }
   print(i)
-  write.csv(i,"C:/Users/Localadmin/Google Drive/AREAprogress.csv", row.names=F)
+  #write.csv(i,"C:/Users/Localadmin/Google Drive/AREAprogress.csv", row.names=F)
 }
 
 hist(ordsums$hiAbunSQKM/ordsums$areaSQKM)
@@ -1172,9 +1408,9 @@ studyregion <- area(studyregion)*1e-6
  hist(ordsums$hiAbun_prop_full)
  hist(ordsums$hiAbun_prop_range)
 
-write.csv(ordsums, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_6_2018.csv", row.names=F)
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_6_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
-ordsums2 <- ordsums[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.9 & ordsums$kappa > 0 & ordsums$kappaP < 0.05,]  
+write.csv(ordsums, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_5_6_2018.csv", row.names=F)
+#ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_4_6_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
+#ordsums2 <- ordsums[ordsums$AUC > 0.7 & ordsums$MESSgn10 > 0.9 & ordsums$kappa > 0 & ordsums$kappaP < 0.05,]  
 
 summary(ordsums2$hiAbun_prop_range) 
 min(ordsums2$hiAbun_prop_range)
@@ -1270,21 +1506,22 @@ eco$prop <- eco$area/sum(eco$area)
 
 
 writeOGR(eco, dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco", driver="ESRI Shapefile")
-
+##################################
 
 
 library(rgdal)
 library(raster)
-
+library(rgeos)
 
 eco <- readOGR(dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco", stringsAsFactors = F)
 
-hi_abun_richness <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
-full_richness    <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_FULL.asc")
+#hi_abun_richness <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
+#full_richness    <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_FULL.asc")
 
 hi_abun_hotspots <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_HI_ABUN.asc")
 full_hotspot     <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_FULL.asc")
 
+compare <- raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc" )
 props <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hi_abun_proportion.asc")
 
 
@@ -1293,10 +1530,10 @@ proj4string(full_richness   )="+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0
 proj4string(hi_abun_hotspots)="+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 proj4string(full_hotspot    )="+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 proj4string(props)="+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(compare)="+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 
 
-
-
+####### BY AREA #############
 #proj4string(hi_abun_richness) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 ######################## repeat for abun (MOVE BELOW)
 abun_hotspotPOLY <- rasterToPolygons(hi_abun_hotspots, na.rm=T, dissolve=T)
@@ -1318,53 +1555,9 @@ abun_hotspotPOLY$area <- area(full_hotspotPOLY)*1e-6
 
 write.table(abun_hotspotPOLY2@data,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/eco_abun_hot.csv",sep=",")
 writeOGR(abun_hotspotPOLY2, dsn="C:/Users/Localadmin/Documents/eco_abun_hot", layer="eco", driver="ESRI Shapefile" )
-#################################
 
-
-
-eco <- spTransform(eco, proj4string(hi_abun_richness))
-#   #eco$IDs
-#   #eco1 <- eco[eco$IDs == "TROPICAL WET FORESTS" | eco$IDs == "MARINE WEST COAST FOREST",]
-#   
-#   mean.abun <- extract(hi_abun_richness$richness_map_HI_ABUN , eco, fun=mean, na.rm=TRUE, sp = T)
-#   mean.rich <- extract(full_richness$richness_map_FULL, eco, fun=mean, na.rm=TRUE, sp = T)
-#   
-#   
-#   stdv.rich <- extract(full_richness$richness_map_FULL, eco, fun=sd, na.rm=TRUE, sp = T)
-
-### everything in proj4string towgs (props 2!!!), ##check layer name!
-
-stdv.abun <- extract(hi_abun_richness$richness_map_HI_ABUN, eco, fun=sd, na.rm=TRUE, sp = T)
-
-mean.prop <- extract(props$hi_abun_proportion, eco, fun=sd, na.rm=TRUE, sp = T)
-stdv.prop <- extract(props$hi_abun_proportion, eco, fun=sd, na.rm=TRUE, sp = T)
-
-
-# UNPOUND
-#eco$mean_rich <- mean.rich$richness_map_FULL
-#eco$mean_abun <- mean.abun$richness_map_HI_ABUN
-#eco$mean_prop <- mean.prop$hi_abun_proportion
-eco$stdv_abun <- stdv.abun$richness_map_HI_ABUN
-eco$stdv_rich <- stdv.rich$richness_map_FULL
-eco$stdv_prop <- stdv.prop$hi_abun_proportion
-eco$cova_abun <- eco$stdv_abun/eco$mean_abun
-eco$cova_rich <- eco$stdv_rich/eco$mean_rich
-eco$cova_prop <- eco$stdv_prop/eco$mean_prop
-
-write.table(eco@data,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/eco_richness.csv",sep=",")
-writeOGR(eco, dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/eco_richness", layer="eco", driver="ESRI Shapefile" )
-
-#################################
-#eco@data
-#plot(eco[eco$IDs == "WATER",])
-#plot(eco[eco$IDs == "NORTHERN FORESTS",], col="lightgreen", add=T, lwd=1)
-#plot(eco[eco$IDs == "EASTERN TEMPERATE FORESTS",], col="green", add=T, lwd=1)
-#plot(eco[eco$IDs == "WATER",], col="firebrick2", border="transparent", add=T, lwd=1)
-
-eco@data
-rm(abunpts,bio,compare,extentShape,maxentRange,mean.abun,mean.rich,messplot,messpts,occ.pts,occ.ran,ordinal,ordsums,ordsums2,species,speciesSum,stdv.rich,i,spp)
-#############hotspot ecoregions
-eco<-spTransform(eco, "+init=epsg:5070")
+######################## full
+#eco<-spTransform(eco, "+init=epsg:5070")
 
 full_hotspotPOLY <- rasterToPolygons(full_hotspot, na.rm=T, dissolve=T)
 full_hotspotPOLY <- spTransform(full_hotspotPOLY, "+init=epsg:5070")
@@ -1384,6 +1577,103 @@ full_hotspotPOLY@data
 
 write.table(full_hotspotPOLY@data,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/eco_full_hot.csv",sep=",")
 writeOGR(full_hotspotPOLY, dsn="C:/Users/Localadmin/Documents/eco_full_hot", layer="eco_full_hot", driver="ESRI Shapefile" )
+
+
+writeOGR(eco, dsn="C:/Users/Localadmin/Desktop/intersection/eco", layer="eco", driver="ESRI Shapefile")
+writeOGR(full_hotspotPOLY, dsn="C:/Users/Localadmin/Desktop/intersection/full", layer="full", driver="ESRI Shapefile")
+writeOGR(abun_hotspotPOLY, dsn="C:/Users/Localadmin/Desktop/intersection/abun", layer="abun", driver="ESRI Shapefile")
+
+
+
+#################################
+plot(full_hotspot)
+plot(hi_abun_hotspot)
+
+eco <- spTransform(eco, proj4string(hi_abun_richness))
+
+plot(eco)
+plot(eco[10,], add=T,col="blue")
+### full hotspot X ecoregion approximation
+ri_hot <- extract(full_hotspot$hotspot_FULL, eco, fun=mean, na.rm=TRUE, sp = T)
+ab_hot <- extract(hi_abun_hotspots$hotspot_HI_ABUN, eco, fun=mean, na.rm=TRUE, sp = T)
+
+
+ab_hot@data
+write.csv(cbind(ri_hot@data,ab_hot@data),"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/hot_eco.csv", sep=",")
+          
+##############################
+#   #eco$IDs
+#   #eco1 <- eco[eco$IDs == "TROPICAL WET FORESTS" | eco$IDs == "MARINE WEST COAST FOREST",]
+#   
+#   mean.abun <- extract(hi_abun_richness$richness_map_HI_ABUN , eco, fun=mean, na.rm=TRUE, sp = T)
+#   mean.rich <- extract(full_richness$richness_map_FULL, eco, fun=mean, na.rm=TRUE, sp = T)
+#   
+#   
+#   stdv.rich <- extract(full_richness$richness_map_FULL, eco, fun=sd, na.rm=TRUE, sp = T)
+
+### everything in proj4string towgs (props 2!!!), ##check layer name!
+
+
+#write.csv(ordsums, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/infilling.csv")
+
+
+##### switch to hotspot instead of eco ########
+
+
+hotPOLY <- rasterToPolygons(compare, na.rm=T, dissolve=T)
+
+
+mean.abun <- extract(hi_abun_richness$richness_map_HI_ABUN, hotPOLY, fun=mean, na.rm=T, sp = T)
+stdv.abun <- extract(hi_abun_richness$richness_map_HI_ABUN, hotPOLY, fun=sd, na.rm=T, sp=T)
+mean.rich <- extract(full_richness$richness_map_FULL, hotPOLY, fun=mean, na.rm=T, sp=T)
+stdv.rich <- extract(full_richness$richness_map_FULL, hotPOLY, fun=sd, na.rm=T, sp=T)
+mean.prop <- extract(props$hi_abun_proportion, hotPOLY, fun=mean, na.rm=T, sp=T)
+stdv.prop <- extract(props$hi_abun_proportion, hotPOLY, fun=sd, na.rm=T, sp=T)
+max.prop <- extract(props$hi_abun_proportion, hotPOLY, fun=max, na.rm=T, sp=T)
+min.prop <- extract(props$hi_abun_proportion, hotPOLY, fun=min, na.rm=T, sp=T)
+
+
+comparSum <- cbind(mean.abun,stdv.abun,mean.rich,stdv.abun)
+write.table(comparSum, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ComparSum.csv")
+
+
+mean.prop@data
+stdv.prop@data
+min.prop@data
+max.prop@data
+
+plot(hotPOLY[3,], col="black")
+#####################################
+### mean.abun <- extract(hi_abun_richness$richness_map_HI_ABUN, ri, fun=sd, na.rm=TRUE, sp = T)
+### stdv.abun <- extract(hi_abun_richness$richness_map_HI_ABUN, eco, fun=sd, na.rm=TRUE, sp = T)
+### mean.prop <- extract(props$hi_abun_proportion, eco, fun=sd, na.rm=TRUE, sp = T)
+### stdv.prop <- extract(props$hi_abun_proportion, eco, fun=sd, na.rm=TRUE, sp = T)
+### 
+### 
+### # UNPOUND
+### #eco$mean_rich <- mean.rich$richness_map_FULL
+### #eco$mean_abun <- mean.abun$richness_map_HI_ABUN
+### #eco$mean_prop <- mean.prop$hi_abun_proportion
+### #eco$stdv_abun <- stdv.abun$richness_map_HI_ABUN
+### #eco$stdv_rich <- stdv.rich$richness_map_FULL
+### #eco$stdv_prop <- stdv.prop$hi_abun_proportion
+### #eco$cova_abun <- eco$stdv_abun/eco$mean_abun
+### #eco$cova_rich <- eco$stdv_rich/eco$mean_rich
+### #eco$cova_prop <- eco$stdv_prop/eco$mean_prop
+
+write.table(eco@data,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/eco_richness.csv",sep=",")
+writeOGR(eco, dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/eco_richness", layer="eco", driver="ESRI Shapefile" )
+
+#################################
+#eco@data
+#plot(eco[eco$IDs == "WATER",])
+#plot(eco[eco$IDs == "NORTHERN FORESTS",], col="lightgreen", add=T, lwd=1)
+#plot(eco[eco$IDs == "EASTERN TEMPERATE FORESTS",], col="green", add=T, lwd=1)
+#plot(eco[eco$IDs == "WATER",], col="firebrick2", border="transparent", add=T, lwd=1)
+
+eco@data
+rm(abunpts,bio,compare,extentShape,maxentRange,mean.abun,mean.rich,messplot,messpts,occ.pts,occ.ran,ordinal,ordsums,ordsums2,species,speciesSum,stdv.rich,i,spp)
+#############hotspot ecoregions
 
 
 
@@ -1925,9 +2215,8 @@ dev.off()
 
 
 
-##################
-##### THESIS FIGS
-##################
+
+
 
 library(rgdal)
 library(raster)
@@ -2013,18 +2302,18 @@ plot(ordinal$layer2, col=c("firebrick"), add=T)
 
 
 bio <- stack(#"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
-             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc")
-             "C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc")
+  "C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
 
 #bio$bio_2[bio$BRPA4 == 0] <- NA
 bio$bio_8[bio$BRPA4 == 0] <- NA
@@ -2065,8 +2354,167 @@ plot(extentShape, col="transparent",lwd=2,add=T, bg="transparent")
 plot(full_richness)
 
 ###############
-### THESIS FIGS
+### THESIS FIGS NEW
 ###############
+
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+#install.packages("RColorBrewer")
+library(RColorBrewer)
+
+
+#ordsums2 <- ordsums[ordsums$kappa > 0 & ordsums$kappaP<0.05 & ordsums$AUC > 0.7 & ordsums$MESSgn10 > .9,]
+#ordsums2[ordsums2$no.pts.full < 1000 & ordsums2$range_prop_area > .20,]
+
+display.brewer.all(n=8, type="all", colorblindFriendly=T)
+
+compare <- raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc")
+hi_abun_richness <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
+full_richness  <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_FULL.asc")
+props <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hi_abun_proportion.asc")
+
+compare <- projectRaster(compare, crs="+init=epsg:5070" )
+hi_abun_richness <- projectRaster(hi_abun_richness , crs="+init=epsg:5070" )
+full_richness <- projectRaster(full_richness, crs="+init=epsg:5070" )
+props <- projectRaster(props, crs="+init=epsg:5070" )
+
+#plot(extentShape, lwd=5)
+#plot(hi_abun_richness, col=brewer.pal(8, name="YlOrRd"), add=T)
+#plot(extentShape, lwd=5)
+#plot(full_richness, col=brewer.pal(8, name="YlGnBu"), add=T)
+
+
+extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+
+abunpts <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv",
+                      sep=",", header=T, stringsAsFactors = F)
+head(abunpts)
+abunpts <- abunpts[abunpts$species=="BRPA4",]
+coordinates(abunpts) <- c(5,4)
+
+occ.pts <- read.table("C:/Users/Localadmin/Documents/MaxEnt_modeling/species/BRPA4.csv", sep=",", stringsAsFactors = F, header=T)
+str(occ.pts)
+coordinates(occ.pts) <- c(2,3)
+
+
+proj4string(extentShape) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+proj4string(abun.pts) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+proj4string(occ.pts) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+extentShape <- spTransform(extentShape, "+init=epsg:5070" )
+abun.pts <- spTransform(abun.pts, "+init=epsg:5070" )
+occ.pts <- spTransform(occ.pts, "+init=epsg:5070" )
+#occ.ran <- occ.pts[sample(1:nrow(occ.pts), 130),]
+#abun.ran <- abunpts[sample(1:nrow(abunpts), 50),]
+#abun.ran <- occ.ran[sample(1:nrow(occ.ran), 40),]
+
+#occ.ran <- occ.pts[sample(1:nrow(occ.pts), 20)]
+
+#plot(full_richness)
+#plot(extentShape, lwd=3, col="grey92", add=T)
+#plot(occ.ran,lwd=3,col="grey20",add=T)
+#plot(abun.ran, pch=19, col="firebrick2", add=T)
+
+
+
+maxentRange <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+#plot(maxentRange)
+names(maxentRange) <- "layer"
+maxentRange <- rasterToPolygons(maxentRange, fun=function(layer){layer > 0}, na.rm=T, dissolve=T)
+proj4string(maxentRange) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+maxentRange <- spTransform(maxentRange,"+init=epsg:5070")
+
+#plot(extentShape, col="grey92")
+#plot(maxentRange, add=T, col="mediumblue",border="mediumblue")
+#plot(maxentRange, add=T, col="firebrick",border="firebrick")
+
+
+#ordinal <- readAsciiGrid("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc") 
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc") 
+ordinal$layer <- 0
+ordinal$layer <- ordinal$BRPA4
+ordinal$layer[ordinal$BRPA4==0] <- NA
+
+ordinal$layer2 <- 0
+ordinal$layer2[ordinal$BRPA4==3] <- 1
+ordinal$layer2[ordinal$BRPA4 != 3 | is.na(ordinal$BRPA4)] <- NA
+
+proj4string(ordinal) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+ordinal <- projectRaster(ordinal, crs="+init=epsg:5070" )
+
+display.brewer.all(n=8, type="all", colorblindFriendly=T)
+#plot(extentShape, col="darkslategrey", lwd=2)   ### black works too
+#plot(ordinal$layer, add=T, col= (brewer.pal(3, name="YlOrRd")))
+#
+#plot(extentShape, col="grey92")
+#plot(ordinal$layer2, col=c("firebrick"), add=T)
+
+
+
+
+
+
+bio <- stack(#"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc")
+  "C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+
+proj4string(bio) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+bio <- projectRaster(bio, crs="+init=epsg:5070" )
+
+#bio$bio_2[bio$BRPA4 == 0] <- NA
+bio$bio_8[bio$BRPA4 == 0] <- NA
+bio$nlcd_6[bio$BRPA4 == 0] <- NA
+#bio$bio_15[bio$BRPA4 == 0] <- NA
+
+#bio$bio_2 <- bio$bio_2/10
+#bio$bio_5 <- bio$bio_5/10
+bio$bio_8 <- bio$bio_8/10
+#bio$bio_6 <- bio$bio_6/10
+
+bio <- dropLayer(bio,3)
+
+
+
+messpts <- data.frame(cbind(abunpts$bio_8, abunpts$nlcd_6))#), abunpts$nlcd_5, abunpts$nlcd_8))
+head(messpts)
+colnames(messpts)<-c("bio_8", "nlcd6" )#, "nlcd_5", "nlcd_8")
+
+library(dismo)
+messplot <- mess(bio,messpts,full=F)
+#plot(messplot)
+
+messplot$mess2 <- -99
+#messplot$mess2[messplot$mess >= -10 & messplot$mess <= 10] <- 2
+messplot$mess2[messplot$mess < -10] <- 1
+messplot$mess2[messplot$mess >= -10] <- 3
+messplot$mess2[is.na(messplot$mess) | messplot$mess == Inf] <- NA
+
+
+
+display.brewer.all(n=8, type="all", colorblindFriendly=T)
+
+#plot(props, col= (brewer.pal("PuRd",n=9)), box=F, axes=F)
+#plot(extentShape, col="transparent",lwd=2,add=T, bg="transparent")
+
+
+
+#######################################################
+
+
+
+
 
 png("C:/Users/Localadmin/Google Drive/GRC_figs/points_in_range.png",width=800,height=500)
 plot(full_richness, axes=F, box=F,legend=F, col="grey92")
@@ -2139,20 +2587,673 @@ plot(extentShape, lwd=2, add=T)
 plot(eco, col="transparent", add=T) 
 dev.off()
 
-###props
-
 
 
 ##############################
-plot(extentShape, col="darkslateblue")
-plot(extentShape, col=adjustcolor(c("black"),.5), add=T)
 
 
 
-plot(extentShape, col="transparent",lwd=3,add=T)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##################
+##### THESIS FIGS THIS ONE
+##################
+
+library(raster)
+
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018.csv", header = T, sep = ",",  
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+png("C:/Users/Localadmin/GRC_figs/infilling.png", width=700, height=300)
+hist(ordsums$infilling[ordsums$AUC>.7 &ordsums$kappaP<0.05 & ordsums$kappa >0 & ordsums$MESSgn10 >10],
+     main="", ylab="Number of species", xlab="proportion of occupied cells",pch=2,cex.lab=1.5,col="lightblue")
+abline(h=0)
 dev.off()
-plot(extentShape, col="purple4")
-plot(extentShape, col="slateblue4")
+
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/FRAL4.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc"))
+
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/NERE.asc")) ###
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/CAGL11.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LYMI.asc"))
+
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ELAN.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ARMI2.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/TRTE.asc"))  ###
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/TRTE.asc"))
+
+
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BETH.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/PUMOL.asc"))###
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LOMA6.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ALJU.asc")) ####
+
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/CYOF.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ONAC.asc")) ###
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/CEOR7.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/CHMA2.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ALPE4.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/MEAZ.asc"))
+plot(raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ELUM.asc"))
+
+
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+#install.packages("RColorBrewer")
+library(RColorBrewer)
+
+
+ordsums2 <- ordsums[ordsums$kappa > 0 & ordsums$kappaP<0.05 & ordsums$AUC > 0.7 & ordsums$MESS_abun2range_SEL > .9,]
+ordsums2[ordsums2$no.pts.full < 1000 & ordsums2$range_prop_area > .20,]
+
+display.brewer.all(n=8, type="all", colorblindFriendly=T)
+
+compare <- raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc")
+hi_abun_richness <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
+full_richness  <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_FULL.asc")
+props <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hi_abun_proportion.asc")
+
+
+#plot(extentShape, lwd=5)
+plot(hi_abun_richness, col=brewer.pal(8, name="YlOrRd"), add=T)
+plot(extentShape, lwd=5)
+plot(full_richness, col=brewer.pal(8, name="YlGnBu"), add=T)
+
+
+extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+
+abunpts <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv",
+                      sep=",", header=T, stringsAsFactors = F)
+head(abunpts)
+abunpts <- abunpts[abunpts$species=="BRPA4",]
+coordinates(abunpts) <- c(5,4)
+
+occ.pts <- read.table("C:/Users/Localadmin/Documents/MaxEnt_modeling/species/BRPA4.csv", sep=",", stringsAsFactors = F, header=T)
+str(occ.pts)
+coordinates(occ.pts) <- c(2,3)
+
+occ.ran <- occ.pts[sample(1:nrow(occ.pts), 130),]
+abun.ran <- abunpts[sample(1:nrow(abunpts), 50),]
+#abun.ran <- occ.ran[sample(1:nrow(occ.ran), 40),]
+
+#occ.ran <- occ.pts[sample(1:nrow(occ.pts), 20)]
+
+plot(full_richness)
+plot(extentShape, lwd=3, col="grey92", add=T)
+plot(occ.ran,lwd=3,col="grey20",add=T)
+plot(abun.ran, pch=19, col="firebrick2", add=T)
+
+
+
+maxentRange <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+plot(maxentRange)
+names(maxentRange) <- "layer"
+maxentRange <- rasterToPolygons(maxentRange, fun=function(layer){layer > 0}, na.rm=T, dissolve=T)
+
+plot(extentShape, col="grey92")
+plot(maxentRange, add=T, col="mediumblue",border="mediumblue")
+plot(maxentRange, add=T, col="firebrick",border="firebrick")
+
+
+#ordinal <- readAsciiGrid("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc") 
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc") 
+ordinal$layer <- 0
+ordinal$layer <- ordinal$BRPA4
+ordinal$layer[ordinal$BRPA4==0] <- NA
+
+ordinal$layer2 <- 0
+ordinal$layer2[ordinal$BRPA4==3] <- 1
+ordinal$layer2[ordinal$BRPA4 != 3 | is.na(ordinal$BRPA4)] <- NA
+
+
+display.brewer.all(n=8, type="all", colorblindFriendly=T)
+plot(extentShape, col="darkslategrey", lwd=2)   ### black works too
+plot(ordinal$layer, add=T, col= (brewer.pal(3, name="YlOrRd")))
+
+plot(extentShape, col="grey92")
+plot(ordinal$layer2, col=c("firebrick"), add=T)
+
+
+
+
+
+
+bio <- stack(#"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+            #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+             #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc")
+             "C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+
+#bio$bio_2[bio$BRPA4 == 0] <- NA
+bio$bio_8[bio$BRPA4 == 0] <- NA
+bio$nlcd_6[bio$BRPA4 == 0] <- NA
+#bio$bio_15[bio$BRPA4 == 0] <- NA
+
+#bio$bio_2 <- bio$bio_2/10
+#bio$bio_5 <- bio$bio_5/10
+bio$bio_8 <- bio$bio_8/10
+#bio$bio_6 <- bio$bio_6/10
+
+bio <- dropLayer(bio,3)
+
+
+
+messpts <- data.frame(cbind(abunpts$bio_8, abunpts$nlcd_6))#), abunpts$nlcd_5, abunpts$nlcd_8))
+head(messpts)
+colnames(messpts)<-c("bio_8", "nlcd6" )#, "nlcd_5", "nlcd_8")
+
+library(dismo)
+messplot <- mess(bio,messpts,full=F)
+#plot(messplot)
+
+messplot$mess2 <- -99
+#messplot$mess2[messplot$mess >= -10 & messplot$mess <= 10] <- 2
+messplot$mess2[messplot$mess < -10] <- 1
+messplot$mess2[messplot$mess >= -10] <- 3
+messplot$mess2[is.na(messplot$mess) | messplot$mess == Inf] <- NA
+
+
+
+display.brewer.all(n=8, type="all", colorblindFriendly=T)
+
+plot(props, col= (brewer.pal("PuRd",n=9)), box=F, axes=F)
+plot(extentShape, col="transparent",lwd=2,add=T, bg="transparent")
+
+
+plot(full_richness)
+
+proj4string(full_richness) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(ordinal)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(messplot)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(hi_abun_richness)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+full_richness <- projectRaster(full_richness, crs="+init=epsg:5070")
+ordinal <- projectRaster(ordinal, crs="+init=epsg:5070")
+messplot <- projectRaster(messplot, crs="+init=epsg:5070")
+compare <- projectRaster(compare, crs="+init=epsg:5070")
+hi_abun_richness <- projectRaster(hi_abun_richness, crs="+init=epsg:5070")
+proj4string(props) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+props<- projectRaster(props,crs="+init=epsg:5070")
+
+eco <- readOGR(dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco", stringsAsFactors = F)
+
+proj4string(occ.pts) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(abunpts) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(extentShape) <-"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(eco) <- "+init=epsg:5070"
+
+occ.pts <- spTransform(occ.pts,"+init=epsg:5070")
+abunpts <- spTransform(abunpts,"+init=epsg:5070")
+extentShape <- spTransform(extentShape,"+init=epsg:5070")
+#eco <- spTransform(eco,"+init=epsg:5070")
+proj4string(maxentRange) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+maxentRange <- spTransform(maxentRange,"+init=epsg:5070")
+
+#install.packages('GISTools')
+#install.packages('maps')
+library(GISTools)
+library(maps)
+###############
+### THESIS FIGS YES THIS ONE
+###############
+
+options(scipen = 999)
+
+
+
+png("C:/Users/Localadmin/Google Drive/figs/points_in_range.png",width=800,height=500)
+plot(full_richness, axes=F, box=F,legend=F, col="grey92")
+plot(maxentRange, add=T,col="deepskyblue",border="transparent", bg='transparent')
+plot(extentShape, lwd=2, col="transparent",add=T)
+plot(occ.pts,col="black",add=T, cex=1, lwd=1)
+plot(abunpts, pch=16, col="firebrick1", add=T, cex=1)
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange.png",width=800,height=500)
+plot(full_richness, axes=F, box=F, legend=F)
+plot(extentShape, col="grey99", lwd=2, add=T)   ### black works too
+plot(ordinal$layer, add=T, col= c("yellow","orange","firebrick3"), legend=F)
+plot(extentShape, col="transparent", lwd=1.5, add=T) 
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+png("C:/Users/Localadmin/Google Drive/figs/mess.png",width=800,height=500)
+plot(full_richness, axes=F, box=F, legend=F)
+plot(extentShape, col="grey99",lwd=1, add=T)
+plot(messplot$mess2, add=T, col=c("red","slategray1"),box=F,legend=F, axes=F)
+plot(extentShape, col="transparent",lwd=3,add=T)
+#plot(abun.ran, pch=16, cex=3, col="firebrick2", add=T) 
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+
+png("C:/Users/Localadmin/Google Drive/figs/compare.png",width=800,height=500)
+plot(compare, col=c("orangered2","darkslateblue","grey98", "deepskyblue1"), box=F, axes=F, legend=F)
+plot(compare, col=c("transparent",adjustcolor(c("black"),.15), "transparent", "transparent"), add=T, box=F, axes=F, legend=F)
+#plot(extentShape, col="transparent",lwd=2,add=T)
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+plot(eco,add=T,col="transparent",lwd=2)
+dev.off()
+
+#png("C:/Users/Localadmin/Google Drive/GRC_figs/compareECO.png",width=800,height=500)
+#plot(compare, col=c("orangered2","darkslateblue","grey95", "deepskyblue1"), box=F, axes=F, legend=F)
+#plot(compare, col=c("transparent",adjustcolor(c("black"),.35), "transparent", "transparent"), add=T, box=F, axes=F, legend=F)
+#plot(extentShape, col="transparent",lwd=2,add=T)
+#plot(eco, lwd=1,col="transparent", add=T)  
+#dev.off()
+
+#png("C:/Users/Localadmin/Google Drive/GRC_figs/abun.png",width=800,height=500)
+#plot(hi_abun_richness, col=brewer.pal(8, name="YlOrRd"), axes=F, box=F, cex=2)
+#plot(extentShape, col="transparent", lwd=2, add=T)
+#map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+#dev.off()
+
+png("C:/Users/Localadmin/Google Drive/figs/abunECO.png",width=800,height=500)
+plot(hi_abun_richness, col=brewer.pal(8, name="YlOrRd"), axes=F, box=F, cex=2)
+plot(extentShape, col="transparent", lwd=2, add=T)
+plot(eco, col="transparent", add=T) 
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+#png("C:/Users/Localadmin/Google Drive/GRC_figs/rich.png",width=800,height=500)
+#plot(full_richness, col=brewer.pal(8, name="YlGnBu"), cex=2, axes=F, box=F)
+#plot(extentShape, lwd=2, add=T)
+#map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+#dev.off()
+
+png("C:/Users/Localadmin/Google Drive/figs/richECO.png",width=800,height=500)
+plot(full_richness, col=brewer.pal(8, name="YlGnBu"), cex=2, axes=F, box=F)
+plot(extentShape, lwd=2, add=T)
+plot(eco, col="transparent", add=T) 
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+#png("C:/Users/Localadmin/Google Drive/GRC_figs/props.png",width=800,height=500)
+#plot(props, col=brewer.pal(9, name="PuRd"), cex=2, axes=F, box=F)
+#plot(extentShape, lwd=2, add=T)
+##plot(eco, col="transparent", add=T) 
+#dev.off()
+
+png("C:/Users/Localadmin/Google Drive/figs/propsECO.png",width=800,height=500)
+plot(props, col=brewer.pal(8, name="PuRd"), cex=2, axes=F, box=F)
+plot(extentShape, lwd=2, add=T)
+plot(eco, col="transparent", add=T) 
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+#### props
+
+
+### RANGES: NERE, LOMA6, TRTE
+### ABUN: PUMOL,ALJU,LOMA6,OMAC
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+library(RColorBrewer)
+library(GISTools)
+library(maps)
+
+
+
+
+extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+
+#proj4string(extentShape) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+extentShape <- spTransform(extentShape, "+init=epsg:5070")
+#plot(extentShape)
+
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/PUMOL.asc") 
+names(ordinal) <- "sp"
+ordinal$layer <- 0
+ordinal$layer <- ordinal$sp
+ordinal$layer[ordinal$sp==0] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_21_PUMOL.png",width=800,height=500, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=0.1, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod2","lightgoldenrod2","firebrick3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=2, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ALJU.asc") 
+names(ordinal) <- "sp"
+ordinal$layer <- 0
+ordinal$layer <- ordinal$sp
+ordinal$layer[ordinal$sp==0] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_21_ALJU.png",width=800,height=500, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=0.1, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod2","lightgoldenrod2","firebrick3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=2, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LOMA6.asc") 
+names(ordinal) <- "sp"
+ordinal$layer <- 0
+ordinal$layer <- ordinal$sp
+ordinal$layer[ordinal$sp==0] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_21_LOMA6.png",width=800,height=500, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=0.1, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod2","lightgoldenrod2","firebrick3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=2, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ONAC.asc") 
+names(ordinal) <- "sp"
+ordinal$layer <- 0
+ordinal$layer <- ordinal$sp
+ordinal$layer[ordinal$sp==0] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_21_ONAC.png",width=800,height=500, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=0.1, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod2","lightgoldenrod2","firebrick3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=2, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+
+#############################################
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/NERE.asc") 
+names(ordinal) <- "sp"
+ordinal$layer <- 0
+ordinal$layer <- ordinal$sp
+ordinal$layer[ordinal$sp==0] <- NA
+ordinal$layer[is.na(ordinal$sp==0)] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+plot(ordinal)
+
+png("C:/Users/Localadmin/Google Drive/figs/Range_5_21_NERE.png",width=800,height=500, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=0.1, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("deepskyblue3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=2, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/LOMA6.asc") 
+names(ordinal) <- "sp"
+ordinal$layer <- 0
+ordinal$layer <- ordinal$sp
+ordinal$layer[ordinal$sp==0] <- NA
+ordinal$layer[is.na(ordinal$sp==0)] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+plot(ordinal)
+
+png("C:/Users/Localadmin/Google Drive/figs/Range_5_21_LOMA6.png",width=800,height=500, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=0.1, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("deepskyblue3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=2, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/TRTE.asc") 
+names(ordinal) <- "sp"
+ordinal$layer <- 0
+ordinal$layer <- ordinal$sp
+ordinal$layer[ordinal$sp==0] <- NA
+ordinal$layer[is.na(ordinal$sp==0)] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+plot(ordinal)
+
+png("C:/Users/Localadmin/Google Drive/figs/Range_5_21_TRTE.png",width=800,height=500, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=0.1, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("deepskyblue3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=2, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+#### redoing some presentation figs for Thesis ###########
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+library(RColorBrewer)
+library(GISTools)
+library(maps)
+
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018.csv", header = T, sep = ",",  
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+
+ordsums2 <- ordsums[ordsums$kappaP < 0.05 & ordsums$kappa > 0 & ordsums$MESS_abun2range_SEL > .9 & ordsums$AUC > .7,]
+hist(ordsums2$impac_estab)
+summary(ordsums2$impac_estab)
+ordsums2$species.code[ordsums2$impac_estab < 0.03 & ordsums2$impac_estab > 0  & ordsums2$kappa > 0.1]
+ordsums2$species.code[ordsums2$impac_estab > 0.5 & ordsums2$kappa > 0.1]
+ordsums2$species.code[ordsums2$impac_estab > 0.09 & ordsums2$impac_estab < 0.161 & ordsums2$kappa > 0.1]
+
+
+
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/FRAL4.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LOMA6.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/CHMA2.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/VETH.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/HEFU.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/EUAL13.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/SOHA.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/TUFA.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/EUAL13.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LYJA.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ROMU.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ALJU.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ARMI2.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/SEPU7.asc")) #NO
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/ELAN.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/HEMA3.asc"))
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LOMO2.asc")) ####
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LOMA6.asc"))
+
+plot(readAsciiGrid("file:///C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/POCU6.asc"))
+
+ordsums2[ordsums2$species.code=="POCU6",]
+
+##### I NEED: 
+## unprojected POCU6
+## projected POCU6
+## projected low
+## projected med
+
+
+##
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/POCU6.asc") 
+ordinal$layer <- 0
+ordinal$layer <- ordinal$POCU6
+ordinal$layer[ordinal$POCU6==0] <- NA
+
+extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_14_POCU6_un.png",width=800,height=500)
+plot(ordinal$layer, axes=F, box=F, legend=F)
+plot(extentShape, col="grey99", lwd=1.5, add=T)   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod1","orange","firebrick3"), legend=F)
+plot(extentShape, col="transparent", lwd=2, add=T) 
+#map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+
+proj4string(extentShape) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+extentShape <- spTransform(extentShape, "+init=epsg:5070")
+plot(extentShape)
+
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+options(scipen = 999)
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_14_POCU.png",width=1600,height=1000)
+plot(ordinal, axes=F, box=F, legend=F)
+plot(extentShape, col="grey99", lwd=1.5, add=T)   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod1","orange","firebrick3"), legend=F)
+plot(extentShape, col="transparent", lwd=1.5, add=T) 
+map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_18_POCU.png",width=1600,height=1000, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=1.5, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod2","lightgoldenrod2","firebrick3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=1.3, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/HEFU.asc") 
+ordinal$layer <- 0
+ordinal$layer <- ordinal$HEFU
+ordinal$layer[ordinal$HEFU==0] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_14_HEFU.png",width=1600,height=1000)
+plot(ordinal, axes=F, box=F, legend=F)
+plot(extentShape, col="grey99", lwd=1.5, add=T)   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod1","orange","firebrick3"), legend=F)
+plot(extentShape, col="transparent", lwd=1.3, add=T) 
+map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_18_HEFU.png",width=1600,height=1000, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=1.5, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod2","lightgoldenrod2","firebrick3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=1.3, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+
+
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/LOMA6.asc") 
+ordinal$layer <- 0
+ordinal$layer <- ordinal$LOMA6
+ordinal$layer[ordinal$LOMA6==0] <- NA
+proj4string(ordinal) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal$layer, crs="+init=epsg:5070")
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_14_LOMA6.png",width=1600,height=1000)
+plot(ordinal, axes=F, box=F, legend=F)
+plot(extentShape, col="grey99", lwd=1.5, add=T)   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod1","orange","firebrick3"), legend=F)
+plot(extentShape, col="transparent", lwd=1.3, add=T) 
+map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+
+png("C:/Users/Localadmin/Google Drive/figs/abundanceRange_5_18_LOMA.png",width=1600,height=1000, bg="transparent")
+plot(ordinal, axes=F, box=F, legend=F, bg="transparent")
+plot(extentShape, col="grey99", lwd=1.5, add=T, bg="transparent")   ### black works too
+plot(ordinal$layer, add=T, col= c("lightgoldenrod2","lightgoldenrod2","firebrick3"), legend=F, bg="transparent")
+plot(extentShape, col="transparent", lwd=1.3, add=T, bg="transparent") 
+#map.scale(x=-2.7e+06,y=800000,ratio=F,relwidth=0.2,cex=1.5,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+dev.off()
+
+bio <- stack("C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc")
+plot(bio)
+plot(bio$nlcd_5)
+##############################
 
 
 
@@ -2692,472 +3793,361 @@ dev.off()
 
 
 
-#########################################################
-##### NOT YET ADAPTED
-#########################################################
-
-##### Current Richness
-current_rich=raster("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_FULL.asc")
-#proj4string(current_rich) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-#"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs""+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-quantile(current_rich, probs=seq(0,1,0.05)) #get quantiles of richness
-
-## set up the matrix required for the function reclassify
-from=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes=matrix(seq(0,1,0.05), nrow=21,ncol=1)
-rcl=cbind(from,to,becomes)
-colnames(rcl)=c("from","to","becomes")
-rcl
-
-for (i in 2:21){
-  rcl[i,1]= rcl[i-1,2]+0.00000001
-}
-rcl[1,1]=0
-rcl
-
-# reclassify richness raster to quantiles
-curr_rich_quant <- reclassify(current_rich, rcl)
-
-## plot quantiles map
-pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantilesFULL.pdf",width=11,height=8.5)
-cuts=quantile(curr_rich_quant, probs=seq(0,1,0.05))
-colors=rev(heat.colors(length(cuts)))
-colors=matlab.like2(length(cuts))
-legend=c(0,0.25,0.5,0.75,1)
-legend_place=c(0,0.25,0.5,0.75,1)
-print(spplot(curr_rich_quant,  col.regions=colors, at=cuts, colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) ))
-dev.off()
-
-### create binary hotspot map with top 25%
-## create reclass table
-from1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes1=matrix(c(rep(0,16),rep(1,5)), nrow=21,ncol=1)
-rcl1=cbind(from1,to1,becomes1)
-colnames(rcl1)=c("from","to","becomes")
-rcl1
-
-
-for (i in 2:21){
-  rcl1[i,1]= rcl1[i-1,2]+0.001
-}
-rcl1
-
-#reclassify to hotspots
-curr_rich_hot <- reclassify(curr_rich_quant, rcl1)
-
-## plot hotspots map
-pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspotFULL.pdf",width=11,height=8.5)
-cuts=c(0,0.5,1)
-colors=c("grey70","red")
-legend=c("","Hotspot")
-legend_place=c(0,0.75)
-print(spplot(curr_rich_hot,  col.regions=colors, at=cuts,colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) )) #
-dev.off()
-
-out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantile_richness_FULL.asc"
-writeRaster(curr_rich_quant, filename=out_file)
-
-out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspot_richness_FULL.asc"
-writeRaster(curr_rich_hot, filename=out_file)
-
-##################################
-#### repeat for abun maxent models
-##### Current Richness
-current_rich=raster("Localadmin/Documents/Maxent_modeling/Binary_asciis/richness_map_ABUN.asc")
-proj4string(current_rich) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-#"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs""+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-quantile(current_rich, probs=seq(0,1,0.05)) #get quantiles of richness
-
-## set up the matrix required for the function reclassify
-from=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes=matrix(seq(0,1,0.05), nrow=21,ncol=1)
-rcl=cbind(from,to,becomes)
-colnames(rcl)=c("from","to","becomes")
-rcl
-
-for (i in 2:21){
-  rcl[i,1]= rcl[i-1,2]+0.00000001
-}
-rcl[1,1]=0
-rcl
-
-# reclassify richness raster to quantiles
-curr_rich_quant <- reclassify(current_rich, rcl)
-
-## plot quantiles map
-pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantilesABUN.pdf",width=11,height=8.5)
-cuts=quantile(curr_rich_quant, probs=seq(0,1,0.05))
-colors=rev(heat.colors(length(cuts)))
-colors=matlab.like2(length(cuts))
-legend=c(0,0.25,0.5,0.75,1)
-legend_place=c(0,0.25,0.5,0.75,1)
-print(spplot(curr_rich_quant,  col.regions=colors, at=cuts, colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) ))
-dev.off()
-
-### create binary hotspot map with top 25%
-## create reclass table
-from1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes1=matrix(c(rep(0,16),rep(1,5)), nrow=21,ncol=1)
-rcl1=cbind(from1,to1,becomes1)
-colnames(rcl1)=c("from","to","becomes")
-rcl1
-
-
-for (i in 2:21){
-  rcl1[i,1]= rcl1[i-1,2]+0.001
-}
-rcl1
-
-#reclassify to hotspots
-curr_rich_hot <- reclassify(curr_rich_quant, rcl1)
-
-## plot hotspots map
-pdf(file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspotABUN.pdf",width=11,height=8.5)
-cuts=c(0,0.5,1)
-colors=c("grey70","red")
-legend=c("","Hotspot")
-legend_place=c(0,0.75)
-print(spplot(curr_rich_hot,  col.regions=colors, at=cuts,colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) )) #
-dev.off()
-
-out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/quantile_richness_ABUN.asc"
-writeRaster(curr_rich_quant, filename=out_file)
-
-out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/hotspot_richness_ABUN.asc"
-writeRaster(curr_rich_hot, filename=out_file)
 
 
 
-##################################################################
-### Create Projections with Future Climate (example with 1 GCM)
-##################################################################
-##################################################################
-### BCC-CSM1-1 model, RCP4.5
 
-environmental="C:/Users/mwone/Google Drive/Ordinal/Occurence/Climate_Data/Analysis/rcp45/BCC_CSM1_1 "
 
-for (i in unique(spp$PLANT_CODE))  { # loop returns warnings if a species has <10 iterations, but runs fine on however many lambdas files the species *does* have
-  for (j in 0:9){
-    file1=paste("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/CtyRich_Logistic/",i,"_",j,".lambdas ",sep="") #iteration j lambda file 
-    output=paste("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/Future/rcp45/BCC_CSM1_1/",i,"_",j,sep="")
-    projection <- paste0("java -cp ",maxent.location, " density.Project ", file1, environmental, output, sep="") # enter any args here
-    system(paste(projection, "autorun"))     
-    print(j)
-    print(i)
+
+
+
+
+############################
+### leave-one-out analysis
+
+library(maptools)
+library(raster)
+library(rgdal)
+library(colorRamps)
+library(ordinal)
+library(reshape2)
+
+#ordsums <- ordsums[ordsums$rule5broke == 1,]
+#summary(ordsums$kappa)
+#ordsums <- ordsums[ordsums$AUC > 0.7 & ordsums$kappa >0 & ordsums$kappaP <0.05 & ordsums$MESSgn10 >.9,]
+
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", header = T, sep = ",",  
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+ordsums <- ordsums[order(-ordsums$USE, ordsums$species.code),]
+
+
+
+spp <- ordsums$species.code[ordsums$AUC > 0.7 & ordsums$kappa >0 & ordsums$kappaP <0.05 & ordsums$MESS_abun2range_SEL >.9]
+
+
+for ( i in 1:length(spp)) {
+
+  if(i == 1){
     
+    all <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", spp[2:length(spp)],".asc")  
+    abun <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", spp[2:length(spp)],".asc")  
   }
-}
+  
+  if(i == length(spp)){
+    all <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", spp[1:length(spp)-1],".asc") 
+    abun <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", spp[1:length(spp)-1],".asc")  
+  }
+  
+  if(i != 1 & i != length(spp)){
+    all <- c(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", spp[1:(i-1)],".asc"),
+             paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", spp[(i+1):length(spp)],".asc"))
+    
+    abun <- c(paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", spp[1:(i-1)],".asc"),
+               paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", spp[(i+1):length(spp)],".asc"))
+  }
+ 
+  all  = stack(all)
+  all  = calc(all, sum)
+  
+  
+  abun = stack(abun)
+  abun  = calc(abun, sum)
+  
+  
+  all <- as.data.frame(all)
+  all$layer[all$layer <= quantile(all$layer, .75, na.rm=T) & !is.na(all$layer)] <- 0 
+  all$layer[all$layer > quantile(all$layer, .75, na.rm=T) & !is.na(all$layer)] <- 1
+  
+  
+  abun <- as.data.frame(abun)
+  abun$layer2[abun$layer <= quantile(abun$layer, .75, na.rm=T) & !is.na(abun$layer)] <- 0
+  abun$layer2[abun$layer > quantile(abun$layer, .75, na.rm=T) & !is.na(abun$layer)] <- 1
 
-#################### Create Mean Future Projection from 10 iterations
-
-for (i in unique(spp$PLANT_CODE)){        #loop for each species
+  comp <- cbind(all,abun$layer2)
+  ordsums$l1o[i] <- length(comp$layer[comp$'abun$layer2'==1 & comp$layer==1 & !is.na(comp$layer)])/length(comp$layer[!is.na(comp$layer) & comp$layer==1])  
+  ordsums$l1o2[i] <- length(comp$layer[comp$'abun$layer2'==1 & comp$layer==1 & !is.na(comp$layer)])/length(comp$layer[!is.na(comp$layer) & comp$'abun$layer2'==1])  
+  ordsums$l1o3[i] <- length(comp$layer[comp$'abun$layer2'==1 & comp$layer==1 & !is.na(comp$layer)])
   
-  a1=list.files("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/Future/rcp45/BCC_CSM1_1",pattern=paste(i,"*", sep=""), full.names=TRUE)
   
-  proj=stack(a1)
-  
-  avg=calc(proj, mean)   
-  
-  out_file=paste("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/Future/rcp45/BCC_CSM1_1/Mean/",i,"_BCC_CSM1_1_rcp45.asc", sep="")
-  writeRaster(avg, filename=out_file) 
-  
-  rm(a1, proj, avg)
-  gc()
   
   print(i)
 }
 
 
-####################################################################
-### Create binary maps and calculate range size (future, 1 GCM)
-####################################################################
+write.table(ordsums,"C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv",row.names=F,sep=",")
+hist(ordsums$l1o)
+hist(ordsums$l1o2)
+hist(ordsums$l1o3)
 
-thresh=read.table("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/IAS_95Perc_thresholds_CtySppRichBias_Current_FINAL.csv",sep=",",header=T)
+cor(ordsums$l1o,ordsums$l1o3)
+cor(ordsums$l1o2,ordsums$l1o3)
+plot(ordsums$l1o2,ordsums$l1o3)
 
-### create dataset to hold suitable cell counts for each species 
-range_size=data.frame(-100,-100,"NA","NA","NA")
-colnames(range_size)=c("Var1","Freq","spp","model","RCP")
-range_size
+mean(ordsums$l1o2[ordsums$USE==1],na.rm=T)
+sd(ordsums$l1o2[ordsums$USE==1],na.rm=T)
 
-###### create binary rasters based on 95% MTP
+hist(ordsums$l1o2*100, col="lightblue", breaks=20, xlim=c(35,60), ylim=c(0,25), ylab="Number of Species", xlab="Percent overlap (%)", main="Leave-one-out hotspot comparisons")
+abline(v=0.50, lwd=4)
+ordsums$species.code[ordsums$l1o2 < .40]
+ordsums$species.code[ordsums$l1o2 > .55]
+#ordsums$species.code[order(ordsums$l1o2)][1:5]
+#ordsums$species.code[rev(order(ordsums$l1o2))][1:5]
+ordsums$l1o2[ordsums$species.code == "COMA2"]
+ordsums$l1o2[ordsums$species.code == "HYPE"]
 
-for (i in unique(thresh$Species)){  
-  file=paste("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/Future/rcp45/BCC_CSM1_1/Mean/",i,"_BCC_CSM1_1_rcp45.asc",sep="")
-  d1=readAsciiGrid(file) 
-  
-  d1@data[d1@data >= thresh$CtySppRich_Bias[thresh$Species==i]]=1
-  d1@data[d1@data < thresh$CtySppRich_Bias[thresh$Species==i]]=0
-  
-  out_file=paste("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/binary/BCC_CSM1_1_rcp45/",i,"_BCC_CSM1_1_rcp45.asc",sep="")
-  write.asciigrid(d1, out_file)
-  
-  tab=as.data.frame(table(d1@data))
-  tab$spp=i
-  tab$model="BCC_CSM1_1"
-  tab$RCP="rcp_4_5"
-  
-  range_size=rbind(range_size,tab)
-  
-  #image(d1, col=c("grey","blue"))
-  
-  rm(d1)
-  gc()
-  print(i)
-}
+ordsums$kappa[order(ordsums$l1o2)][1:5]
+ordsums$kappa[rev(order(ordsums$l1o2))][1:5]
+head(ordsums)
+ordsums[ordsums$species.code=="FRAL4",]
 
-head(range_size)
-dim(range_size)
-range_size1=range_size[2:1781,]
 
-range_size2=range_size1[range_size1$Var1 ==1,]
-head(range_size2)
-dim(range_size2)
 
-########################################################
-## Create Species Richness Map (adapt for abundance sums once you have prediction maps from ordinal regression)
-######################################################
 
-### Sum binary maps 
-filenames = list.files("C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/FINAL_OUTPUT/binary/sppRichCtyBias_current",pattern="*.asc", full.names=TRUE)
+
+#################
+
+#### species trait composition
+
+library(raster)
+library(RColorBrewer)
+display.brewer.all(n=8, type="all", colorblindFriendly=T)
+
+
+
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", header = T, sep = ",",  
+                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
+ordsums <- ordsums[ordsums$USE==1,]
+
+unique(ordsums$habit)
+unique(ordsums$duration_final)
+
+woody <- ordsums$species.code[ordsums$habit == "tree" | ordsums$habit == "shrub_subshrub"]
+p.herb <- ordsums$species.code[(ordsums$habit == "forb_herb" | ordsums$habit == "grass") & ordsums$duration_final == "Perennial" ]
+np.herb <- ordsums$species.code[(ordsums$habit == "forb_herb" | ordsums$habit == "grass") & ordsums$duration_final != "Perennial" ]
+
+#per  <- ordsums$species.code[ordsums$duration_final == "Perennial"]
+#np   <- ordsums$species.code[ordsums$duration_final != "Perennial"]
+#summary(as.factor(ordsums$habit[ordsums$duration_final != "Perennial"]))
+#& ordsums$duration_final == "Perennial",]
+#non.per <- ordsums[ordsums$duration_final != "Perennial",]
+
+rich <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_FULL.asc")
+abun <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
+riHOT <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_FULL.asc")
+abHOT <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_HI_ABUN.asc")
+coHOT <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_compare.asc")
+
+
+richD <- as.data.frame(rich)
+abunD <- as.data.frame(abun)
+
+
+#filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", woody,".asc")
+filenames <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", woody,".asc")
+
 ldf=stack(filenames)
 
 overlap=calc(ldf, sum)
+plot(overlap)
+overlapD <- as.data.frame(overlap)
 
-out_file="C:/Users/mwone/Google Drive/Ordinal/Occurence/Hotspots_output/Richness_CtyRichBias_FivePercMTP_Current.asc"
-writeRaster(overlap, filename=out_file)
+vals <- overlapD$layer/richD$richness_map_FULL
 
-pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/SppRichness_CtyRichBias_5PercMTP_Current.pdf",width=11,height=8.5)
-colors=rev(heat.colors(100))
-spplot(overlap, col.regions=colors)
-dev.off()
+woody_rich_prop <- raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
+#plot(woody_rich_prop, col=brewer.pal("YlOrRd",n=9))
+#plot(riHOT, add=T, col=c("grey","transparent") )
 
-##############################################################################################
-## Calculate and Plot RCP 4.5 richness mean and sd from future model projections
-##############################################################################################
+plot(woody_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of establishers that are woody")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
 
-## this calculates the mean richness across 13 future GCM maps of species richness
-## you can adapt this code to find the mean abundance predictions across your GCMs
-## assumes each GCM abundance map is ascii format
 
-filenames = list.files("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/RCP45_recalc",pattern="*_rcp45.asc", full.names=TRUE)
-filenames
-length(filenames)
+
+
+######################################################
+filenames <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", woody,".asc")
 
 ldf=stack(filenames)
 
-mean_45=calc(ldf, mean)
-sd_45=calc(ldf, sd)
+overlap=calc(ldf, sum)
+plot(overlap)
+overlapD <- as.data.frame(overlap)
 
-out_file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Ensemble Maps/Richness_Mean_RCP45_recalc.asc"
-outfile1="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Ensemble Maps/Richness_SD_RCP45_recalc.asc"
-writeRaster(mean_45, filename=out_file)
-writeRaster(sd_45, filename=outfile1)
+vals <- overlapD$layer/abunD$richness_map_HI_ABUN
 
-ls()
-rm(ldf, filenames, mean_45, sd_45, outfile1, out_file)
-gc()
+woody_abun_prop <- raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
+#plot(woody_abun_prop, col=brewer.pal("YlOrRd",n=9))
+#plot(abHOT, add=T, col=c("grey","transparent") )
+
+plot(woody_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of impacters that are woody")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F)
+
+
+
+
+
+##################################################################
+filenames <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", per.herb,".asc")
+
+ldf=stack(filenames)
+
+overlap=calc(ldf, sum)
+plot(overlap)
+overlapD <- as.data.frame(overlap)
+
+vals <- overlapD$layer/richD$richness_map_FULL
+
+perHerb_rich_prop <- raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
+#plot(woody_rich_prop, col=brewer.pal("YlOrRd",n=9))
+#plot(riHOT, add=T, col=c("grey","transparent") )
+
+plot(perHerb_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of establishers that are perennial herbs")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
+
+
+
+
+######################################################
+filenames <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", per.herb,".asc")
+
+ldf=stack(filenames)
+
+overlap=calc(ldf, sum)
+plot(overlap)
+overlapD <- as.data.frame(overlap)
+
+vals <- overlapD$layer/abunD$richness_map_HI_ABUN
+
+perHerb_abun_prop <- raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
+#plot(woody_abun_prop, col=brewer.pal("YlOrRd",n=9))
+#plot(abHOT, add=T, col=c("grey","transparent") )
+
+plot(perHerb_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of impacters that are perennial herbs")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F)
+
+
+
 
 ####################################################################################
-## Plot RCP 4.5 Ensemble Mean and SD Richness 
-###################################################################################
+filenames <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", np.herb,".asc")
 
-## plots the results of the future ensemble calculations above
+ldf=stack(filenames)
 
-mean_45=readAsciiGrid("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Ensemble Maps/Richness_Mean_RCP45_recalc.asc") 
-proj4string(mean_45) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+overlap=calc(ldf, sum)
+plot(overlap)
+overlapD <- as.data.frame(overlap)
 
-sd_45=readAsciiGrid("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Ensemble Maps/Richness_SD_RCP45_recalc.asc") 
-proj4string(sd_45) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+vals <- overlapD$layer/richD$richness_map_FULL
 
-srg=readOGR("C:/Users/Jenica/Dropbox/National Invasives SDMs/Intermediate Data/Ecoregions_L48_wgs84.shp", layer="Ecoregions_L48_wgs84")
-proj4string(srg)
+npHerb_rich_prop <- raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
+#plot(woody_rich_prop, col=brewer.pal("YlOrRd",n=9))
+#plot(riHOT, add=T, col=c("grey","transparent") )
 
-#setEPS()
-#postscript("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/SppRichness_RCP45_Ensemble_Mean_recalc.eps",width=3.5,height=3)
-pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/SppRichness_RCP45_Ensemble_Mean_recalc.pdf",width=11,height=8.5)
-plot_poly=list("sp.lines", as(srg, "SpatialLines"), col="grey20")
-colors=rev(heat.colors(100))
-spplot(mean_45, col.regions=colors, sp.layout=list(plot_poly))
-dev.off()
-
-setEPS()
-postscript("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/Figures/PNAS/SppRichness_SD_RCP45_recalc.eps",width=3.5,height=3)
-#pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/SppRichness_SD_RCP45_recalc.pdf",width=11,height=8.5)
-plot_poly=list("sp.lines", as(srg, "SpatialLines"), col="grey20")
-colors=blue2red(20)
-spplot(sd_45, col.regions=colors, sp.layout=list(plot_poly))
-dev.off()
-
-###############################################################################################################
-### Hotspot maps
-################################################################################################################
-
-## based on richness maps here, adapt to summed abundance maps
-
-##### Current Richness
-current_rich=raster("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Richness_CtyRichBias_FivePercMTP_Current_recalc.asc")
-proj4string(current_rich) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-
-quantile(current_rich, probs=seq(0,1,0.05)) #get quantiles of richness
-
-## set up the matrix required for the function reclassify
-from=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to=matrix(quantile(current_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes=matrix(seq(0,1,0.05), nrow=21,ncol=1)
-rcl=cbind(from,to,becomes)
-colnames(rcl)=c("from","to","becomes")
-rcl
-
-for (i in 2:21){
-  rcl[i,1]= rcl[i-1,2]+0.00000001
-}
-rcl[1,1]=0
-rcl
-
-# reclassify richness raster to quantiles
-curr_rich_quant <- reclassify(current_rich, rcl)
-
-## plot quantiles map
-pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/Hotspot_quantiles_Current_recalc.pdf",width=11,height=8.5)
-cuts=quantile(curr_rich_quant, probs=seq(0,1,0.05))
-colors=rev(heat.colors(length(cuts)))
-colors=matlab.like2(length(cuts))
-legend=c(0,0.25,0.5,0.75,1)
-legend_place=c(0,0.25,0.5,0.75,1)
-print(spplot(curr_rich_quant,  col.regions=colors, at=cuts, colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) ))
-dev.off()
-
-### create binary hotspot map with top 25%
-## create reclass table
-from1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to1=matrix(quantile(curr_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes1=matrix(c(rep(0,16),rep(1,5)), nrow=21,ncol=1)
-rcl1=cbind(from1,to1,becomes1)
-colnames(rcl1)=c("from","to","becomes")
-rcl1
+plot(npHerb_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of establishers that are nonperennial herbs")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
 
 
-for (i in 2:21){
-  rcl1[i,1]= rcl1[i-1,2]+0.001
-}
-rcl1
-
-#reclassify to hotspots
-curr_rich_hot <- reclassify(curr_rich_quant, rcl1)
-
-## plot hotspots map
-pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/Hotspot_binary_Current_recalc.pdf",width=11,height=8.5)
-cuts=c(0,0.5,1)
-colors=c("grey70","red")
-legend=c("","Hotspot")
-legend_place=c(0,0.75)
-print(spplot(curr_rich_hot,  col.regions=colors, at=cuts,colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) )) #
-dev.off()
-
-out_file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Richness_quantiles_current_recalc.asc"
-writeRaster(curr_rich_quant, filename=out_file)
-
-out_file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Richness_hotspots_current_recalc.asc"
-writeRaster(curr_rich_hot, filename=out_file)
-
-######### Future Ensemble Average 
-## same process with future ensemble average richness
-fut_rich=raster("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Ensemble Maps/Richness_Mean_RCP45_recalc.asc")
-proj4string(fut_rich) <- CRS("+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-
-quantile(fut_rich, probs=seq(0,1,0.05))
-
-from=matrix(quantile(fut_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to=matrix(quantile(fut_rich, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes=matrix(seq(0,1,0.05), nrow=21,ncol=1)
-rcl=cbind(from,to,becomes)
-colnames(rcl)=c("from","to","becomes")
-rcl
-
-for (i in 2:21){
-  rcl[i,1]= rcl[i-1,2]+0.00000001
-}
-rcl[1,1]=0
-rcl
-
-fut_rich_quant <- reclassify(fut_rich, rcl)
-
-pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/Hotspot_quantiles_future_recalc.pdf",width=11,height=8.5)
-cuts=quantile(fut_rich_quant, probs=seq(0,1,0.05))
-colors=rev(heat.colors(length(cuts)))
-colors=matlab.like2(length(cuts))
-legend=c(0,0.25,0.5,0.75,1)
-legend_place=c(0,0.25,0.5,0.75,1)
-print(spplot(fut_rich_quant,  col.regions=colors, at=cuts, colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) ))
-dev.off()
-
-### create binary hotspot map with top 25%
-from1=matrix(quantile(fut_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-to1=matrix(quantile(fut_rich_quant, probs=seq(0,1,0.05)), nrow=21,ncol=1)
-becomes1=matrix(c(rep(0,16),rep(1,5)), nrow=21,ncol=1)
-rcl1=cbind(from1,to1,becomes1)
-colnames(rcl1)=c("from","to","becomes")
-rcl1
 
 
-for (i in 2:21){
-  rcl1[i,1]= rcl1[i-1,2]+0.001
-}
-rcl1
+######################################################
+filenames <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", np.herb,".asc")
 
-fut_rich_hot <- reclassify(fut_rich_quant, rcl1)
+ldf=stack(filenames)
 
-pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/Hotspot_binary_future_recalc.pdf",width=11,height=8.5)
-cuts=c(0,0.5,1)
-colors=c("grey70","red")
-legend=c("","Hotspot")
-legend_place=c(0,0.75)
-print(spplot(fut_rich_hot,  col.regions=colors, at=cuts,colorkey=list(width=2,labels=list(at=legend_place,labels=legend)) )) #
-dev.off()
+overlap=calc(ldf, sum)
+plot(overlap)
+overlapD <- as.data.frame(overlap)
 
-out_file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Richness_quantiles_future_recalc.asc"
-writeRaster(fut_rich_quant, filename=out_file)
+vals <- overlapD$layer/abunD$richness_map_HI_ABUN
 
-out_file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Richness_hotspots_future_recalc.asc"
-writeRaster(fut_rich_hot, filename=out_file)
+npHerb_abun_prop <- raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
+#plot(woody_abun_prop, col=brewer.pal("YlOrRd",n=9))
+#plot(abHOT, add=T, col=c("grey","transparent") )
+
+plot(npHerb_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of impacters that are nonperennial herbs")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F)
 
 
-##### Hotspot change
 
-fut_rich_hot1=fut_rich_hot
-fut_rich_hot1[fut_rich_hot1 >0]=2
 
-unique(fut_rich_hot1) #0 and 2
 
-hot_change=fut_rich_hot1 + curr_rich_hot
 
-#setEPS()
-#postscript("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/Hotspot_change_recalc.eps",width=3.5,height=3)
-pdf(file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/Hotspot_change_recalc.pdf",width=11,height=8.5) 
-# 0 means pixel NOT hotspot in either time period
-# 1 means pixel hotspot in current climate only
-# 2 means pixel hotspot in future climate only
-# 3 means pixel hotspot in current and future 
 
-plot_poly=list("sp.lines", as(srg, "SpatialLines"), col="grey20")
-cuts=c(-.5, 0.5, 1.5, 2.5, 3.5)
-#legend=c("Non-hotspot","Current climate hotspot","Future climate hotspot","Current & future hotspot")
-legend=c("None","Current","Future","Both")    
 
-print(spplot(hot_change,col.regions=c("grey90","royalblue","red", "orange"), at=cuts, sp.layout=list(plot_poly),
-             colorkey=list(width=2,labels=list(at=c(0,1,2,3),labels=legend)))) 
+eco <- readOGR(dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco", stringsAsFactors = F)
+plot(eco)
+
+#eco <- spTransform(eco, "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs")
+#plot(eco)
+
+proj4string(woody_rich_prop) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(woody_abun_prop) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(perHerb_rich_prop) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(perHerb_abun_prop) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(npHerb_rich_prop) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(npHerb_abun_prop) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+woody_rich_prop <- projectRaster(woody_rich_prop, crs="+init=epsg:5070")
+woody_abun_prop <- projectRaster(woody_abun_prop, crs="+init=epsg:5070")
+perHerb_rich_prop <- projectRaster(perHerb_rich_prop, crs="+init=epsg:5070")
+perHerb_abun_prop <- projectRaster(perHerb_abun_prop, crs="+init=epsg:5070")
+npHerb_rich_prop <- projectRaster(npHerb_rich_prop, crs="+init=epsg:5070")
+npHerb_abun_prop <- projectRaster(npHerb_abun_prop, crs="+init=epsg:5070")
+
+
+
+
+############### ecoregion plots
+
+pdf(file="C:/Users/Localadmin/Google Drive/figs/traits_eco.pdf",width=15, height=7.5)
+par(mfrow=c(2,3))
+
+plot(woody_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of woody plants", ylab="Establishers", mar=c(0,0,0,0) )
+plot(eco, add=T, col=c("transparent"), axes=F, lwd=0.5)
+
+plot(perHerb_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of perennial herbs")
+plot(eco, add=T, col=c("transparent"), axes=F, lwd=0.5 )
+
+plot(npHerb_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of nonperennial herbs")
+plot(eco, add=T, col=c("transparent"), axes=F, lwd=0.5 )
+
+plot(woody_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, ylab= "Impacters")
+plot(eco, add=T, col=c("transparent"), axes=F, lwd=0.5 )
+
+
+plot(perHerb_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F)
+plot(eco, add=T, col=c("transparent"), axes=F, lwd=0.5 )
+
+
+plot(npHerb_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F)
+plot(eco, add=T, col=c("transparent"), axes=F, lwd=0.5 )
 
 dev.off()
 
-out_file="C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Hotspots_change_recalc.asc"
-writeRaster(hot_change, filename=out_file)
-
-hot_change1=raster("C:/Users/Jenica/Dropbox/National Invasives SDMs/Analysis/richness_asciis/Hotspots_change_recalc.asc")
-
-freq(hot_change1)
+proj4string(coHOT) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+coHOT <- projectRaster(coHOT, crs="+init=epsg:5070")
 
 
+############### hotspot plots
+pdf(file="C:/Users/Localadmin/Google Drive/figs/traits_hots.pdf",width=15, height=7.5)
+par(mfrow=c(2,3))
+
+plot(woody_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of woody plants", ylab="Establishers", mar=c(0,0,0,0) )
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
+
+plot(perHerb_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of perennial herbs")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
+
+plot(npHerb_rich_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, main= "Proportion of nonperennial herbs")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
+
+plot(woody_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F, ylab= "Impacters")
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
+
+plot(perHerb_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F)
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
+
+plot(npHerb_abun_prop, col=brewer.pal("YlOrRd",n=9), axes=F, box=F)
+plot(coHOT, add=T, col=c("transparent", "transparent", "grey", "transparent"), axes=F, box=F, legend=F )
+
+
+dev.off()
