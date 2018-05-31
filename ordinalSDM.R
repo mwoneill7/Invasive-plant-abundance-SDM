@@ -205,7 +205,7 @@ ordsums$bin3p <- -99
 head(ordsums)
 
 
-for(s in 194:187){#length(ordsums$species.code):140){#:length(sp.list)){ ## Loop through species list
+for(s in 1:155){#length(ordsums$species.code):140){#:length(sp.list)){ ## Loop through species list
 
   
   #species.code <- sp.list[s] ## extract the USDA species code for the species of the iteration
@@ -411,6 +411,8 @@ for(s in 194:187){#length(ordsums$species.code):140){#:length(sp.list)){ ## Loop
     
     
     formulae.s <- formulae[formulae$no.vars <= ordsums$max.vars.5epv[s],]
+    formulae.s <- formulae.s[formulae.s$no.vars <= 18,] #remove
+    
     
     i <- -1 ## keep track of place in formula list
     edf <- -1 ## number of variables
@@ -442,7 +444,7 @@ for(s in 194:187){#length(ordsums$species.code):140){#:length(sp.list)){ ## Loop
           aic <- AIC(M) ## extract aic score
           model.sel.i <- data.frame(i, edf, aic, stringsAsFactors = F)
           model.sel <- rbind(model.sel, model.sel.i) ## append data from iteration to the master data frame
-          #print(i)
+         # print(i)
 
         }  
 
@@ -530,7 +532,7 @@ for(s in 194:187){#length(ordsums$species.code):140){#:length(sp.list)){ ## Loop
     ordsums$bin2p[s] <- length(pm$observed[pm$predicted == 2])
     ordsums$bin3p[s] <- length(pm$observed[pm$predicted == 3])
     
-    write.csv(s, "bloop.csv",row.names=F)
+    write.csv(ordsums, "progressMACHINE1.csv",row.names=F)
     
     #bin1o <- length(pm$observed[pm$observed == 1])
     #bin2o <- length(pm$observed[pm$observed == 2])
@@ -577,7 +579,7 @@ for(s in 194:187){#length(ordsums$species.code):140){#:length(sp.list)){ ## Loop
 }
 
 #ordsums <- ordsums[ordsums$species.code != "TEMPLATE",]
-write.csv(ordsums,"ordsums4_27_2018laptop.csv", row.names=F)
+write.csv(ordsums,"ordsums4_27_2018machine1.csv", row.names=F)
 
 hist(ordsums$kappa)
 length(ordsums$kappa > 0 & ordsums$kappaP <0.05)
