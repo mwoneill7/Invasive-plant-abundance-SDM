@@ -4,7 +4,7 @@
 #   updated: 5/25/2018
 
 
-ordsums <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", sep=",", header=T, stringsAsFactors = F)
+ordsums <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", sep=",", header=T, stringsAsFactors = F)
 
 
 mean(ordsums$infilling[ordsums$USE==1 & !is.na(ordsums$infilling)])
@@ -13,48 +13,32 @@ sd(ordsums$infilling[ordsums$USE==1 & !is.na(ordsums$infilling)])
 hist(ordsums$infilling[ordsums$USE==1 & !is.na(ordsums$infilling)])
 length(ordsums$species.code[ordsums$AUC>.7 & ordsums$MESS_abun2range_SEL < 0.9])
 length(ordsums$species.code[ordsums$AUC>.7 & ordsums$MESS_abun2range_SEL > 0.9 & (ordsums$kappaP >0.05 | ordsums$kappa <=0 )])
-#for (i in 1:155){
-#  if(ordsums$AUC[i] > .7 & ordsums$kappa[i] > 0 & ordsums$kappaP[i] <0.05 & ordsums$MESSgn10[i] > .9){
-#    ordsums$USE[i] <- 1
-#  } else {
-#    ordsums$USE[i] <- 0 
-#  }
-#}
-#
 
+options(scipen=999)
 
-png("C:/Users/mwone/Google Drive/figs/kappas.png",width=700,height=400)
-hist(ordsums$kappa[ordsums$USE==1],breaks=20, xlab="Cohen's kappa", pch=2,cex.lab=1.5,col="lightblue", ylab="Number of species", main="")
-dev.off()
+## not needed in publication
+#pdf("C:/Users/Localadmin/Google Drive/figs/kappas.png",width=700,height=400)
+#hist(ordsums$kappa[ordsums$USE==1],breaks=20, xlab="Cohen's kappa", pch=2,cex.lab=1.5,col="lightblue", ylab="Number of species", main="")
+#dev.off()
 
-#summary(ordsums$bin3o[ordsums$USE==1]*25/ordsums$areaSQKM[ordsums$USE==1])
-#plot(ordsums$bin3o[ordsums$USE==1]*16/ordsums$areaSQKM[ordsums$USE==1]~ordsums$hiAbun_prop_range[ordsums$USE==1])
-#abline(a=0,b=1)
-#glm()
+## 25.4 mm per inch
 
+pdf("C:/Users/Localadmin/Google Drive/figs/EstImpInf.pdf",width=79/25.4,height=150/25.4)
 
-#par(mfrow=c(2,1))
-#hist(ordsums$bin3o[ordsums$USE==1]*16/ordsums$areaSQKM[ordsums$USE==1], col="light blue", breaks=20)
-png("C:/Users/mwone/Google Drive/figs/rangesizeESTAB.png",width=700,height=300)
-hist(ordsums$areaSQKM_5_7[ordsums$USE==1],breaks=10, xlab="Area (square km)", pch=2,cex.lab=1.5,col="lightblue", ylab="Number of species",main="",
+par(mfrow=c(3,1))
+hist(ordsums$areaSQKM_5_7[ordsums$USE==1],breaks=10, ylab="Number of species", xlab=expression("Area" ~ (km^2)), cex.lab=1,col="lightblue", main="",
      xlim=c(0,6000000))
-#abline(v=7800000)
-dev.off()
+#title("(a)", adj=0, cex.main=1.5)
+mtext("(a)", side=3, line=2, adj=-0.25)
 
 
-summary(ordsums$range_prop_area[ordsums$USE==1])
-png("C:/Users/mwone/Google Drive/figs/rangesizeIMPAC.png",width=700,height=300)
-hist(ordsums$hiAbunSQKM_5_7[ordsums$USE==1], main="",ylab="Number of species", xlab="Area (square km)", pch=2,cex.lab=1.5,col="lightblue",
+hist(ordsums$hiAbunSQKM_5_7[ordsums$USE==1], main="",ylab="Number of species", xlab=expression("Area" ~ (km^2)), cex.lab=1,col="lightblue",
      xlim=c(0,6000000))
-dev.off()
+#title("(b)", adj=0, cex.main=1.5)
+mtext("(b)", side=3, line=2, adj=-0.25)
 
-
-png("C:/Users/mwone/Google Drive/figs/infilling.png",width=1200,height=700)
-hist(ordsums$infilling[ordsums$USE==1]*100, main="",xlab="percent infilling (%)", ylab="Number of species",pch=2,cex.lab=1.5,col="lightblue")
-dev.off()
-#summary(ordsums$hiAbun_prop_range[ordsums$USE==1])
-png("C:/Users/mwone/Google Drive/figs/infilling2.png",width=1200,height=700)
-hist(ordsums$infilling[ordsums$USE==1]*100, main="",xlab=" ", ylab=" ",pch=2,cex.axis=2,col="lightblue")
+hist(ordsums$infilling[ordsums$USE==1]*100, main="",xlab="Percent infilling (%)", ylab="Number of species",cex.lab=1,col="lightblue")
+mtext("(c)", side=3, line=2, adj=-0.25)
 dev.off()
 
 
@@ -68,10 +52,10 @@ M2 <- lm(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$no.pts[ordsums$USE==1])
 summary(M)
 summary(M2)
 
-options(scipen=999)
+
 
 #par(mfrow=c(2,1))
-png("C:/Users/mwone/Google Drive/figs/samplesize.png",width=700,height=500)
+png("C:/Users/Localadmin/Google Drive/figs/samplesize.png",width=700,height=500)
 plot(ordsums$areaSQKM_5_7[ordsums$USE==1]~ordsums$thinned_occ[ordsums$USE==1], pch=19, col="medium blue", cex.lab=1.3,
      xlab="sample size", ylab= "ranges size (square km)")
 points(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$no.pts[ordsums$USE==1], pch="+", cex=2,col="firebrick2")
@@ -79,7 +63,7 @@ abline(M$coefficients[1],M$coefficients[2], col="darkblue", lwd=2)
 abline(M2$coefficients[1],M2$coefficients[2], col="firebrick3", lwd=2)
 dev.off()
 
-png("C:/Users/mwone/Google Drive/figs/estab_imp2.png",width=1000,height=480, bg="transparent")
+png("C:/Users/Localadmin/Google Drive/figs/estab_imp2.png",width=1000,height=480, bg="transparent")
 options(scipen = 999)
 plot(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1],pch=19, cex.lab=2,
      xlab= "Establishment range size (square km)", ylab= "Impact range size (square km)", cex.axis=2, bg="transparent")
@@ -95,7 +79,7 @@ points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="PUMOL"]~ordsums$areaSQKM_5_
 points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="ONAC"]~ordsums$areaSQKM_5_7[ordsums$species.code=="ONAC"], col="green", pch=16)
 
 ##########################
-all <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/master list.csv" , header = T, sep = ",", quote= "\"", 
+all <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/master list.csv" , header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 summary(as.factor(all$L48_present))
 summary(as.factor(all$list))
@@ -116,8 +100,8 @@ all <- all[ !is.na(all$habit) & all$habit != "",] ## 1045
 #summary(as.factor(all$duration_final))
 #hist(as.numeric(as.factor(all$duration_final)))
 #1052 with trait data
-write.table(all, "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv", sep=",", row.names=F)
-traits <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv" , header = T, sep = ",", quote= "\"", 
+write.table(all, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv", sep=",", row.names=F)
+traits <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv" , header = T, sep = ",", quote= "\"", 
                      comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
@@ -133,7 +117,7 @@ summary(as.factor(traits$habit))
 summary(as.factor(traits$duration_final))
 
 ####################################################
-ordsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", header = T, sep = ",", quote= "\"", 
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", header = T, sep = ",", quote= "\"", 
                       comment.char= "", stringsAsFactors = F, strip.white = T)
 head(ordsums)
 str(ordsums)
@@ -166,7 +150,7 @@ hist(ordsums$AUC)
 summary(as.factor(ordsums$duration[ordsums$USE==1]))
 summary(as.factor(ordsums$habit[ordsums$USE==1]))/70
 
-#traits <- read.csv("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/all.csv", header=T,stringsAsFactors = F)
+#traits <- read.csv("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/all.csv", header=T,stringsAsFactors = F)
 
 ordsums$habit <- ordered(ordsums$habit, levels=c("forb_herb","grass", "vine","tree", "shrub_subshrub", "MULTIPLE", "palms", "cactus"))
 traits$habit <- ordered(traits$habit, levels=c("forb_herb","grass", "vine","tree", "shrub_subshrub", "MULTIPLE", "palms", "cactus"))
@@ -205,7 +189,7 @@ durations <- rbind(durations,durations2,durations3)
 colnames(durations) <- c( "perennial", "biennial", "annual", "multiple")
 
 
-png("C:/Users/mwone/Google Drive/figs/habitsPROP.png",width=1000,height=400)
+png("C:/Users/Localadmin/Google Drive/figs/habitsPROP.png",width=1000,height=400)
 barplot(habits*100, main="habit composition", ylim=c(0,100),#cex=2,
         xlab="Habit", ylab= "Percent of species (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
         col=c("white","lightblue","mediumblue"), beside=TRUE, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
@@ -216,7 +200,7 @@ abline(h=0)
 dev.off()
 
 
-png("C:/Users/mwone/Google Drive/figs/durationsPROP.png",width=1000,height=400)
+png("C:/Users/Localadmin/Google Drive/figs/durationsPROP.png",width=1000,height=400)
 barplot(durations*100, main="Duration composition" , ylim=c(0,100),
         xlab="Duration", ylab= "Percent of species (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
         col=c("white","lightblue","mediumblue"), beside=TRUE, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
@@ -259,7 +243,7 @@ length(ordsums$species.code[ordsums$USE ==1 & ordsums$kappa > 0.2])
 ##infilling series
 
 
-inf<-read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/infilling.csv",  header = T, sep = ",", quote= "\"", 
+inf<-read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/infilling.csv",  header = T, sep = ",", quote= "\"", 
                 comment.char= "", stringsAsFactors = F, strip.white = T)
 inf <- inf[inf$kappaP<0.05 & inf$AUC>0.7 & inf$kappa>0 & inf$MESSgn10>.9,]
 cbind(inf$species.code,ordsums2$species.code)
@@ -267,7 +251,7 @@ ordsums2 <- cbind(ordsums2,inf$infilling)
 hist(ordsums2$`inf$infilling`)
 
 
-png("C:/Users/mwone/Google Drive/GRC_figs/infil.png",width=700,height=300)
+png("C:/Users/Localadmin/Google Drive/GRC_figs/infil.png",width=700,height=300)
 hist(ordsums2$`inf$infilling`, main="",xlab="Porportion of cells occupied", ylab="Number of species",pch=2,cex.lab=1.5,col="lightblue")
 dev.off()
 
@@ -332,7 +316,7 @@ length(ordsums2$kappa[ordsums2$kappa >0.8 & ordsums2$kappa >0.6])
 1/64
 38+22+2+1
 ######################
-eco.hot <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ecoXhot_5_8.csv", sep=",", header=T)
+eco.hot <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoXhot_5_8.csv", sep=",", header=T)
 #eco.hot <- as.data.frame(eco.hot)
 #eco.hot <- as.matrix(eco.hot)
 
@@ -347,7 +331,7 @@ eco.hot <- as.matrix(eco.hot[,2:NCOL(eco.hot)])
 head(eco.hot)
 
 ## 900 500
-png("C:/Users/mwone/Google Drive/figs/ecoXhot.png",width=800,height=500)
+png("C:/Users/Localadmin/Google Drive/figs/ecoXhot.png",width=800,height=500)
 barplot(eco.hot, main=" ", #cex=2,
         xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
         col=c("white","lightblue","firebrick3"), beside=TRUE, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
@@ -356,7 +340,7 @@ barplot(eco.hot, main=" ", #cex=2,
 dev.off()
 
 
-png("C:/Users/mwone/Google Drive/figs/ecoXhot2.png",width=1300,height=470)
+png("C:/Users/Localadmin/Google Drive/figs/ecoXhot2.png",width=1300,height=470)
 barplot(eco.hot[1:2,], main=" ", #cex=2,
         xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
         col=c("white","lightblue" ), cex=2, beside=TRUE#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
@@ -365,7 +349,7 @@ barplot(eco.hot[1:2,], main=" ", #cex=2,
 )
 dev.off()
 
-png("C:/Users/mwone/Google Drive/figs/ecoXhot3.png",width=1300,height=470)
+png("C:/Users/Localadmin/Google Drive/figs/ecoXhot3.png",width=1300,height=470)
 barplot(eco.hot, main=" ", #cex=2,
         xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
         col=c("white","lightblue","firebrick3"), beside=TRUE#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
@@ -374,7 +358,7 @@ barplot(eco.hot, main=" ", #cex=2,
 )
 dev.off()
 
-png("C:/Users/mwone/Google Drive/figs/ecoXhot5.png",width=1000,height=625)
+png("C:/Users/Localadmin/Google Drive/figs/ecoXhot5.png",width=1000,height=625)
 barplot(eco.hot*100, main=" ", ylim=c(0,100), #cex=2,
         xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=3, cex.axis=2, cex.main=2,
         col=c("white","lightblue","firebrick3"), beside=TRUE,#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
@@ -390,7 +374,7 @@ dev.off()
 
 
 
-eco.hot <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/hot_eco.csv", sep=",", header=T)
+eco.hot <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/hot_eco.csv", sep=",", header=T)
 
 eco.hot <- rbind(eco.hot$IDs[1:10],eco.hot$hotspot_FULL[1:10],eco.hot$hotspot_HI_ABUN[1:10])
 
@@ -419,24 +403,24 @@ eco.hot2
 ######making a pretty table
 ####################################
 
-ordsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv", header = T, sep = ",", quote= "\"", 
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv", header = T, sep = ",", quote= "\"", 
                       comment.char= "", stringsAsFactors = F, strip.white = T)
 
-#infilling <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/infilling.csv", header = T, sep = ",", quote= "\"", 
+#infilling <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/infilling.csv", header = T, sep = ",", quote= "\"", 
 #                         comment.char= "", stringsAsFactors = F, strip.white = T)
-#leaveoneout <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_1_2018.csv", header = T, sep = ",", quote= "\"", 
+#leaveoneout <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_1_2018.csv", header = T, sep = ",", quote= "\"", 
 #                          comment.char= "", stringsAsFactors = F, strip.white = T)
-#samplesizes<- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/summaries_copy_4_07/sample_sizes.csv", header = T, sep = ",", quote= "\"", 
+#samplesizes<- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/summaries_copy_4_07/sample_sizes.csv", header = T, sep = ",", quote= "\"", 
 #                         comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
-edd <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 edd$abundance <- ordered(as.factor(edd$abundance), levels=c(1,2,3))
 
 
 
-all <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/master list.csv" , header = T, sep = ",", quote= "\"", 
+all <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/master list.csv" , header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 
 #for (i in 1:155){
@@ -1021,7 +1005,7 @@ summary(as.factor(tab$n8[1:70]))
 
 #tab$infilling[tab$infilling==0]
 
-write.csv(tab, "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/prettyTable_5_31.csv", row.names=F)
+write.csv(tab, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/prettyTable_5_31.csv", row.names=F)
 
 
 
@@ -1050,7 +1034,7 @@ summary(ordsums$USE[1:64])
 library(ordinal)
 library(irr)
 library(reshape2)
-ordsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/old_ordsums/model_summaries_4_11_2018.csv", header = T, sep = ",", quote= "\"", 
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/old_ordsums/model_summaries_4_11_2018.csv", header = T, sep = ",", quote= "\"", 
                       comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
@@ -1064,7 +1048,7 @@ for (i in 1:155){
 }
 
 
-edd <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
+edd <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 edd$abundance <- ordered(as.factor(edd$abundance), levels=c(1,2,3))
 
@@ -1106,7 +1090,7 @@ ordsums$kappa[s] <- kappa$value
 
 ###################################
 ###################################
-varsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/variable_sums.csv", sep=",", header=T)
+varsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/variable_sums.csv", sep=",", header=T)
 #eco.hot <- as.data.frame(eco.hot)
 #eco.hot <- as.matrix(eco.hot)
 varsums <- as.matrix(varsums)
@@ -1117,7 +1101,7 @@ varsums<- varsums[,2:13]
 varsums[,1:12] <- as.numeric(varsums[,1:12])
 varsums
 
-#png("C:/Users/mwone/Google Drive/GRC_figs/ecoXhot.png",width=900,height=500)
+#png("C:/Users/Localadmin/Google Drive/GRC_figs/ecoXhot.png",width=900,height=500)
 barplot(varsums, main=" ", ylim=c(0,50),#cex=2,
         xlab="Predictor variable", ylab= "Frequency in best-fit models", cex.lab=1.5, cex.axis=1.5, cex.main=2,
         col=c("lightblue","blue","white","firebrick1"), #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
@@ -1130,7 +1114,7 @@ dev.off()
 #####################
 
 
-ordsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_5_6_2018.csv", header = T, sep = ",", quote= "\"", 
+ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/model_summaries_5_6_2018.csv", header = T, sep = ",", quote= "\"", 
                       comment.char= "", stringsAsFactors = F, strip.white = T)
 
 for (i in 1:155){
@@ -1250,17 +1234,17 @@ citation("dismo")
 ##############################
 
 library(rgdal)
-states <- readOGR(dsn="C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/states", layer="US_states")
+states <- readOGR(dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/states", layer="US_states")
 proj4string(states)
 
 states <- spTransform(states,"+init=epsg:5070")
 
-png("C:/Users/mwone/Google Drive/figs/states.png", height=1000, width=1600)
+png("C:/Users/Localadmin/Google Drive/figs/states.png", height=1000, width=1600)
 plot(states, col="grey95",lwd=2)
 dev.off()
 
 
-png("C:/Users/mwone/Google Drive/figs/floridaborder.png", height=1000, width=1600, bg="transparent")
+png("C:/Users/Localadmin/Google Drive/figs/floridaborder.png", height=1000, width=1600, bg="transparent")
 plot(states[as.character(states$NAME)=="Florida",], col="transparent",lwd=10, bg="transparent") 
 dev.off()
 
