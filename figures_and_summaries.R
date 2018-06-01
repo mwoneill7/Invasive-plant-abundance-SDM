@@ -315,56 +315,59 @@ length(ordsums2$kappa[ordsums2$kappa >0.8 & ordsums2$kappa >0.6])
 2/64  
 1/64
 38+22+2+1
+
+
+
 ######################
 eco.hot <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoXhot_5_8.csv", sep=",", header=T)
-#eco.hot <- as.data.frame(eco.hot)
-#eco.hot <- as.matrix(eco.hot)
 
-#eco.hot <- rbind(eco.hot$IDs[1:10],eco.hot$hotspot_FULL[1:10],eco.hot$hotspot_HI_ABUN[1:10])
-#
-#eco.hot <- cbind(eco.hot[,1:2], eco.hot[,5], eco.hot[,7:6], eco.hot[,4], eco.hot[,9], eco.hot[,3], eco.hot[,8], eco.hot[,10])
-#
-#eco.hot <- eco.hot[2:3,]
-#colnames(eco.hot) <- c(1:10)
+
 
 eco.hot <- as.matrix(eco.hot[,2:NCOL(eco.hot)])
 head(eco.hot)
-
+colnames(eco.hot) <- c("","","","","","","","","","")
 ## 900 500
-png("C:/Users/Localadmin/Google Drive/figs/ecoXhot.png",width=800,height=500)
-barplot(eco.hot, main=" ", #cex=2,
-        xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
-        col=c("white","lightblue","firebrick3"), beside=TRUE, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
-        legend = c("Contiguous U.S.","Richness hotspot","Abundance hotspot"), 
-        args.legend = list(x="topright", bty="n", cex=2.2))
-dev.off()
 
 
-png("C:/Users/Localadmin/Google Drive/figs/ecoXhot2.png",width=1300,height=470)
-barplot(eco.hot[1:2,], main=" ", #cex=2,
-        xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
-        col=c("white","lightblue" ), cex=2, beside=TRUE#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
-        #legend = c("Contiguous U.S.","Richness hotspot","Abundance hotspot"), 
-        #args.legend = list(x="topright", bty="n", cex=2.2)
-)
-dev.off()
-
-png("C:/Users/Localadmin/Google Drive/figs/ecoXhot3.png",width=1300,height=470)
-barplot(eco.hot, main=" ", #cex=2,
-        xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
-        col=c("white","lightblue","firebrick3"), beside=TRUE#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
-        #legend = c("Contiguous U.S.","Richness hotspot","Abundance hotspot"), 
-        #args.legend = list(x="topright", bty="n", cex=2.2)
-)
-dev.off()
-
-png("C:/Users/Localadmin/Google Drive/figs/ecoXhot5.png",width=1000,height=625)
-barplot(eco.hot*100, main=" ", ylim=c(0,100), #cex=2,
-        xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=3, cex.axis=2, cex.main=2,
+pdf("C:/Users/Localadmin/Google Drive/figs/EcoregionComp.pdf",width=168/25.4,height=200/25.4)
+par(mar = c(14, 5, 2, 2))
+barplot(eco.hot*100, main=" ", ylim=c(0,100), cex.lab=1.25, #cex=2,
+        ylab= "Percent of area in each ecoregion (%)", xlab= "", cex.axis=1, 
         col=c("white","lightblue","firebrick3"), beside=TRUE,#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
-        legend = c("Contiguous U.S.","Richness hotspot","Abundance hotspot"), 
-        args.legend = list(x="topright", bty="n", cex=4)
+        legend = c("Contiguous U.S.","Richness hotspots","Abundance hotspots"), 
+        args.legend = list(x="topright", bty="n", cex=1.4)#,
+        #args.axis = list(side=1, las=2)
 )
+
+
+axis(side=1, tck=0, at=c(-1,40), label=c("", ""))
+
+abline(h=0, lwd=2)
+#abline(v=0, lwd=2)
+
+mtext("Eastern Temperate Forests   ", side=1, las=2, at=c(2.35,-40), cex=1.2)
+mtext("Great Plains   ", side=1, las=2, at=c(6.35,-40), cex=1.2)
+mtext("North American Deserts   ", side=1, las=2, at=c(10.35,-40), cex=1.2)
+mtext("NW Forested Mountains   ", side=1, las=2, at=c(14.35,-40), cex=1.2)
+mtext("Northern Forests   ", side=1, las=2, at=c(18.35,-40), cex=1.2)
+mtext("Mediterranean California   ", side=1, las=2, at=c(22.35,-40), cex=1.2)
+mtext("Temperate Sierras   ", side=1, las=2, at=c(26.35,-40), cex=1.2)
+mtext("Marine West Coast Forests   ", side=1, las=2, at=c(30.35,-40), cex=1.2)
+mtext("Southern Semiarid Highlands   ", side=1, las=2, at=c(34.35,-40), cex=1.2)
+mtext("Tropical Wet Forests   ", side=1, las=2, at=c(38.35,-40), cex=1.2)
+dev.off()
+
+
+#barplot(eco.hot*100, main=" ", ylim=c(0,100), #cex=2,
+#        xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=3, cex.axis=2, cex.main=2, horiz=T,
+#        col=c("white","lightblue","firebrick3"), beside=TRUE,#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
+#        legend = c("Contiguous U.S.","Richness hotspot","Abundance hotspot"), 
+#        args.legend = list(x="topright", bty="n", cex=2)#,
+#        #args.axis = list(side=1, las=2)
+#)
+
+
+axis(las=2)
 abline(h=0)
 dev.off()
 
@@ -400,7 +403,7 @@ eco.hot2
 
 
 ####################################
-######making a pretty table
+###### making a pretty table
 ####################################
 
 ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv", header = T, sep = ",", quote= "\"", 
@@ -448,9 +451,9 @@ colnames(tab)<-"code"
 tab$species <- "BLOOP"
 tab$occ_cells <- -999
 tab$abun_cells <- -999
-tab$AUC <-" "
+tab$AUC <- " "
 tab$mess <- " "
-tab$kappa <-" "
+tab$kappa <- " "
 
 tab$b2 <- " "
 tab$b5 <- " "
@@ -950,32 +953,40 @@ for (i in 1:length(tab$code)){
   
   
   tab$mess[i]      <- as.character(round((100-ordsums$MESSgn10[ordsums$species.code==tab$code[i]]*100), 1))
+  
+  if(as.numeric(tab$mess[i]) < 0.1 & as.numeric(tab$mess[i]) > 0) {
+    tab$mess[i] <- "<0.1"
+  }
+  
+  
   if( as.numeric(tab$mess[i]) > 10){
     tab$mess[i] <- paste0(tab$mess[i],"^")
   }
   
+  
+  
   tab$rangekm[i]   <- as.character(round(ordsums$areaSQKM_5_7[ordsums$species.code==tab$code[i]]/1000000, 1))
-  if(as.numeric(tab$rangekm[i] < 0.1)){
+  if(as.numeric(tab$rangekm[i]) < 0.1 & as.numeric(tab$rangekm[i]) > 0){
     tab$rangekm[i] <- "<0.1"
   }
   
   tab$rangeP[i]    <- as.character(round(ordsums$estab_US[ordsums$species.code==tab$code[i]]*100, 1))
-  if(as.numeric(tab$rangeP[i] < 0.1)){
+  if(as.numeric(tab$rangeP[i]) < 0.1 & as.numeric(tab$rangeP[i]) > 0){
     tab$rangeP[i] <- "<0.1"
   }
   
   tab$impackm[i]   <- as.character(round(ordsums$hiAbunSQKM_5_7[ordsums$species.code==tab$code[i]]/1000000, 1))
-  if(as.numeric(tab$impackm[i] < 0.1)){
+  if(as.numeric(tab$impackm[i]) < 0.1 & as.numeric(tab$impackm[i]) > 0){
     tab$impackm[i] <- "<0.1"
   }
   
   tab$impacP[i]    <- as.character(round(ordsums$impac_estab[ordsums$species.code==tab$code[i]]*100, 1))
-  if(as.numeric(tab$impacP[i] < 0.1)){
+  if(as.numeric(tab$impacP[i]) < 0.1 & as.numeric(tab$impacP[i]) > 0){
     tab$impacP[i] <- "<0.1"
   }
   
   tab$infilling[i] <- as.character(round(ordsums$infilling[ordsums$species.code==tab$code[i]]*100, 1))
-  if(ordsums$infilling[ordsums$species.code==tab$code[i]]*100 < 0.1 & !is.na(ordsums$infilling[ordsums$species.code==tab$code[i]])){
+  if(ordsums$infilling[ordsums$species.code==tab$code[i]]*100 < 0.1 & ordsums$infilling[ordsums$species.code==tab$code[i]]*100 > 0 & !is.na(ordsums$infilling[ordsums$species.code==tab$code[i]])){
     tab$infilling[i] <- "<0.1"
   }
   if(i<71){
@@ -1252,3 +1263,73 @@ dev.off()
 
 
 hist(ordsums$l1o2*100, col="light blue")
+
+
+
+##################
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+library(RColorBrewer)
+
+compare <- raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc")
+proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+compare <- projectRaster(compare, crs="+init=epsg:5070")
+
+eco <- readOGR(dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco", stringsAsFactors = F)
+proj4string(eco) <- "+init=epsg:5070"
+
+extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+#proj4string(extentShape) <-"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+extentShape <- spTransform(extentShape,"+init=epsg:5070")
+
+D <- (as.data.frame(compare))
+head(D)
+
+#D$hotspot_compare2 <- "FILLER"
+#summary(as.facto)
+D$hotspot_compare2[D$hotspot_compare>.7 & D$hotspot_compare <1.3 & !is.na(D$hotspot_compare) ] <- "Abundance hotspot"
+D$hotspot_compare2[D$hotspot_compare>1.7 & D$hotspot_compare <2.3 & !is.na(D$hotspot_compare) ] <- "Both hotspots"
+D$hotspot_compare2[D$hotspot_compare>3.7 & D$hotspot_compare <4.3 & !is.na(D$hotspot_compare) ] <- "Richness hotspot"
+D$hotspot_compare2[D$hotspot_compare>2.7 & D$hotspot_compare <3.3 & !is.na(D$hotspot_compare) ] <- "Not hotspot"
+
+
+
+
+summary(as.factor(D$hotspot_compare2))
+#D$hotspot_compare2 <- as.factor(D$hotspot_compare2)
+
+D$hotspot_compare2 <- ordered(D$hotspot_compare2, levels = c("Abundance hotspot", "Both hotspots", "Richness hotspot", "Not hotspot"))
+str(D$hotspot_compare2)
+
+compare <- raster(nrows=nrow(compare),ncols=ncol(compare),ext=extent(compare),vals=D$hotspot_compare2, crs=crs(extentShape))
+#raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
+#str(compare$layer@data)
+#compare <- raster(nrows=nrow(compare),ncols=ncol(compare),ext=extent(compare),vals=as.numeric(D))
+
+install.packages("latticeExtra")
+library(laticeExtra)
+library(sp)
+
+spplot(compare, col.regions= c("orangered2","darkslateblue","deepskyblue1", "grey98"))
+       #sp.layout=sp.polygons(extentShape, fill="blue"))
+
+plot(compare, col= c("orangered2","darkslateblue","deepskyblue1", "grey98"))
+
+#unique(D$hotspot_compare)
+#plot(compare$hotspot_compare2)
+
+compare$hotspot_compare2<- as.factor(compare$hotspot_compare)
+pdf("C:/Users/Localadmin/Google Drive/figs/compare.png",width=168/25.4,height=100/25.4)
+
+
+
+spplot(compare$hotspot_compare2, col=c("orangered2","darkslateblue","grey98", "deepskyblue1") )
+#plot(compare, col=c("transparent",adjustcolor(c("black"),.15), "transparent", "transparent"), add=T, box=F, axes=F, legend=F)
+#plot(extentShape, col="transparent",lwd=2,add=T)
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+plot(eco,add=T,col="transparent",lwd=2)
+dev.off()
+
