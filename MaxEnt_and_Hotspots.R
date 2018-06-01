@@ -2835,6 +2835,8 @@ maxentRange <- spTransform(maxentRange,"+init=epsg:5070")
 #install.packages('maps')
 library(GISTools)
 library(maps)
+
+
 ###############
 ### THESIS FIGS YES THIS ONE
 ###############
