@@ -1272,6 +1272,8 @@ library(raster)
 library(maptools)
 library(rgeos)
 library(RColorBrewer)
+library(laticeExtra)
+library(sp)
 
 compare <- raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc")
 proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
@@ -1281,55 +1283,243 @@ eco <- readOGR(dsn="C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SD
 proj4string(eco) <- "+init=epsg:5070"
 
 extentShape = readOGR(dsn = "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
-#proj4string(extentShape) <-"+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 extentShape <- spTransform(extentShape,"+init=epsg:5070")
 
-D <- (as.data.frame(compare))
-head(D)
 
-#D$hotspot_compare2 <- "FILLER"
-#summary(as.facto)
-D$hotspot_compare2[D$hotspot_compare>.7 & D$hotspot_compare <1.3 & !is.na(D$hotspot_compare) ] <- "Abundance hotspot"
-D$hotspot_compare2[D$hotspot_compare>1.7 & D$hotspot_compare <2.3 & !is.na(D$hotspot_compare) ] <- "Both hotspots"
-D$hotspot_compare2[D$hotspot_compare>3.7 & D$hotspot_compare <4.3 & !is.na(D$hotspot_compare) ] <- "Richness hotspot"
-D$hotspot_compare2[D$hotspot_compare>2.7 & D$hotspot_compare <3.3 & !is.na(D$hotspot_compare) ] <- "Not hotspot"
+#####################################
+
+#D <- (as.data.frame(compare))
+#head(D)
+#
+#D$hotspot_compare2[D$hotspot_compare>.7 & D$hotspot_compare <1.3 & !is.na(D$hotspot_compare) ] <- "Abundance hotspot"
+#D$hotspot_compare2[D$hotspot_compare>1.7 & D$hotspot_compare <2.3 & !is.na(D$hotspot_compare) ] <- "Both hotspots"
+#D$hotspot_compare2[D$hotspot_compare>3.7 & D$hotspot_compare <4.3 & !is.na(D$hotspot_compare) ] <- "Richness hotspot"
+#D$hotspot_compare2[D$hotspot_compare>2.7 & D$hotspot_compare <3.3 & !is.na(D$hotspot_compare) ] <- "Not hotspot"
+#
+#summary(as.factor(D$hotspot_compare2))
+#
+#D$hotspot_compare2 <- ordered(D$hotspot_compare2, levels = c("Abundance hotspot", "Both hotspots", "Richness hotspot", "Not hotspot"))
+#str(D$hotspot_compare2)
+#
+#compare <- raster(nrows=nrow(compare),ncols=ncol(compare),ext=extent(compare),vals=D$hotspot_compare2, crs=crs(compare))
+#compare$hotspot_compare2<- as.factor(compare$hotspot_compare)
+#####################################
+#install.packages('plot3D')
+library(plot3D)
+library(GISTools)
+library(maps)
 
 
+plot(compare, col= c("orangered2","darkslateblue", "grey98","deepskyblue1"), axes=F, box=F, legend=F, #mar=c(5, 0, 4, 10))
+     xlim=c(-2.3e+06, 5e+06))
+
+legend(x=2e+06, y=2000000, legend=c("Richness hotspot", "Abundance hotspot", "Both hotspots", "Not hotspot"),
+       col=c("deepskyblue","darkslateblue","orangered2", "grey98"),bty="n", xpd=T,
+       pch=c(15,15, 15, 15), pt.cex=3)
+legend(x=2e+06, y=2000000, legend=c("Richness hotspot", "Abundance hotspot", "Both hotspots", "Not hotspot"),
+       col=c("black","black","black", "black"),bty="n", xpd=T,
+       pch=c(0,0,0,0), pt.cex=3)
 
 
-summary(as.factor(D$hotspot_compare2))
-#D$hotspot_compare2 <- as.factor(D$hotspot_compare2)
-
-D$hotspot_compare2 <- ordered(D$hotspot_compare2, levels = c("Abundance hotspot", "Both hotspots", "Richness hotspot", "Not hotspot"))
-str(D$hotspot_compare2)
-
-compare <- raster(nrows=nrow(compare),ncols=ncol(compare),ext=extent(compare),vals=D$hotspot_compare2, crs=crs(extentShape))
-#raster(nrows=nrow(rich),ncols=ncol(rich),ext=extent(rich),vals=vals)
-#str(compare$layer@data)
-#compare <- raster(nrows=nrow(compare),ncols=ncol(compare),ext=extent(compare),vals=as.numeric(D))
-
-install.packages("latticeExtra")
-library(laticeExtra)
-library(sp)
-
-spplot(compare, col.regions= c("orangered2","darkslateblue","deepskyblue1", "grey98"))
-       #sp.layout=sp.polygons(extentShape, fill="blue"))
-
-plot(compare, col= c("orangered2","darkslateblue","deepskyblue1", "grey98"))
-
-#unique(D$hotspot_compare)
-#plot(compare$hotspot_compare2)
-
-compare$hotspot_compare2<- as.factor(compare$hotspot_compare)
 pdf("C:/Users/Localadmin/Google Drive/figs/compare.png",width=168/25.4,height=100/25.4)
+spplot(compare$hotspot_compare, col=c("orangered2","darkslateblue","grey98", "deepskyblue1") )
 
-
-
-spplot(compare$hotspot_compare2, col=c("orangered2","darkslateblue","grey98", "deepskyblue1") )
-#plot(compare, col=c("transparent",adjustcolor(c("black"),.15), "transparent", "transparent"), add=T, box=F, axes=F, legend=F)
-#plot(extentShape, col="transparent",lwd=2,add=T)
 map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.7,bg="transparent")
 north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
 plot(eco,add=T,col="transparent",lwd=2)
 dev.off()
+
+
+plot(compare)
+bbox(compare)
+abline(h=185177)
+abline(h=3281388)
+abline(v=-2921970, col="blue")
+abline(v=-2946360)
+plot(extentShape, mar=c(-20,-20,-20,-20))
+
+extent(extentShape)
+bbox(extentShape)
+plot(compare)
+abline(v=-2358781)
+abline(v=2258381.8)
+abline(h=310447)
+abline(h=3166167)
+
+
+pdf("C:/Users/Localadmin/Google Drive/figs/test2.pdf", width=4.5, height=3)
+plot(comp2, mar=c(0,0,0,0), cex=0.01)
+#spplot(maxentRange, asp=1, mar=c(0,0,0,0))
+dev.off()
+
+comp2 <- crop(compare, extent(extentShape))
+plot(comp2)
+
+
+library(sp)
+e <- as(raster::extent(-2200000, 2100000, 250000, 2900000), "SpatialPolygons")
+proj4string(e) <- "+init=epsg:5070"
+plot(e)
+plot(comp2, add=T, xpd=T)
+plot()
+
+plot(comp2)
+
+
+pdf("C:/Users/Localadmin/Google Drive/figs/test3.pdf", width=6, height=9)
+par(mfrow=c(3,1))
+plot(extentShape)
+plot(extentShape)
+plot(extentShape)
+dev.off()
+
+
+pdf("C:/Users/Localadmin/Google Drive/figs/test4.pdf", width=3, height=4.5)
+par(mfrow=c(3,1), mai=c(0,0,0,0))
+plot(extentShape)
+plot(extentShape)
+plot(extentShape)
+dev.off()
+
+pdf("C:/Users/Localadmin/Google Drive/figs/test4.pdf", width=3, height=4.5)
+par(mfrow=c(3,1), mai=c(0,0,0,.5))
+plot(extentShape)
+plot(extentShape)
+plot(extentShape)
+dev.off()
+
+
+
+#plot(bbox(extentShape))
+############################
+##### Three panel monster
+############################
+abunpts <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv",
+                      sep=",", header=T, stringsAsFactors = F)
+head(abunpts)
+abunpts <- abunpts[abunpts$species=="BRPA4",]
+coordinates(abunpts) <- c(5,4)
+
+occ.pts <- read.table("C:/Users/Localadmin/Documents/MaxEnt_modeling/species/BRPA4.csv", sep=",", stringsAsFactors = F, header=T)
+str(occ.pts)
+coordinates(occ.pts) <- c(2,3)
+
+
+proj4string(occ.pts) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(abunpts) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+occ.pts <- spTransform(occ.pts, "+init=epsg:5070")
+abunpts <- spTransform(abunpts, "+init=epsg:5070")
+
+occ.ran <- occ.pts[sample(1:nrow(occ.pts), 130),]
+abun.ran <- abunpts[sample(1:nrow(abunpts), 50),]
+
+maxentRange <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+names(maxentRange) <- "layer"
+maxentRange <- rasterToPolygons(maxentRange, fun=function(layer){layer > 0}, na.rm=T, dissolve=T)
+proj4string(maxentRange) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+maxentRange <- spTransform(maxentRange, "+init=epsg:5070")
+
+
+bio <- stack(#"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
+  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
+  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
+  #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc")
+  "C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+
+#bio$bio_2[bio$BRPA4 == 0] <- NA
+bio$bio_8[bio$BRPA4 == 0] <- NA
+bio$nlcd_6[bio$BRPA4 == 0] <- NA
+#bio$bio_15[bio$BRPA4 == 0] <- NA
+
+#bio$bio_2 <- bio$bio_2/10
+#bio$bio_5 <- bio$bio_5/10
+bio$bio_8 <- bio$bio_8/10
+#bio$bio_6 <- bio$bio_6/10
+
+bio <- dropLayer(bio,3)
+
+library(dismo)
+messpts <- data.frame(cbind(abunpts$bio_8, abunpts$nlcd_6))#), abunpts$nlcd_5, abunpts$nlcd_8))
+head(messpts)
+colnames(messpts)<-c("bio_8", "nlcd6" )#, "nlcd_5", "nlcd_8")
+
+messplot <- mess(bio,messpts,full=F)
+
+messplot$mess2 <- -99
+messplot$mess2[messplot$mess < -10] <- 1
+messplot$mess2[messplot$mess >= -10] <- 3
+messplot$mess2[is.na(messplot$mess) | messplot$mess == Inf] <- NA
+proj4string(messplot)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+messplot <- projectRaster(messplot, crs="+init=epsg:5070")
+
+ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc") 
+ordinal$layer <- 0
+ordinal$layer <- ordinal$BRPA4
+ordinal$layer[ordinal$BRPA4==0] <- NA
+
+ordinal$layer2 <- 0
+ordinal$layer2[ordinal$BRPA4==3] <- 1
+ordinal$layer2[ordinal$BRPA4 != 3 | is.na(ordinal$BRPA4)] <- NA
+proj4string(ordinal)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+ordinal <- projectRaster(ordinal, crs="+init=epsg:5070")
+
+options(scipen=999)
+
+
+pdf("C:/Users/Localadmin/Google Drive/figs/3panel.pdf",width=168/25.4,height=230/25.4)
+par(mfrow=c(3,1), mai=c(0,0,0,1.5))
+
+#par(mfrow=c(3,1))
+plot(extentShape, lwd=1.5, col="grey94", asp=1)
+plot(maxentRange, add=T,col="deepskyblue",border="transparent", bg='transparent')
+plot(extentShape, lwd=1.5, col="transparent",add=T)
+plot(occ.pts,col="black",add=T, cex=1, lwd=1)
+plot(abunpts, pch=16, col="firebrick1", add=T, cex=1)
+legend(x=2e+06, y=2000000, legend=c("Establishment range", "Unsuitable", "Occurrence record", "Abundance record"),
+       col=c("deepskyblue","grey94","black", "firebrick1"),bty="o", xpd=T,
+       pch=c(15,15, 3, 16), pt.cex=c(3.5,3.5,1.5,1.5), cex=1.5, title="MaxEnt predictions")
+legend(x=2e+06, y=2000000, legend=c("Establishment range", "Unsuitable", "Occurrence record", "Abundance record"),
+       col=c("black","black","black", "firebrick1"),bty="n", xpd=T,
+       pch=c(0,0, 3, 16), pt.cex=c(3.5,3.5,1.5,1.5), cex=1.5, title="MaxEnt predictions")
+text(x=-2350000, y=3120000,"(a)", cex=2)
+
+
+#plot(extentShape, lwd=1.5, col="transparent",asp=1)
+plot(extentShape, col="grey96",lwd=1.5)
+plot(messplot$mess2, add=T, col=c("firebrick2","slategray2"),box=F,legend=F, axes=F)
+plot(extentShape, col="transparent",lwd=1.5,add=T)
+text(x=-2350000, y=3120000,"(b)", cex=2)
+legend(x=2e+06, y=2000000, legend=c("Analog", "Non-analog", "Unsuitable               "),
+       col=c("slategray2","firebrick3","grey96"),bty="o", xpd=T,
+       pch=c(15,15, 15), pt.cex=c(3.5,3.5,3.5), cex=1.5, title="MESS results")
+legend(x=2e+06, y=2000000, legend=c("Analog", "Non-analog", "Unsuitable               "),
+       col=c("black","black","black" ),bty="n", xpd=T,
+       pch=c(0,0,0), pt.cex=c(3.5,3.5,3.5), cex=1.5, title="MESS results")
+
+
+plot(extentShape, lwd=1.5, col="grey99")
+plot(ordinal$layer, add=T, col= c("lightgoldenrod","orange","firebrick3"), legend=F)
+plot(extentShape, col="transparent", lwd=1.5, add=T) 
+legend(x=2e+06, y=2000000, legend=c("High (impact range) ", "Medium", "Low", "Unsuitable"),
+       col=c("firebrick2","orange","lightgoldenrod","grey99"),bty="o", xpd=T,
+       pch=c(15,15, 15), pt.cex=c(3.5,3.5,3.5), cex=1.5, title="Abundance predictions")
+legend(x=2e+06, y=2000000, legend=c("High (impact range) ", "Medium", "Low", "Unsuitable"),
+       col=c("black","black","black", "black"),bty="o", xpd=T,
+       pch=c(0,0,0,0), pt.cex=c(3.5,3.5,3.5), cex=1.5, title="Abundance predictions")
+text(x=-2350000, y=3120000,"(c)", cex=2)
+map.scale(x=-2.5e+06,y=800000,ratio=F,relwidth=0.15,cex=0.75,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+
+dev.off()
+
+
+
 
