@@ -4,7 +4,7 @@
 #   updated: 5/25/2018
 
 
-ordsums <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", sep=",", header=T, stringsAsFactors = F)
+ordsums <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", sep=",", header=T, stringsAsFactors = F)
 
 
 mean(ordsums$infilling[ordsums$USE==1 & !is.na(ordsums$infilling)])
@@ -55,30 +55,85 @@ summary(M2)
 
 
 #par(mfrow=c(2,1))
-png("C:/Users/Localadmin/Google Drive/figs/samplesize.png",width=700,height=500)
-plot(ordsums$areaSQKM_5_7[ordsums$USE==1]~ordsums$thinned_occ[ordsums$USE==1], pch=19, col="medium blue", cex.lab=1.3,
-     xlab="sample size", ylab= "ranges size (square km)")
-points(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$no.pts[ordsums$USE==1], pch="+", cex=2,col="firebrick2")
+#png("C:/Users/Localadmin/Google Drive/figs/samplesize.png",width=700,height=500)
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/samplesize.pdf",width=110/25.4,height=85/25.4, bg="transparent")
+par(mai=c(.5,.5,.1,1.3))
+plot(ordsums$areaSQKM_5_7[ordsums$USE==1]~ordsums$thinned_occ[ordsums$USE==1], pch=20, col="medium blue", cex.lab=0.8, cex.axis= 0.5,
+     xlab="Sample size", ylab= expression("Range size"~(km^2)), cex.main=0.001, mgp=c(1.3,.4,0))
+points(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$no.pts[ordsums$USE==1], pch="+", cex=1,col="firebrick2")
 abline(M$coefficients[1],M$coefficients[2], col="darkblue", lwd=2)
 abline(M2$coefficients[1],M2$coefficients[2], col="firebrick3", lwd=2)
+
+points(8300,3200000,pch=19,col="medium blue",xpd=1)
+points(8300,2200000,pch="+",col="firebrick2",xpd=1, cex=1.5)
+
+text(8500,3200000, "Establishment", pos=4, xpd=1, cex=.65)
+text(8500,3000000, "range", pos=4, xpd=1, cex=.65)
+text(8500,2200000, "Impact range", pos=4, xpd=1, cex=.65)
+
 dev.off()
 
-png("C:/Users/Localadmin/Google Drive/figs/estab_imp2.png",width=1000,height=480, bg="transparent")
+
+
+
+#Possible figure sizes: single column = 79mm, 2/3rd column = 110mm, double column = 168mm, maximum height of figure = 230mm.
+M3 <- lm(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1])
+#bottom, left, top, right
+
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/estab_imp2.pdf",width=110/25.4,height=75/25.4, bg="transparent")
+#par(mai=c(0.4,0.4,0.1,0.1))#, mar=c(0,0,0,0))
+# bottom, left, top, right
+par(mar=c(2.5,2.5,1,1))
 options(scipen = 999)
-plot(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1],pch=19, cex.lab=2,
-     xlab= "Establishment range size (square km)", ylab= "Impact range size (square km)", cex.axis=2, bg="transparent")
-#M3 <- lm(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1])
-#abline(M3$coefficients[1],M3$coefficients[2], col="blue", lwd=2) 
+plot(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1],pch=20, cex=1, cex.axis= 0.5, cex.lab=0.8,
+     xlab= expression("Establishment range size"~(km^2)), ylab= expression("Impact range size"~(km^2)), bg="transparent", mgp=c(1.4,.4,0))
+abline(M3$coefficients[1],M3$coefficients[2], col="blue", lwd=1) 
+
+summary(M3)
+text(3500000,1000000,"y = 0.14x + 41573.62", col="dark blue",pos=4, xpd=1, cex=.7)
+text(3500000,870000,"adjusted R  = 0.22", col="dark blue",pos=4, xpd=1, cex=.7)
+text(4350000,900000, "2", col="dark blue", pos=4, xpd=1,cex=0.3)
+
+
+
 dev.off()
 #summary(M3)
 
-plot(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1],pch=19, cex.lab=2,
-     xlab= "Establishment range size (square km)", ylab= "Impact range size (square km)", cex.axis=2, bg="transparent")
-points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="ALJU"]~ordsums$areaSQKM_5_7[ordsums$species.code=="ALJU"], col="orange", pch=16)
-points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="PUMOL"]~ordsums$areaSQKM_5_7[ordsums$species.code=="PUMOL"], col="red", pch=16)
-points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="ONAC"]~ordsums$areaSQKM_5_7[ordsums$species.code=="ONAC"], col="green", pch=16)
+#### CORRELATION between full range and abundance range INSTEAD ######
+ordsums <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv", sep=",", header=T, stringsAsFactors = F)
+hist(ordsums$hiAbunSQKM_5_7[ordsums$USE==1])
+hist(ordsums$areaSQKM_5_7[ordsums$USE==1])
 
-##########################
+hist(log(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]))
+hist(log(ordsums$areaSQKM_5_7[ordsums$USE==1]))
+## non-normal distribution, variances are not the same?
+
+ordsums70 <- ordsums[ordsums$USE==1,]
+## there are ties in data (can't calculate p-value for spearman)
+cor.test(ordsums70$areaSQKM_5_7,ordsums70$hiAbunSQKM_5_7, method="kendall")
+## tau = 0.46
+## p = 1.905e * 10^-8 = .00000001905
+
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/estab_imp2_correlation.pdf",width=110/25.4,height=75/25.4, bg="transparent")
+#par(mai=c(0.4,0.4,0.1,0.1))#, mar=c(0,0,0,0))
+# bottom, left, top, right
+par(mar=c(2.5,2.5,1,1))
+options(scipen = 999)
+plot(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1],pch=20, cex=1, cex.axis= 0.5, cex.lab=0.8,
+     xlab= expression("Establishment range size"~(km^2)), ylab= expression("Impact range size"~(km^2)), bg="transparent", mgp=c(1.4,.4,0))
+
+text(3500000,1000000,"Kendall's tau = 0.46", col="dark blue",pos=4, xpd=1, cex=.7)
+text(3500000,870000,"p-value = 1.9 x 10", col="dark blue",pos=4, xpd=1, cex=.7)
+text(4930000,900000, "-8", col="dark blue", pos=4, xpd=1,cex=0.4)
+
+dev.off()
+#plot(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1],pch=19, cex.lab=2,
+#     xlab= "Establishment range size (square km)", ylab= "Impact range size (square km)", cex.axis=2, bg="transparent")
+#points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="ALJU"]~ordsums$areaSQKM_5_7[ordsums$species.code=="ALJU"], col="orange", pch=16)
+#points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="PUMOL"]~ordsums$areaSQKM_5_7[ordsums$species.code=="PUMOL"], col="red", pch=16)
+#points(ordsums$hiAbunSQKM_5_7[ordsums$species.code=="ONAC"]~ordsums$areaSQKM_5_7[ordsums$species.code=="ONAC"], col="green", pch=16)
+
+########################## TRAIT COMPOSITION ######################
 all <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/master list.csv" , header = T, sep = ",", quote= "\"", 
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 summary(as.factor(all$L48_present))
@@ -94,14 +149,14 @@ all <- all[all$habit != "aquatic",] #1088
 all <- all[!((!is.na(all$HI) | !is.na(all$AK)) & all$Number.of.States==1 & (all$list == "USDA" | all$list == "") & is.na(all$Federal.Noxious==1)),]
 ## 1078
 
-all$habit[all$NewCode=="TRSE"] <- "tree"
+all$habit[all$NewCode=="TRSE"] <- "tree" ## from USDA PLANTS database
 #summary(as.factor(all$habit))
 all <- all[ !is.na(all$habit) & all$habit != "",] ## 1045
 #summary(as.factor(all$duration_final))
 #hist(as.numeric(as.factor(all$duration_final)))
 #1052 with trait data
 write.table(all, "C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv", sep=",", row.names=F)
-traits <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv" , header = T, sep = ",", quote= "\"", 
+traits <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv" , header = T, sep = ",", quote= "\"", 
                      comment.char= "", stringsAsFactors = F, strip.white = T)
 
 
@@ -110,48 +165,18 @@ traits$common.name[(traits$NewCode %in% ordsums$species.code[ordsums$USE==0 & (o
 ## perennial pepperweed
 traits$habit[traits$common.name=="poison hemlock, poison-hemlock" ]
 traits$common.name[(traits$NewCode %in% ordsums$species.code[ordsums$USE==0 & (ordsums$habit=="forb_herb" | ordsums$habit =="grass") & ordsums$duration_final =="Perennial" & (ordsums$kappaP >0.05 | ordsums$kappa < 0)])]
-## poison hemlock
 
-
-summary(as.factor(traits$habit))
-summary(as.factor(traits$duration_final))
-
-####################################################
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", header = T, sep = ",", quote= "\"", 
+ordsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv", header = T, sep = ",", quote= "\"", 
                       comment.char= "", stringsAsFactors = F, strip.white = T)
 head(ordsums)
 str(ordsums)
 summary(ordsums)
 hist(ordsums$AUC)
-#ordsums$kappa <- as.numeric(ordsums$kappa)
-##ordsums$kappaP <- as.numeric(ordsums$kappaP)
-#ordsums$MESSgn10 <- as.numeric(ordsums$MESSgn10)
-#ordsums$AUC <- as.numeric(ordsums$AUC)
-
-#ordsums$habit <- "filler"
-#ordsums$duration <- "filler"
-#
-#for (i in 143:155){
-#  if(ordsums$AUC[i] > .7 & ordsums$kappa[i] > 0 & ordsums$kappaP[i] <0.05 & ordsums$MESSgn10[i] > .9){
-#    ordsums$USE[i] <- 1
-#  } else {
-#    ordsums$USE[i] <- 0 
-#  }
-#  
-#  ordsums$habit[i] <- traits$habit[traits$NewCode == ordsums$species.code[i]]
-#  ordsums$duration[i] <- traits$duration_final[traits$NewCode == ordsums$species.code[i]]
-#  print(i)
-#  }
-#summary(as.factor(ordsums$USE))
-#ordsums$habit[142]<-"tree"
-#ordsums$duration[142]<-"Perennial"
 55/64
-
 summary(as.factor(ordsums$duration[ordsums$USE==1]))
 summary(as.factor(ordsums$habit[ordsums$USE==1]))/70
 
 #traits <- read.csv("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/all.csv", header=T,stringsAsFactors = F)
-
 ordsums$habit <- ordered(ordsums$habit, levels=c("forb_herb","grass", "vine","tree", "shrub_subshrub", "MULTIPLE", "palms", "cactus"))
 traits$habit <- ordered(traits$habit, levels=c("forb_herb","grass", "vine","tree", "shrub_subshrub", "MULTIPLE", "palms", "cactus"))
 #summary(as.factor(ordsums$USE))
@@ -188,32 +213,52 @@ durations3 <- durations3/nrow(ordsums[!is.na(ordsums$aic) & ordsums$USE==1,])
 durations <- rbind(durations,durations2,durations3)
 colnames(durations) <- c( "perennial", "biennial", "annual", "multiple")
 
+colnames(habits) <- c("","","","","","","","")
+colnames(durations) <- c("","","","" )
 
-png("C:/Users/Localadmin/Google Drive/figs/habitsPROP.png",width=1000,height=400)
-barplot(habits*100, main="habit composition", ylim=c(0,100),#cex=2,
-        xlab="Habit", ylab= "Percent of species (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
+
+
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/traits.pdf",width=110/25.4,height=110/25.4)
+par(mfrow=c(2,1), mai=c(0.3,0.7,0.49,0.2))
+
+barplot(habits*100, main="", ylim=c(0,100), #cex=.75,
+        xlab="Habit", ylab= " ", cex.axis=.70,
         col=c("white","lightblue","mediumblue"), beside=TRUE, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
         legend = c("all species","data-sufficient species", "species post-screening"), 
-        args.legend = list(x="topright", bty="n", cex=2),
+        args.legend = list(x="topright", bty="n", cex=.8),
         axes=T)
 abline(h=0)
-dev.off()
+text(-5, 125,"(a)",xpd=1, cex=1.2)
+text(2.4,-12,"Forb",xpd=1, cex=0.75)
+text(6.5,-12,"Grass",xpd=1, cex=0.75)
+text(10.6,-12,"Vine",xpd=1, cex=0.75)
+text(14.4,-12,"Tree",xpd=1, cex=0.75)
+text(18.4,-12,"Shrub",xpd=1, cex=0.75)
+text(22.7,-12.5,"Multiple",xpd=1, cex=0.75) #22.9 is too high
+text(26.7,-12,"Palm",xpd=1, cex=0.75)
+text(30.5,-12,"Cactus",xpd=1, cex=0.75)
+mtext("Percent of species (%)", side=2,line=2, at=c(50))
 
 
-png("C:/Users/Localadmin/Google Drive/figs/durationsPROP.png",width=1000,height=400)
-barplot(durations*100, main="Duration composition" , ylim=c(0,100),
-        xlab="Duration", ylab= "Percent of species (%)", cex.lab=1.5, cex.axis=1.5, cex.main=2,
+barplot(durations*100, main="" , ylim=c(0,100),
+        xlab="Duration", ylab= " ", cex.axis=.70, cex.main=2,
         col=c("white","lightblue","mediumblue"), beside=TRUE, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
         legend = c("all species","data-sufficient species", "species post-screening"), 
-        args.legend = list(x="topright", bty="n",cex=2))
+        args.legend = list(x="topright", bty="n",cex=.8))
 abline(h=0)
+text(-2,125,"(b)",xpd=1, cex=1.2)
+mtext("Percent of species (%)", side=2,line=2, at=c(50))
+text(2.5,-12,"Perennial",xpd=1, cex=0.75)
+text(6.5,-12,"Biennial",xpd=1, cex=0.75)
+text(10.5,-12,"Annual",xpd=1, cex=0.75)
+text(14.5,-12,"Multiple",xpd=1, cex=0.75)
 dev.off()
 ## 1045 out of 1078
 
 #######################################
 
 
-###################
+################### model screening ####
 ordsums2 <- ordsums[ordsums$AUC >0.7,]
 146/155 # 94%
 ordsums2 <- ordsums2[ordsums2$MESSgn10 > .90,]
@@ -239,8 +284,7 @@ length(ordsums$species.code[ordsums$USE ==1 & ordsums$kappa > 0.2])
 26/64
 
 
-#############
-##infilling series
+###############infilling series###########
 
 
 inf<-read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/infilling.csv",  header = T, sep = ",", quote= "\"", 
@@ -318,8 +362,8 @@ length(ordsums2$kappa[ordsums2$kappa >0.8 & ordsums2$kappa >0.6])
 
 
 
-######################
-eco.hot <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ecoXhot_5_8.csv", sep=",", header=T)
+###################### ECOREGION COMPOSITION #####
+eco.hot <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ecoXhot_5_8.csv", sep=",", header=T)
 
 
 
@@ -329,12 +373,12 @@ colnames(eco.hot) <- c("","","","","","","","","","")
 ## 900 500
 
 
-pdf("C:/Users/Localadmin/Google Drive/figs/EcoregionComp.pdf",width=168/25.4,height=200/25.4)
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/EcoregionComp2.pdf",width=168/25.4,height=200/25.4)
 par(mar = c(14, 5, 2, 2))
 barplot(eco.hot*100, main=" ", ylim=c(0,100), cex.lab=1.25, #cex=2,
         ylab= "Percent of area in each ecoregion (%)", xlab= "", cex.axis=1, 
         col=c("white","lightblue","firebrick3"), beside=TRUE,#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
-        legend = c("Contiguous U.S.","Richness hotspots","Abundance hotspots"), 
+        legend = c("Coterminuous U.S.","Establishment hotspots","Abundance hotspots"), 
         args.legend = list(x="topright", bty="n", cex=1.4)#,
         #args.axis = list(side=1, las=2)
 )
@@ -355,22 +399,8 @@ mtext("Temperate Sierras   ", side=1, las=2, at=c(26.35,-40), cex=1.2)
 mtext("Marine West Coast Forests   ", side=1, las=2, at=c(30.35,-40), cex=1.2)
 mtext("Southern Semiarid Highlands   ", side=1, las=2, at=c(34.35,-40), cex=1.2)
 mtext("Tropical Wet Forests   ", side=1, las=2, at=c(38.35,-40), cex=1.2)
+
 dev.off()
-
-
-#barplot(eco.hot*100, main=" ", ylim=c(0,100), #cex=2,
-#        xlab="", ylab= "Percent of area in each ecoregion (%)", cex.lab=3, cex.axis=2, cex.main=2, horiz=T,
-#        col=c("white","lightblue","firebrick3"), beside=TRUE,#, #bty="L", #mar=c(1,1,1,1), oma=c(3,5,0,0),
-#        legend = c("Contiguous U.S.","Richness hotspot","Abundance hotspot"), 
-#        args.legend = list(x="topright", bty="n", cex=2)#,
-#        #args.axis = list(side=1, las=2)
-#)
-
-
-axis(las=2)
-abline(h=0)
-dev.off()
-
 
 
 
@@ -378,14 +408,9 @@ dev.off()
 
 
 eco.hot <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/hot_eco.csv", sep=",", header=T)
-
 eco.hot <- rbind(eco.hot$IDs[1:10],eco.hot$hotspot_FULL[1:10],eco.hot$hotspot_HI_ABUN[1:10])
-
 eco.hot <- cbind(eco.hot[,1:2], eco.hot[,5], eco.hot[,7:6], eco.hot[,4], eco.hot[,9], eco.hot[,3], eco.hot[,8], eco.hot[,10])
-
 eco.hot <- eco.hot[2:3,]
-#colnames(eco.hot) <- c(1:10)
-
 
 eco.hot1 <- c(.32,.291,.184,.11,.041,.021,.013,.010,.008,.002)
 eco.hot1b <- c(.8,.045,.035,.025,.12,.001,.0008,.008,.0001,0)
@@ -1521,5 +1546,226 @@ north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
 dev.off()
 
 
+########
+ordsums <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_8_2018b.csv", sep=",", header=T, stringsAsFactors = F)
+head(ordsums)
+splist <- data.frame(ordsums$species.code[ordsums$USE==1])
+colnames(splist) <- c("name")
+
+library(rgdal)
+library(raster)
+
+eco <- readOGR(dsn="C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco")
+#plot(eco)
+#eco@data
+eco$ID2 <- as.character(eco$IDs)
 
 
+eco <- eco[eco$ID2=="MARINE WEST COAST FOREST",]
+eco <- spTransform(eco, "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs")
+plot(eco)
+proj4string(eco)
+
+splist$mwcf <- "filler"
+
+for (i in 1:length(splist$name)){
+  sp <- raster(paste0("C:/Users/mwone/Desktop/HI_ABUN/",splist$name[i],".asc"))
+  proj4string(sp) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+  
+  sp <- mask(crop(sp,eco),eco)
+  
+  sp <- as.data.frame(sp)
+  colnames(sp) <- c("sp")
+  splist$mwcf[i] <- NROW(sp[sp$sp==1 & !is.na(sp$sp),])/NROW(sp[!is.na(sp$sp),])
+  print(i)
+}
+
+#sp <- raster(paste0("C:/Users/mwone/Desktop/HI_ABUN/","PUMOL",".asc"))
+hist(as.numeric(splist$mwcf))
+
+splist$name[as.numeric(splist$mwcf)>0.4]
+
+
+plot(sp)
+
+splist
+
+plot(raster("C:/Users/mwone/Desktop/HI_ABUN/AIAL.asc"))
+plot(raster("C:/Users/mwone/Desktop/HI_ABUN/ARMI2.asc"))
+plot(raster("C:/Users/mwone/Desktop/HI_ABUN/IRPS.asc"))
+plot(raster("C:/Users/mwone/Desktop/HI_ABUN/LIVU2.asc")) #*****
+plot(raster("C:/Users/mwone/Desktop/HI_ABUN/TAVU.asc")) ## Both NE and NW
+plot(raster("C:/Users/mwone/Desktop/HI_ABUN/CEDI3.asc")) 
+
+
+plot(raster("C:/Users/mwone/Desktop/HI_ABUN/EUES.asc")) 
+
+
+plot(raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcd/nlcd3.asc"))
+plot(raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcd/nlcd4.asc")) # L+ ****
+plot(raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcd/nlcd5.asc")) # Q-
+plot(raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcd/nlcd6.asc")) # L+ great plains
+plot(raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcd/nlcd7.asc")) #
+plot(raster("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/nlcd/nlcd8.asc"))
+
+
+
+
+################### HOTSPOR COMPARISON FIGURE
+install.packages("GISTools")
+install.packages("maps")
+
+
+library(GISTools)
+library(maps)
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+
+#single column = 79mm, 2/3rd column = 110mm, double column = 168mm, maximum height of figure = 230mm.
+
+extentShape = readOGR(dsn = "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+compare <- raster("C:/Users/mwone/Desktop/asciis/hotspot_compare.asc")
+eco <- readOGR(dsn="C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco", stringsAsFactors = F)
+#proj4string(eco) <- "+init=epsg:5070"
+
+proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+compare <- projectRaster(compare, crs="+init=epsg:5070")
+
+options(scipen = 999)
+
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/compare.pdf",width=168/25.4,height=3)
+par(mai=c(0,0,0,.2)) # c(bottom, left, top, right) 
+plot(compare, col=c("orangered2","darkslateblue","grey98", "deepskyblue1"), box=F, axes=F, legend=F)
+#plot(compare, col=c("transparent",adjustcolor(c("black"),.15), "transparent", "transparent"), add=T, box=F, axes=F, legend=F)
+#plot(extentShape, col="transparent",lwd=2,add=T)
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.4,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+
+legend(x=2.0e+06, y=1950000, legend=c("Abundance hotspot", "Establishment hotspot", "Both hotspots", "Non-hotspot"),
+       col=c("orangered2","deepskyblue1","darkslateblue", "grey98"),bty="n", xpd=T,
+       pch=c(15,15,15,15), pt.cex=c(2.3,2.3,2.3,2.3), cex=.85)
+legend(x=2.0e+06, y=1950000, legend=c("Abundance hotspot", "Establishment hotspot", "Both hotspots", "Non-hotspot"),
+       col=c("black","black","black", "black"),bty="o", xpd=T,
+       pch=c(0,0,0,0), pt.cex=c(2.3,2.3,2.3,2.3), cex=.85)
+
+plot(eco,add=T,col="transparent",lwd=1)
+dev.off()
+
+
+#######################################################################
+##### double checking details of this project for clarification for
+##### JMA and BB
+
+ordsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv", header = T, sep = ",", quote= "\"", 
+                      comment.char= "", stringsAsFactors = F, strip.white = T)
+head(ordsums)
+
+nrow(ordsums[ordsums$rule5broke==1 & ordsums$USE==1,])
+nrow(ordsums[ordsums$rule5broke==0 & ordsums$USE==1,])
+
+# Perennial tree
+
+ordsums[ordsums$species.code=="BRPA4",]
+
+median(ordsums$kappa[ordsums$USE==1])
+ordsums$kappa[ordsums$species.code=="BRPA4"]
+
+hist(ordsums$impac_estab[ordsums$USE==1])
+ordsums$impac_estab[ordsums$species.code=="BRPA4"] #large impact range
+
+median(ordsums$no.pts.abun[ordsums$USE==1])
+ordsums$no.pts.abun[ordsums$species.code=="BRPA4"] #few points
+
+median(ordsums$thinned_occ[ordsums$USE==1])
+ordsums$thinned_occ[ordsums$species.code=="BRPA4"]
+
+median(ordsums$no.terms[ordsums$USE==1])
+ordsums$no.terms[ordsums$species.code=="BRPA4"]
+
+median(ordsums$areaSQKM_5_7[ordsums$USE==1])
+ordsums$areaSQKM_5_7[ordsums$species.code=="BRPA4"]
+
+mean(ordsums$range_size[ordsums$USE==1])
+ordsums$range_size[ordsums$species.code=="BRPA4"]
+
+median(ordsums$MESSgn10[ordsums$USE==1])
+ordsums$MESSgn10[ordsums$species.code=="BRPA4"]
+hist(ordsums$MESSgn10[ordsums$USE==1])
+
+ordsums$no.terms[5]
+ordsums$no.vars[5]
+ordsums$formu[5]
+
+length(ordsums$species.code[ordsums$USE==1 & (ordsums$no.vars > ordsums$no.pts.abun)])
+length(ordsums$species.code[ordsums$USE==1 & ((ordsums$no.terms-2) > ordsums$no.vars)])
+58/70
+
+
+
+#### do all sources of duration/form need to be cited?
+traits <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/all_contig.csv" , header = T, sep = ",", quote= "\"", 
+                     comment.char= "", stringsAsFactors = F, strip.white = T)
+
+summary(traits$source)
+
+ordsums$source <- "BLANK"
+
+for (i in 65:155){
+ordsums$source[i] <- traits$source[traits$NewCode==ordsums$species.coSde[i]]
+print(i)
+}
+
+ordsums$species.code[64]
+head(traits)
+unique(traits$source)
+unique(ordsums$source)
+
+## maximum abun richness and full richness
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+library(RColorBrewer)
+
+hi_abun_richness <- raster("C:/Users/mwone/Downloads/richness_map_HI_ABUN.asc")
+full_richness  <- raster("C:/Users/mwone/Downloads/richness_map_FULL.asc")
+head(hi_abun_richness)
+hi_abun <- as.data.frame(hi_abun_richness$richness_map_HI_ABUN)
+summary(hi_abun) #max 16
+full <- as.data.frame(full_richness$richness_map_FULL)
+summary(full) #max 52
+
+  mean(ordsums70$thinned_occ)
+  mean(ordsums70$no.pts)
+  mean(ordsums70$AUC)
+1-mean(ordsums70$MESSgn10)
+  mean(ordsums70$kappa)
+  mean(ordsums70$kappaP)
+  mean(ordsums70$areaSQKM_5_7)/(10^6)
+  mean(ordsums70$range_prop_area)
+  mean(ordsums70$hiAbunSQKM_5_7)/(10^6)
+  mean(ordsums70$hiAbun_prop_range)
+  mean(ordsums70$infilling)
+  mean(ordsums70$l1o2)
+
+  median(ordsums70$thinned_occ)
+  median(ordsums70$no.pts)
+  median(ordsums70$AUC)
+1-median(ordsums70$MESSgn10)
+  median(ordsums70$kappa)
+  median(ordsums70$kappaP)
+  median(ordsums70$areaSQKM_5_7)/(10^6)
+  median(ordsums70$range_prop_area)
+  median(ordsums70$hiAbunSQKM_5_7)/(10^6)
+  median(ordsums70$hiAbun_prop_range)
+  median(ordsums70$infilling)
+  median(ordsums70$l1o2)
+
+
+1-ordsums$MESSgn10[ordsums$species.code=="PARE3"]
+1-ordsums70$MESSgn10[ordsums70$species.code=="CHMA2"]
+
+ordsums <- ordsums[order(-ordsums$USE,ordsums$species.code),]
+write.table(data.frame(ordsums$species.code,ordsums$MESS_abun2range_SEL),"C://Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MESS_for_pretty_table.csv", sep=",", row.names=F)
