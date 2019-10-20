@@ -3,7 +3,7 @@
 ##   last modified: 12/19/2017
 #    Mitch O'Neill
 
-setwd("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/")
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
 
 library(rgdal)
 library(raster)   ## for Raster climate data

@@ -120,7 +120,7 @@ pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/estab_i
 par(mar=c(2.5,2.5,1,1))
 options(scipen = 999)
 plot(ordsums$hiAbunSQKM_5_7[ordsums$USE==1]~ordsums$areaSQKM_5_7[ordsums$USE==1],pch=20, cex=1, cex.axis= 0.5, cex.lab=0.8,
-     xlab= expression("Establishment range size"~(km^2)), ylab= expression("Impact range size"~(km^2)), bg="transparent", mgp=c(1.4,.4,0))
+     xlab= expression("Establishment range size"~(km^2)), ylab= expression("Abundance range size"~(km^2)), bg="transparent", mgp=c(1.4,.4,0))
 
 text(3500000,1000000,"Kendall's tau = 0.46", col="dark blue",pos=4, xpd=1, cex=.7)
 text(3500000,870000,"p-value = 1.9 x 10", col="dark blue",pos=4, xpd=1, cex=.7)
@@ -1297,10 +1297,11 @@ library(raster)
 library(maptools)
 library(rgeos)
 library(RColorBrewer)
-library(laticeExtra)
+#install.packages('laticeExtra')
+#library(laticeExtra)
 library(sp)
 
-compare <- raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc")
+compare <- raster("C:/Users/mwone/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc")
 proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 compare <- projectRaster(compare, crs="+init=epsg:5070")
 
@@ -1419,13 +1420,27 @@ dev.off()
 ############################
 ##### Three panel monster
 ############################
-abunpts <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv",
+library(rgdal)
+library(raster)
+library(maptools)
+library(rgeos)
+library(RColorBrewer)
+#install.packages('laticeExtra')
+#library(laticeExtra)
+library(sp)
+library(reshape2)
+library(dismo)
+
+abunpts <- read.table("file:///C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv",
                       sep=",", header=T, stringsAsFactors = F)
 head(abunpts)
 abunpts <- abunpts[abunpts$species=="BRPA4",]
 coordinates(abunpts) <- c(5,4)
+plot(abunpts)
 
-occ.pts <- read.table("C:/Users/Localadmin/Documents/MaxEnt_modeling/species/BRPA4.csv", sep=",", stringsAsFactors = F, header=T)
+
+##MaxEntModeling/species
+occ.pts <- read.table("C:/Users/mwone/Downloads/BRPA4.csv", sep=",", stringsAsFactors = F, header=T)
 str(occ.pts)
 coordinates(occ.pts) <- c(2,3)
 
@@ -1434,30 +1449,39 @@ proj4string(occ.pts) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_d
 proj4string(abunpts) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 occ.pts <- spTransform(occ.pts, "+init=epsg:5070")
 abunpts <- spTransform(abunpts, "+init=epsg:5070")
+proj4string(occ.pts)
 
 occ.ran <- occ.pts[sample(1:nrow(occ.pts), 130),]
 abun.ran <- abunpts[sample(1:nrow(abunpts), 50),]
 
-maxentRange <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+#maxentRange <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+maxentRange <- raster("C:/Users/mwone/Downloads/BRPA4.asc")
 names(maxentRange) <- "layer"
 maxentRange <- rasterToPolygons(maxentRange, fun=function(layer){layer > 0}, na.rm=T, dissolve=T)
 proj4string(maxentRange) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 maxentRange <- spTransform(maxentRange, "+init=epsg:5070")
 
+install.packages("prettymapr")
+library(prettymapr)
+plot(maxentRange)
+addscalebar(plotunit="m", plotepsg=5070, widthhint=0.2,
+            unitcategory="metric", htin = 0.1,
+            style="bar", bar.cols=c("black","white"), lwd=1,
+            linecol="black", tick.cex = 0.7, labelpadin=0.08)
 
 bio <- stack(#"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
-  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
+  "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/bio_8.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
-  "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
+  "C:/Users/mwone/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
   #"C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc")
-  "C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/BRPA4.asc")
+  "C:/Users/mwone/Downloads/BRPA4.asc")
 
 #bio$bio_2[bio$BRPA4 == 0] <- NA
 bio$bio_8[bio$BRPA4 == 0] <- NA
@@ -1471,7 +1495,7 @@ bio$bio_8 <- bio$bio_8/10
 
 bio <- dropLayer(bio,3)
 
-library(dismo)
+#library(dismo)
 messpts <- data.frame(cbind(abunpts$bio_8, abunpts$nlcd_6))#), abunpts$nlcd_5, abunpts$nlcd_8))
 head(messpts)
 colnames(messpts)<-c("bio_8", "nlcd6" )#, "nlcd_5", "nlcd_8")
@@ -1485,7 +1509,9 @@ messplot$mess2[is.na(messplot$mess) | messplot$mess == Inf] <- NA
 proj4string(messplot)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
 messplot <- projectRaster(messplot, crs="+init=epsg:5070")
 
-ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc") 
+#ordinal <- raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/BRPA4.asc") 
+ordinal <- raster("C:/Users/mwone/Downloads/ordinal/BRPA4.asc") 
+
 ordinal$layer <- 0
 ordinal$layer <- ordinal$BRPA4
 ordinal$layer[ordinal$BRPA4==0] <- NA
@@ -1498,9 +1524,15 @@ ordinal <- projectRaster(ordinal, crs="+init=epsg:5070")
 
 options(scipen=999)
 
+extentShape = readOGR(dsn = "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+extentShape <- spTransform(extentShape, "+init=epsg:5070")
 
-pdf("C:/Users/Localadmin/Google Drive/figs/3panel.pdf",width=168/25.4,height=230/25.4)
-par(mfrow=c(3,1), mai=c(0,0,0,1.5))
+
+
+
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/3panel_6_27_19.pdf",width=168/25.4,height=230/25.4)
+#par(mfrow=c(3,1), mai=c(0,0,0,1.5))
+par(mfrow=c(3,1), mai=c(0,0,0,1.8))
 
 #par(mfrow=c(3,1))
 plot(extentShape, lwd=1.5, col="grey94", asp=1)
@@ -1533,17 +1565,36 @@ legend(x=2e+06, y=2000000, legend=c("Analog", "Non-analog", "Unsuitable         
 plot(extentShape, lwd=1.5, col="grey99")
 plot(ordinal$layer, add=T, col= c("lightgoldenrod","orange","firebrick3"), legend=F)
 plot(extentShape, col="transparent", lwd=1.5, add=T) 
-legend(x=2e+06, y=2000000, legend=c("High (impact range) ", "Medium", "Low", "Unsuitable"),
+legend(x=2e+06, y=2000000, legend=c("High (abundance range) ", "Medium", "Low", "Unsuitable"),
        col=c("firebrick2","orange","lightgoldenrod","grey99"),bty="o", xpd=T,
        pch=c(15,15, 15), pt.cex=c(3.5,3.5,3.5), cex=1.5, title="Abundance predictions")
-legend(x=2e+06, y=2000000, legend=c("High (impact range) ", "Medium", "Low", "Unsuitable"),
+legend(x=2e+06, y=2000000, legend=c("High (abundance range) ", "Medium", "Low", "Unsuitable"),
        col=c("black","black","black", "black"),bty="o", xpd=T,
        pch=c(0,0,0,0), pt.cex=c(3.5,3.5,3.5), cex=1.5, title="Abundance predictions")
 text(x=-2350000, y=3120000,"(c)", cex=2)
-map.scale(x=-2.5e+06,y=800000,ratio=F,relwidth=0.15,cex=0.75,bg="transparent")
-north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+#map.scale(x=-2.5e+06,y=800000,ratio=F,relwidth=0.15,cex=0.75,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+
+addnortharrow(pos = "bottomleft", padin = c(0.15, 0.5), scale = .6,
+              lwd = 1, border = "black", cols = c("grey99", "black"),
+              text.col = "black")
+
+addscalebar(plotunit="m", plotepsg=5070, widthhint=0.2,
+            unitcategory="metric", htin = 0.07,
+            style="bar", bar.cols=c("black","grey99"), lwd=1,
+            linecol="black", labelpadin=0.08, label.cex=1)
 
 dev.off()
+
+
+
+
+
+
+
+
+
+
 
 
 ########
@@ -1769,3 +1820,578 @@ summary(full) #max 52
 
 ordsums <- ordsums[order(-ordsums$USE,ordsums$species.code),]
 write.table(data.frame(ordsums$species.code,ordsums$MESS_abun2range_SEL),"C://Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/MESS_for_pretty_table.csv", sep=",", row.names=F)
+
+
+
+
+####
+#### contingency tables
+setwd("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/")
+
+ordsums <- read.table("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_31_2018.csv", header = T, sep = ",", quote= "\"", 
+                      comment.char= "", stringsAsFactors = F, strip.white = T)
+ordsums <- ordsums[ordsums$USE==1,]
+
+## edd <- 
+edd <- read.table("edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
+                  comment.char= "", stringsAsFactors = F, strip.white = T)
+library(ordinal)
+library(reshape2)
+library(irr)
+
+ordsums$a<- -999
+ordsums$b<- -999
+ordsums$c<- -999
+ordsums$d<- -999
+ordsums$e<- -999
+ordsums$f<- -999
+ordsums$g<- -999
+ordsums$h<- -999
+ordsums$i<- -999
+ordsums$check <-  -999
+ordsums$kappa2 <-  -999
+
+for (i in 1:70){
+
+  ## make species dataset
+  species <- edd[edd$species == ordsums$species.code[i],]## subset to species of the iteration
+  #species <- data.frame(cbind(species$abundance, species$latitude, species$longitude)) ## select only variables needed to save computation time
+  species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3))
+  
+  #ordsums$formu[ordsums$species.code==ordsums$species.code[i]]
+   ## make model
+  M <- clm(formula(ordsums$formu[ordsums$species.code==ordsums$species.code[i]]), data = species)
+  
+  pm <- predict(M, species, type="class")
+  pm <- melt(pm)
+  pm <- pm[,1]
+  #length(pm
+  pm <- data.frame(cbind(species$abundance,pm))
+  colnames(pm) <- c("observed", "predicted")
+  head(pm)
+
+  ordsums$a[i] <- nrow(pm[pm$observed == 1 & pm$predicted == 1,])/nrow(pm)
+  ordsums$b[i] <- nrow(pm[pm$observed == 1 & pm$predicted == 2,])/nrow(pm)
+  ordsums$c[i] <- nrow(pm[pm$observed == 1 & pm$predicted == 3,])/nrow(pm)
+  ordsums$d[i] <- nrow(pm[pm$observed == 2 & pm$predicted == 1,])/nrow(pm)
+  ordsums$e[i] <- nrow(pm[pm$observed == 2 & pm$predicted == 2,])/nrow(pm)
+  ordsums$f[i] <- nrow(pm[pm$observed == 2 & pm$predicted == 3,])/nrow(pm)
+  ordsums$g[i] <- nrow(pm[pm$observed == 3 & pm$predicted == 1,])/nrow(pm)
+  ordsums$h[i] <- nrow(pm[pm$observed == 3 & pm$predicted == 2,])/nrow(pm)
+  ordsums$i[i] <- nrow(pm[pm$observed == 3 & pm$predicted == 3,])/nrow(pm)
+  ordsums$check[i] <- ordsums$a[i] + ordsums$b[i] + ordsums$c[i] + ordsums$d[i] + ordsums$e[i] + ordsums$f[i] + ordsums$g[i] + ordsums$h[i] + ordsums$i[i] 
+  #head(ordsums$a)
+  
+  ##############  predicted
+  ############## 1    2    3
+  ### observed ###############
+  ###    1       A    B    C
+  ###    2       D    E    F
+  ###    3       G    H    I
+  
+  kappa <- kappa2(pm)
+  #ordsums$kappaP[s] <- kappa$p.value
+  ordsums$kappa2[i] <- kappa$value
+  print(i)
+
+}
+
+ordsums$check2 <- ordsums$kappa2/ordsums$kappa
+summary(ordsums$check2)
+summary(ordsums$check)
+
+hist(ordsums$a)
+hist(ordsums$b)
+hist(ordsums$c)
+hist(ordsums$d)
+hist(ordsums$e)
+hist(ordsums$f)
+hist(ordsums$g)
+hist(ordsums$h)
+hist(ordsums$i)
+
+######
+mean(ordsums$a)
+mean(ordsums$b)
+mean(ordsums$c)
+mean(ordsums$d)
+mean(ordsums$e)
+mean(ordsums$f)
+mean(ordsums$g)
+mean(ordsums$h)
+mean(ordsums$i)
+
+median(ordsums$a)
+median(ordsums$b)
+median(ordsums$c)
+median(ordsums$d)
+median(ordsums$e)
+median(ordsums$f)
+median(ordsums$g)
+median(ordsums$h)
+median(ordsums$i)
+
+median(ordsums$a[ordsums$kappa<.2])
+median(ordsums$b[ordsums$kappa<.2])
+median(ordsums$c[ordsums$kappa<.2])
+median(ordsums$d[ordsums$kappa<.2])
+median(ordsums$e[ordsums$kappa<.2])
+median(ordsums$f[ordsums$kappa<.2])
+median(ordsums$g[ordsums$kappa<.2])
+median(ordsums$h[ordsums$kappa<.2])
+median(ordsums$i[ordsums$kappa<.2])
+
+
+
+ordsums$no.pts[1]
+
+ordsums$prop3inAbunRange <- ordsums$i/(ordsums$c+ordsums$f+ordsums$i)
+hist(ordsums$prop3inAbunRange)
+median(ordsums$prop3inAbunRange[!is.na(ordsums$prop3inAbunRange)]) ## 0.58%
+mean(ordsums$prop3inAbunRange[!is.na(ordsums$prop3inAbunRange)]) ## .60%
+ordsums[is.na(ordsums$prop3inAbunRange),]
+
+ordsums$prop1inAbunRange <- ordsums$c/(ordsums$c+ordsums$f+ordsums$i)
+hist(ordsums$prop1inAbunRange)
+median(ordsums$prop1inAbunRange[!is.na(ordsums$prop1inAbunRange)])
+mean(ordsums$prop1inAbunRange[!is.na(ordsums$prop1inAbunRange)])
+
+ordsums$prop2inAbunRange <- ordsums$f/(ordsums$c+ordsums$f+ordsums$i)
+hist(ordsums$prop2inAbunRange)
+median(ordsums$prop2inAbunRange[!is.na(ordsums$prop2inAbunRange)])
+mean(ordsums$prop2inAbunRange[!is.na(ordsums$prop2inAbunRange)])
+
+
+ordsums$prop3inNonAbunRange <- (ordsums$g + ordsums$h)/(ordsums$a+ordsums$b+ordsums$e+ordsums$d+ordsums$g + ordsums$h)
+hist(ordsums$prop3inNonAbunRange)
+median(ordsums$prop3inNonAbunRange)
+1-mean(ordsums$prop3inNonAbunRange)
+
+
+
+##############  predicted
+############## 1    2    3
+### observed ###############
+###    1       A    B    C
+###    2       D    E    F
+###    3       G    H    I
+
+###################### 
+## true positive rate / sensitivity / recall
+## obs 3, predicted 3
+## I/ (G+H+I)
+
+ordsums$truePos <- ordsums$i/(ordsums$g+ordsums$h+ordsums$i)
+median(ordsums$truePos)
+######################
+## false positive rate
+## obs 2/1, predicted 3
+## C+F/(A-F)
+ordsums$falsePos <- (ordsums$c+ordsums$f)/(ordsums$a+ordsums$b+ordsums$c+ordsums$d+ordsums$e+ordsums$f)
+
+######################
+## True negative/ specificity
+## obs 1/2, pred 1/2
+## 1 - false positive?
+## A+B+D+E/ A-F
+ordsums$trueneg <- (ordsums$a+ordsums$b+ordsums$d+ordsums$e)/(ordsums$a+ordsums$b+ordsums$c+ordsums$d+ordsums$e+ordsums$f)
+
+######################
+## false negative
+## obs
+## G+H/ (G+H+I)
+
+ordsums$falseNeg <- (ordsums$g+ordsums$h)/(ordsums$g+ordsums$h+ordsums$i)
+
+
+ordsums$check3 <- ordsums$falsePos+ordsums$trueneg
+ordsums$check4 <- ordsums$truePos+ordsums$falseNeg
+summary(ordsums$check3)
+summary(ordsums$check4)
+
+
+median(ordsums$truePos)
+median(ordsums$falsePos)
+median(ordsums$falseNeg)
+median(ordsums$trueneg)
+
+hist(ordsums$truePos)
+hist(ordsums$falsePos)
+hist(ordsums$falseNeg)
+hist(ordsums$trueneg)
+
+
+ordsums$accuracy <- (ordsums$a+ordsums$e+ordsums$i)/ordsums$no.pts.abun
+hist(ordsums$accuracy)
+summary(ordsums$no.pts/ordsums$no.pts.abun)
+ordsums$accuracy2 <- (ordsums$a+ordsums$b+ordsums$d+ordsums$e+ordsums$i)/ordsums$no.pts
+hist(ordsums$accuracy2)
+ordsums$no.ptsCHECK <- ordsums$a+ordsums$b+ordsums$c+ordsums$d+ordsums$e+ordsums$f+ordsums$g+ordsums$h+ordsums$i
+
+ordsums$accuracy3 <- (ordsums$a+ordsums$b+ordsums$d+ordsums$e+ordsums$i)/ordsums$no.ptsCHECK
+hist(ordsums$accuracy3)
+
+
+
+
+ordsums$a <- as.character(ordsums$a*ordsums$no.pts)
+ordsums$b <- as.character(ordsums$b*ordsums$no.pts)
+ordsums$c <- as.character(ordsums$c*ordsums$no.pts)
+ordsums$d <- as.character(ordsums$d*ordsums$no.pts)
+ordsums$e <- as.character(ordsums$e*ordsums$no.pts)
+ordsums$f <- as.character(ordsums$f*ordsums$no.pts)
+ordsums$g <- as.character(ordsums$g*ordsums$no.pts)
+ordsums$h <- as.character(ordsums$h*ordsums$no.pts)
+ordsums$i <- as.character(ordsums$i*ordsums$no.pts)
+
+
+
+
+
+low <- "low"
+medium <- "medium"
+high <-  "high"
+total <- -999
+
+tab70 <- data.frame(low,medium,high, total)
+
+for (i in 6:70){
+  #######
+  low <- ordsums$species.code[i]
+  medium <- " "
+  high <- " "
+  total <- i
+  t1 <- data.frame(low,medium,high,total)
+  
+  
+  low <- ordsums$a[i]
+  medium <- ordsums$b[i]
+  high <- ordsums$c[i]
+  total <- as.numeric(low)+as.numeric(medium)+as.numeric(high)
+  t2 <- data.frame(low,medium,high,total)
+  
+  low <- ordsums$d[i]
+  medium <- ordsums$e[i]
+  high <- ordsums$f[i]
+  total <- as.numeric(low)+as.numeric(medium)+as.numeric(high)
+  t3 <- data.frame(low,medium,high,total)
+  
+  low <- ordsums$g[i]
+  medium <- ordsums$h[i]
+  high <- ordsums$i[i]
+  total <- as.numeric(low)+as.numeric(medium)+as.numeric(high)
+  t4 <- data.frame(low,medium,high,total)
+  
+  low <- as.character(as.numeric(ordsums$a[i])+as.numeric(ordsums$d[i])+as.numeric(ordsums$g[i]))
+  medium <- as.character(as.numeric(ordsums$b[i])+as.numeric(ordsums$e[i])+as.numeric(ordsums$h[i]))
+  high <- as.character(as.numeric(ordsums$c[i])+as.numeric(ordsums$f[i])+as.numeric(ordsums$i[i]))
+  total <- as.numeric(low)+as.numeric(medium)+as.numeric(high)
+  t5 <- data.frame(low,medium,high,total)
+  
+  if(total != ordsums$no.pts[i]){
+    print("aw crap")
+  }
+  
+  tab70 <- rbind(tab70,t1,t2,t3,t4,t5)
+  print(i)
+}
+
+tab70
+write.table(tab70,"C:/Users/mwone/Documents/tab70.csv", sep=",", row.names=F)
+
+
+### why didn't the scale bars just freaking work
+#######################################
+proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+compare <- projectRaster(compare, crs="+init=epsg:5070")
+
+options(scipen = 999)
+
+#pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/compare.pdf",width=168/25.4,height=3)
+#par(mai=c(0,0,0,.2)) # c(bottom, left, top, right) 
+plot(compare, col=c("orangered2","darkslateblue","grey98", "deepskyblue1"), box=F, axes=F, legend=F)
+
+
+library(SDMTools)
+
+plot(compare)
+#Scalebar(x=0,y=2000000,distance=10000)
+scalebar(d=4000000)
+
+
+#plot(compare, col=c("transparent",adjustcolor(c("black"),.15), "transparent", "transparent"), add=T, box=F, axes=F, legend=F)
+#plot(extentShape, col="transparent",lwd=2,add=T)
+map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.4,bg="transparent")
+north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+
+######################################
+### NEw three panel 06 30 2019
+
+## compare.pdf
+## abunECO
+## richECO
+#library(GISTools)
+#library(maps)
+library(rgdal)
+library(raster)
+#library(maptools)
+#library(rgeos)
+library(prettymapr)
+library(RColorBrewer)
+
+#single column = 79mm, 2/3rd column = 110mm, double column = 168mm, maximum height of figure = 230mm.
+
+extentShape = readOGR(dsn = "C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ArcFiles_2_2_2018/us_shape_2_9_2018", layer = "us_shape")
+compare <- raster("C:/Users/mwone/Downloads/hotspot_compare.asc")
+eco <- readOGR(dsn="C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/ecoregions", layer="eco", stringsAsFactors = F)
+#proj4string(eco) <- "+init=epsg:5070"
+hi_abun_richness <- raster("C:/Users/mwone/Downloads/richness_map_HI_ABUN.asc")
+full_richness  <- raster("C:/Users/mwone/Downloads/richness_map_FULL.asc")
+
+
+proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(hi_abun_richness) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+proj4string(full_richness) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+compare <- projectRaster(compare, crs="+init=epsg:5070")
+hi_abun_richness <- projectRaster(hi_abun_richness, crs="+init=epsg:5070")
+full_richness <- projectRaster(full_richness, crs="+init=epsg:5070")
+
+proj4string(eco)
+eco <- spTransform(eco, "+init=epsg:5070")
+plot(eco)
+
+proj4string(extentShape)
+extentShape <- spTransform(extentShape, "+init=epsg:5070")
+
+options(scipen = 999)
+
+
+
+
+
+
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/3panel_NEW_6_27_19.pdf",width=168/25.4,height=230/25.4)
+#par(mfrow=c(3,1), mai=c(0,0,0,1.5))
+par(mfrow=c(3,1), mai=c(0,0,0,1.8))
+
+
+plot(extentShape, lwd=1.5, col="grey94", asp=1,add=F)
+#par(mai=c(0,0,0,.2)) # c(bottom, left, top, right) 
+plot(compare, col=c("orangered2","darkslateblue","grey98", "deepskyblue1"), box=F, axes=F, legend=F, add=T)
+#plot(compare, col=c("transparent",adjustcolor(c("black"),.15), "transparent", "transparent"), add=T, box=F, axes=F, legend=F)
+#plot(extentShape, col="transparent",lwd=2,add=T)
+#map.scale(x=-2.6e+06,y=800000,ratio=F,relwidth=0.2,cex=0.4,bg="transparent")
+#north.arrow(xb=-2.4e+06,yb=1200000,len=80000,lab="N",cex=1,bg="transparent")
+
+legend(x=2.0e+06, y=1950000, legend=c("Abundance hotspot", "Establishment hotspot", "Both hotspots", "Non-hotspot"),
+       col=c("orangered2","deepskyblue1","darkslateblue", "grey98"),bty="n", xpd=T,
+       pch=c(15,15,15,15), pt.cex=c(2.3,2.3,2.3,2.3), cex=1.5)
+legend(x=2.0e+06, y=1950000, legend=c("Abundance hotspot", "Establishment hotspot", "Both hotspots", "Non-hotspot"),
+       col=c("black","black","black", "black"),bty="o", xpd=T,
+       pch=c(0,0,0,0), pt.cex=c(2.3,2.3,2.3,2.3), cex=1.5)
+
+#legend(x=2e+06, y=2000000, legend=c("Establishment range", "Unsuitable", "Occurrence record", "Abundance record"),
+#       col=c("deepskyblue","grey94","black", "firebrick1"),bty="o", xpd=T,
+#       pch=c(15,15, 3, 16), pt.cex=c(3.5,3.5,1.5,1.5), cex=1.5, title="MaxEnt predictions")
+#legend(x=2e+06, y=2000000, legend=c("Establishment range", "Unsuitable", "Occurrence record", "Abundance record"),
+#       col=c("black","black","black", "firebrick1"),bty="n", xpd=T,
+#       pch=c(0,0, 3, 16), pt.cex=c(3.5,3.5,1.5,1.5), cex=1.5, title="MaxEnt predictions")
+text(x=-2350000, y=3120000,"(a)", cex=2)
+plot(eco,add=T,col="transparent",lwd=1)
+
+######
+
+#par(mai=c(0,0,0,2.5))
+
+plot(extentShape, lwd=1.5, col="grey94", asp=1)
+plot(full_richness, col=brewer.pal(8, name="YlGnBu"), axes=F, box=F,add=T)
+plot(extentShape, lwd=2, add=T)
+plot(eco, col="transparent", add=T)
+text(x=-2350000, y=3120000,"(b)", cex=2)
+mtext(at=c(3000000,1800000), adj=1, text="Number of species", side=4, cex=1.0, srt=90)
+
+######
+
+#par(mai=c(0,0,0,3))
+
+plot(extentShape, lwd=1.5, col="grey94", asp=1)
+plot(hi_abun_richness, col=brewer.pal(8, name="YlOrRd"), axes=F, box=F,add=T) #YlOrRd
+plot(extentShape, col="transparent", lwd=2, add=T)
+plot(eco, col="transparent", add=T)
+text(x=-2350000, y=3120000,"(b)", cex=2)
+mtext(x=2500000, y= 1700000, "Number of high abundance species", cex=1.2, srt=90)
+
+######
+
+addnortharrow(pos = "bottomleft", padin = c(0.15, 0.5), 
+              scale = .6, lwd = 1, border = "black", 
+              cols = c("grey99", "black"), text.col = "black") 
+addscalebar(plotunit="m", plotepsg=5070, widthhint=0.2, unitcategory="metric",
+            htin = 0.07, style="bar", bar.cols=c("black","grey99"), lwd=1, 
+            linecol="black", labelpadin=0.08, label.cex=1)
+dev.off()
+
+
+################# figure out how many species in each hotspot type
+compare <- raster("C:/Users/mwone/Downloads/hotspot_compare.asc")
+hi_abun_richness <- raster("C:/Users/mwone/Downloads/richness_map_HI_ABUN.asc")
+full_richness  <- raster("C:/Users/mwone/Downloads/richness_map_FULL.asc")
+
+#proj4string(compare)<- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+#proj4string(hi_abun_richness) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+#proj4string(full_richness) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+
+#compare <- projectRaster(compare, crs="+init=epsg:5070")
+#hi_abun_richness <- projectRaster(hi_abun_richness, crs="+init=epsg:5070")
+#full_richness <- projectRaster(full_richness, crs="+init=epsg:5070")
+wackyStack <- stack(compare,hi_abun_richness,full_richness)
+wackyStack <- as.data.frame(wackyStack)
+
+ncell(compare)
+head(wackyStack)
+
+wackyStack <- wackyStack[!is.na(wackyStack$hotspot_compare),]
+summary(wackyStack)
+
+### 1-abun/abun 2-both/both 3-non/non 4-rich
+
+plot(wackyStack$hotspot_compare,wackyStack$richness_map_HI_ABUN) 
+### 1-abun/both 2-both/abun 3-non/rich 4-non/rich
+
+plot(wackyStack$hotspot_compare,wackyStack$richness_map_FULL)
+### 1-non/abun 2-rich/both 3-non/abun 4-non/rich
+
+### 1-abun     2-both     3-non     4-rich
+
+
+### richness hotspot
+hist(wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+mean(wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+median(wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+sd(wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+min(wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+max(wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+## 33.8
+## 34
+## 5.6
+## 25-52
+
+### abun hotspot
+hist(wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3])
+mean(wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3])   # 25.6
+median(wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3]) # 24
+sd(wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3])     # 9.4
+max(wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3]) 
+min(wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3])    #6-52
+
+
+
+
+### no. abun species
+
+## establishment
+
+hist(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+sd(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+min(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+max(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+## 4.6
+## 4
+## 2
+## 0-16
+
+### abun hotspot
+hist(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3])
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3])   # 6.1
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3]) # 6
+sd(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3])     # 1.4
+max(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3]) 
+min(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3])    #5-16
+
+
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4])
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4])
+sd(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4])
+
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 1])
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 1])
+sd(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 1])
+
+#################################
+par(mfrow=c(3,1))
+hist(wackyStack$richness_map_FULL)
+hist(wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3], xlim=c(0,52))
+hist(wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2], xlim=c(0,52))
+
+
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3]/wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3])
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2]/wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3]/wackyStack$richness_map_FULL[wackyStack$hotspot_compare < 3])
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2]/wackyStack$richness_map_FULL[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+
+
+wackyStack$prop <- wackyStack$richness_map_HI_ABUN/wackyStack$richness_map_FULL
+mean(wackyStack$prop[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+mean(wackyStack$prop[wackyStack$hotspot_compare < 3])
+#unique(wackyStack$hotspot_compare)
+sd(wackyStack$prop[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+sd(wackyStack$prop[wackyStack$hotspot_compare < 3])
+
+dev.off()
+par(mfrow=c(2,1))
+hist(wackyStack$prop[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2],xlim=c(0,1))
+hist(wackyStack$prop[wackyStack$hotspot_compare < 3], xlim=c(0,1))
+
+mean(wackyStack$prop[wackyStack$hotspot_compare == 1], xlim=c(0,1))
+median(wackyStack$prop[wackyStack$hotspot_compare == 1], xlim=c(0,1))
+### 1-abun     2-both     3-non     4-rich
+median(wackyStack$prop[wackyStack$hotspot_compare == 2] )
+median(wackyStack$prop[wackyStack$hotspot_compare == 3] )
+median(wackyStack$prop[wackyStack$hotspot_compare == 4] )
+sd(wackyStack$prop[wackyStack$hotspot_compare == 4])
+mean(wackyStack$prop[wackyStack$hotspot_compare == 1])
+
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+mean(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3])
+
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2])
+median(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3])
+
+hist(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare == 4 | wackyStack$hotspot_compare == 2], xlim = c(0,16))
+hist(wackyStack$richness_map_HI_ABUN[wackyStack$hotspot_compare < 3], xlim = c(0,16))
+
+
+
+
+############################
+## Redo bias map
+
+
+bias <- raster("C:/Users/mwone/Downloads/BIAS_avgFULL.asc")
+proj4string(bias) <- "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs"
+#plot(bias)
+
+bias <- projectRaster(bias, crs="+init=epsg:5070")
+
+options(scipen=0)
+pdf("C:/Users/mwone/Google Drive/Invasive-plant-abundance-SDM-files/figs/bias_6_30.pdf",width=168/25.4,height=4)
+par(mai=c(0,0,0,0.75))
+
+plot(extentShape, lwd=1.5, col="grey94", asp=1)
+plot(bias,col=rev(brewer.pal(8, name="YlGn")), axes=F, box=F,add=T) #YlOrRd
+plot(extentShape, col="transparent", lwd=2, add=T)
+plot(extentShape, lwd=2, add=T)
+
+addnortharrow(pos = "bottomleft", padin = c(0.15, 0.5), scale = .6,
+              lwd = 1, border = "black", cols = c("grey99", "black"),
+              text.col = "black")
+
+addscalebar(plotunit="m", plotepsg=5070, widthhint=0.2,
+            unitcategory="metric", htin = 0.07,
+            style="bar", bar.cols=c("black","grey99"), lwd=1,
+            linecol="black", labelpadin=0.08, label.cex=1)
+dev.off()
