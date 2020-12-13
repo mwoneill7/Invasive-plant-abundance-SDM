@@ -4,6 +4,14 @@
 #    Mitch O'Neill
 
 
+
+
+#### files needed
+## 1. environmental layers
+## 2. list of species ---- sp.list <- unique(speciesdata$code)
+## 3. bias file ---- should I make it in the code
+## 4. ordsums ---- should I make it in the code?
+
 edd <- read.table("file:///C:/Users/mwone/Documents/abs_pres_occbias_figs/edd_w_environmental_NEW.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 head(edd)
 
