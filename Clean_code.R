@@ -1,6 +1,7 @@
-#### Modeling abundance for terrestrial invasive plants in CONUS
-###  Mitch O'Neill, began work on this code in 2017
-##   last modified: 12/12/2020 - added more comments to clarify code
+##### Modeling abundance for terrestrial invasive plants in CONUS
+####  Created by Mitchell O'Neill, during his graduate studies at the University of New Hampshire
+###   Created: 11/10/2017
+##    Last modified: 12/13/2020
 
 #### files needed
 ## 1. environmental layers
@@ -178,7 +179,8 @@ for (i in unique(thresh$Species)){
 
 ####################################################################################
 ##### Constructing ordinal models abundance as a response to environmental variables
-setwd("Folder")
+
+setwd("Folder") ## set working directory back to main folder
 
 ######################################
 ###### create a list of formulae with
