@@ -2,23 +2,24 @@
 ###  Mitch O'Neill, began work on this code in 2017
 ##   last modified: 12/12/2020 - added more comments to clarify code
 
-
 #### files needed
-## 1. environmental layers - Environmental_Data_02_08_2018 folder
+## 1. environmental layers
 ## 3. bias file 
 ## 4. Table with each species 
 ## 5. occurence + abundance dataset
 ## 6. MaxEnt must be installed on your machine
 
-## define filepath of MaxEnt on computer
+setwd("Folder") ## set the working directory to the downloaded folder
+
+## define filepath of MaxEnt on your machine
 maxent.location='C:/Users/Localadmin/Documents/MaxEnt/maxent.jar'
 
 
-## define directory of environmental data for fitting
-environmental=paste("environmentallayers=","C:/Users/Localadmin/Documents/MaxEnt_modeling/envi_ASCIIs",sep="")
+## define directory of environmental data for model fitting
+environmental=paste("environmentallayers=","environmental_layers",sep="")
 
 ## species list from "ordsums"
-sp.list <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums.csv", header = T, sep = ",", 
+sp.list <- read.table("species_list.csv", header = T, sep = ",", 
                       quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
 
 spp_bias_log = paste0("java -jar ",maxent.location, 
@@ -28,16 +29,16 @@ spp_bias_log = paste0("java -jar ",maxent.location,
 for(i in 1:length(sp.list$code)){
 
   ## define point location samples (all species in one .csv), must be set up with three columns (species, lon, lat, in that order)
-  samples=paste("samplesfile=", paste("C:/Users/Localadmin/Documents/Maxent_modeling/species", 
+  samples=paste("samplesfile=", paste("species", 
                                       paste(sp.list$code[i], "csv", sep="."), sep="/"), sep="")
  
   ## create a directory for MaxEnt output (a folder with the name of the species) and set it as the output directory for MaxEnt
-  directory<- paste("C:/Users/Localadmin/Documents/MaxEnt_modeling/FINAL_OUTPUT", sp.list$code[i], sep="/")
+  directory<- paste("MAXENT_OUTPUT", sp.list$code[i], sep="/")
   dir.create(directory)
   output=paste("outputdirectory=", directory, sep="") 
   
   ## define the bias file
-  bias=paste("biasfile=","C:/Users/Localadmin/Documents/MaxEnt_modeling/BIAS_OUTPUT_FULL/BIAS_avgFULL.asc",sep="")
+  bias=paste("biasfile=","BIAS_avgFULL.asc",sep="")
   
   ## call model to run, including the settings, output directory, environmental data, invasive species data, and bias
   system(paste(spp_bias_log,output,environmental,samples,bias, "autorun"))
@@ -68,9 +69,8 @@ spp_val=data.frame("Species",15,0,"CtySppRich_Bias",100000, 100000,stringsAsFact
 colnames(spp_val)=c("Species", "Run", "X95_MTP_thresh_logistic","Bias", "test_n","train_n")
 
 
-
 ## Set directory to maxent output
-setwd("C:/Users/Localadmin/Documents/MaxEnt_modeling/FINAL_OUTPUT/")
+setwd("MAXENT_OUTPUT/")
 
 
 for (i in spp){        #loop through each species
@@ -142,15 +142,18 @@ samples=cbind(test, train)
 samples1=subset(samples, select=c("Species","test_n","train_n"))
 samples1$total_n=samples1$test_n + samples1$train_n
 
+
+
 ## save table of thresholds and table of sample sizes
-write.table(thresh, file= "C:/Users/Localadmin/Documents/Maxent_modeling/summaries/thresholds.csv" ,sep=",",row.names=F)
-write.table(samples1,file= "C:/Users/Localadmin/Documents/Maxent_modeling/summaries/sample_sizes.csv" ,sep=",",row.names=F) 
+write.table(thresh, file= "thresholds.csv" ,sep=",",row.names=F)
+write.table(samples1,file= "sample_sizes.csv" ,sep=",",row.names=F) 
 
 #########################################################################
-### Create binary maps for each species
+###### Create binary maps for each species based on 95% MTP
 #########################################################################
 
-###### create binary rasters based on 95% MTP
+###### create directory to store these binary rasters
+dir.create("Binary_asciis")
 
 for (i in unique(thresh$Species)){  
   
@@ -165,7 +168,7 @@ for (i in unique(thresh$Species)){
   d1@data[d1@data < thresh$CtySppRich_Bias[thresh$Species==i]]=0
   
   ## write out new binary ascii file, named by species
-  out_file=paste("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/",i,".asc",sep="")
+  out_file=paste("Binary_asciis/",i,".asc",sep="")
   write.asciigrid(d1, out_file)
   
   rm(d1) #garbage cleaning
@@ -173,12 +176,9 @@ for (i in unique(thresh$Species)){
   print(i) #track progress
 }
 
-### ^^^^^ based on MaxEnt_and_Hotspots.R lines 1-303, after ordinalSDM, pick up at line 561 of maxent and hotspots
-
-
 ####################################################################################
 ##### Constructing ordinal models abundance as a response to environmental variables
-
+setwd("Folder")
 
 ######################################
 ###### create a list of formulae with
@@ -240,7 +240,7 @@ rm(var.sets, combo.j, i, j, var.list) ## garbage cleaning
 colnames(formulae) <- c("formula")
 
 ## make a column for each variable to record which variables are present for each formula
-## this will make sorting easier later on ***
+## this will make sorting easier later on
 formulae$bio_2 <- sapply(formulae$formula, grepl, pattern="bio_2", fixed=T)
 formulae$bio_5 <- sapply(formulae$formula, grepl, pattern="bio_5", fixed=T)
 formulae$bio_6 <- sapply(formulae$formula, grepl, pattern="bio_6", fixed=T)
@@ -254,7 +254,7 @@ formulae$nlcd_6 <- sapply(formulae$formula, grepl, pattern="nlcd_6", fixed=T)
 formulae$nlcd_7 <- sapply(formulae$formula, grepl, pattern="nlcd_7", fixed=T)
 formulae$nlcd_8 <- sapply(formulae$formula, grepl, pattern="nlcd_8", fixed=T)
 
-## calculate number of terms (no.vars) and number of quadratic terms (no.poly) ***
+## calculate number of terms (no.vars) and number of quadratic terms (no.poly)
 formulae$no.vars <- sapply(formulae$formula, str_count, pattern="\\+")
 formulae$no.poly <- sapply(formulae$formula, str_count, pattern="poly")
 formulae$no.vars <- formulae$no.vars + formulae$no.poly + 1
@@ -266,7 +266,7 @@ edd <- read.table("edd_w_environmental.csv", header = T, sep = ",", quote= "\"",
                   comment.char= "", stringsAsFactors = F, strip.white = T)
 
 ## load species list / model summay file
-ordsums <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/species_list_4_27b.csv", header = T, sep = ",", quote= "\"", 
+ordsums <- read.table("species_list.csv", header = T, sep = ",", quote= "\"", 
                       comment.char= "", stringsAsFactors = F, strip.white = T)
 
 ## set up new columns to assign values in loop below
@@ -275,20 +275,20 @@ ordsums$pS10 <- -99
 ordsums$pI <- -99           ## p-val for intercept
 ordsums$pI10 <- -99
 ordsums$c.up <- -99         ## number of concave-up response curves
-ordsums$c.down <- -99       ## number of concave-down response curves?***
+ordsums$c.down <- -99       ## number of concave-down response curves
 ordsums$aic <- -99          ## AIC value of selected model
 ordsums$no.terms  <- -99    ## number of terms in the selected model
 ordsums$no.vars <- -99      ## number of environmental variables in selected model
 ordsums$formu <- "FILLER"   ## formula of the selected model
-ordsums$null <- -99         ## null model kappa?***
+ordsums$null <- -99         ## null model kappa
 ordsums$kappa <- -99        ## Cohen's kappa value of selected model
 ordsums$kappaP <- -99       ## p-value of the kappa
 ordsums$bin1o <- -99        ## number of observations in bin 1 (low abundance)
 ordsums$bin2o <- -99        ## number of observations in bin 2 (medium abundance)
 ordsums$bin3o <- -99        ## number of observations in bin 3 (high abundance)
-ordsums$bin1p <- -99        ## number of observations predicted into bin 1 (to calculate kappa) ***
-ordsums$bin2p <- -99        ## number of observations predicted into bin 2 (to calculate kappa) ***
-ordsums$bin3p <- -99        ## number of observations predicted into bin1 (to calculate kappa)  ***
+ordsums$bin1p <- -99        ## number of observations predicted into bin 1 (to calculate kappa) 
+ordsums$bin2p <- -99        ## number of observations predicted into bin 2 (to calculate kappa) 
+ordsums$bin3p <- -99        ## number of observations predicted into bin1 (to calculate kappa)  
 
 
 head(ordsums)
@@ -367,7 +367,6 @@ for(s in 1:155){ ## Loop through species list
       model.sel <- rbind(model.sel, model.sel.i) ## concatenate the data from this model to the table with the data for all models for the species of this iteration
     }
     
-    #***** there was an extra bracket - verify that high collinearity didnt happen? *****
   
   } else { ## if there are no variables with high correlations, then all models can be constructed
     
@@ -403,7 +402,7 @@ for(s in 1:155){ ## Loop through species list
   Msum <- coef(summary(M))
   
   ####################################
-  ##########************
+  ##########
   MsumS <- data.frame(Msum[3:nrow(Msum),]) ## 1 back to 2
   ## Slopes
   ordsums$pS[s] <- length(MsumS$Estimate[MsumS$Pr...z..>0.05])
@@ -447,7 +446,7 @@ for(s in 1:155){ ## Loop through species list
   ordsums$kappaP[s] <- kappa$p.value ## extract p-value of kappa
   ordsums$kappa[s] <- kappa$value    ## extract kappa value
   
-  ## record the number of samples predicted and observed at each abundance class ***
+  ## record the number of samples predicted and observed at each abundance class
   ordsums$bin1o[s] <- length(pm$observed[pm$observed == 1])
   ordsums$bin2o[s] <- length(pm$observed[pm$observed == 2])
   ordsums$bin3o[s] <- length(pm$observed[pm$observed == 3])
@@ -461,42 +460,42 @@ for(s in 1:155){ ## Loop through species list
 
 
 ######### Now predict abundance within establishment ranges predicted by MaxEnt
-library(maptools) #### *** confirm which packages are needed
-library(raster)   #### *** did I add packages earlier for stuff too?
-library(rgdal)    #### *** make sure I didn't need
+library(maptools) 
+library(raster)  
+library(rgdal)    
 library(colorRamps)
 library(ordinal)
 library(reshape2)
 library(rgeos)
 
 
-edd <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",",  
+edd <- read.table("edd_w_environmental.csv", header = T, sep = ",",  
                   quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
-## eddmaps abundance data (thinned) with environmental data *** INSERT CLEAN FILE HERE
+## eddmaps abundance data (thinned) with environmental data
 
 ## list of species
-spp <- ordsums$species.code ### *** maybe just use spp list in the next object made
+spp <- ordsums$species.code 
 
 ## list of selected model formulae for each species
 formulae <- data.frame(cbind(ordsums$species.code,ordsums$formu), stringsAsFactors = F)
 colnames(formulae) <- c("species","formula")
 
-edd <- edd[edd$species %in% spp,] ### *** maybe just use formulae$spp
+edd <- edd[edd$species %in% spp,] 
 ## restrict dataset only to species with ordinal models constructed
 
-## load in rasters for environmental variables *** insert here... maybe I can give it a proj4string
-bio <- stack("C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc" )
+## load in rasters for environmental variables
+bio <- stack("environmental_layers/bio_2.asc",
+             "environmental_layers/bio_5.asc",
+             "environmental_layers/bio_6.asc",
+             "environmental_layers/bio_8.asc",
+             "environmental_layers/bio_12.asc",
+             "environmental_layers/bio_15.asc",
+             "environmental_layers/nlcd_3.asc",
+             "environmental_layers/nlcd_4.asc",
+             "environmental_layers/nlcd_5.asc",
+             "environmental_layers/nlcd_6.asc",
+             "environmental_layers/nlcd_7.asc",
+             "environmental_layers/nlcd_8.asc" )
 
 
 proj4string(bio) <-  "+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs" 
@@ -508,11 +507,11 @@ summary(bioD)
 bioD[,1:4] <- bioD[,1:4]/10 ## divide bio_2 and bio_8 so that values are interpretable
 
 ## create directory for mapped abundance
-dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/")
-dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN") ## maps of abundance within range
-dir.create("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN")  ## maps of just cells predicted into high abundance (class 3)
+dir.create("ORDINAL")
+dir.create("ALL_ABUN") ## maps of abundance within range
+dir.create("HI_ABUN")  ## maps of just cells predicted into high abundance (class 3)
 
-## add fields to dataset to record the number of cells in each class as well as sumary stats *** is this needed? remove date?
+## add fields to dataset to record the number of cells in each class as well as sumary stats
 ordsums$class1_5_7 <- -99
 ordsums$class2_5_7 <- -99
 ordsums$class3_5_7 <- -99
@@ -521,7 +520,7 @@ ordsums$mode_5_7 <- -99
 ordsums$vr_5_7 <- -99
 
 
-for (i in 1:length(spp)){ ## loop through species *** spp?
+for (i in 1:length(spp)){ ## loop through species
   
   species <- edd[edd$species == spp[i],] ## subset dataset to the species of the iteration
   species$abundance <- ordered(as.factor(species$abundance), levels=c(1,2,3)) ## convert abundance to ordinal factor
@@ -529,7 +528,7 @@ for (i in 1:length(spp)){ ## loop through species *** spp?
   M <- clm(formula(formulae$formula[formulae$species==spp[i]]), data = species) 
   ## construct model using the observations and the selected formula
   
-  range <- raster(paste0("Binary_asciis/",spp[i],".asc")) ## binary rangemap from MaxEnt for the species
+  range <- raster(paste0("MAXENT_OUTPUT/Binary_asciis/",spp[i],".asc")) ## binary rangemap from MaxEnt for the species
   rangeD <- as.data.frame(range) ## dataframe to cut down on computing time
   colnames(rangeD) <- c("presence")
   
@@ -555,8 +554,8 @@ for (i in 1:length(spp)){ ## loop through species *** spp?
   ordsums$class3_5_7[i] <- length(p$abundance[p$abundance_presence == 3 & !is.na(p$abundance_presence)])/length(p$abundance[!is.na(p$presence) & p$presence==1])
   
   ## write out rasters
-  writeRaster(abun, paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/ALL_ABUN/",spp[i],".asc"),overwrite=T)
-  writeRaster(hi_abun,paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/",spp[i],".asc"),overwrite=T)
+  writeRaster(abun, paste0("ORDINAL/ALL_ABUN/",spp[i],".asc"),overwrite=T)
+  writeRaster(hi_abun,paste0("ORDINAL/HI_ABUN/",spp[i],".asc"),overwrite=T)
 
   ## calculate median class and other summary stats
   ordsums$medianClass_5_7[i] <- median(p$abundance_presence[p$presence ==1 & !is.na(p$presence)])
@@ -602,7 +601,7 @@ for (i in 1:length(spp)){ ## loop through species *** spp?
     hi_abunD <- as.data.frame(hi_abun)
   
     
-  ## calculate infilling *** do we need this?
+  ## calculate infilling 
   pts <- species
   coordinates(pts) <- c(5,4)
   ext <- extract(hi_abun, pts) ## extract climate values to points
@@ -637,10 +636,6 @@ library(rgdal)
 library(raster)
 library(dismo) ## for mess()
 
-
-ordsums <- read.table("file:///C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/old_ordsums/ordsums_4_19_2018_updated.csv", header = T, sep = ",",  
-                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
-
 ## Construct a table of the best fit models for each species
 ## Create new field for each variable - whether not included in each model
 formulae <- data.frame(cbind(ordsums$species.code,ordsums$formu), stringsAsFactors = F)
@@ -664,18 +659,18 @@ head(formulae)
 spp <- formulae$species
 
 ## load environmental variables
-bio <- stack("C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_2.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_5.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_6.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_8.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_12.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/bio_15.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_3.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_4.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_5.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_6.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_7.asc",
-             "C:/Users/Localadmin/Documents/Environmental_Data_2_8_2018/nlcd_8.asc" )
+bio <- stack("environmental_layers/bio_2.asc",
+             "environmental_layers/bio_5.asc",
+             "environmental_layers/bio_6.asc",
+             "environmental_layers/bio_8.asc",
+             "environmental_layers/bio_12.asc",
+             "environmental_layers/bio_15.asc",
+             "environmental_layers/nlcd_3.asc",
+             "environmental_layers/nlcd_4.asc",
+             "environmental_layers/nlcd_5.asc",
+             "environmental_layers/nlcd_6.asc",
+             "environmental_layers/nlcd_7.asc",
+             "environmental_layers/nlcd_8.asc" )
 
 ## adjust temperature values, which are served multiplied by 10
 bio$bio_2 <- bio$bio_2/10
@@ -688,7 +683,7 @@ cellIDs <- raster(nrows=nrow(bio), ncols=ncol(bio), ext=extent(bio), vals=seq(1:
 
 bio <- stack(bio,cellIDs) # "add the cell ID's to the stack of environmental variables
 
-occ.list <- list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/species", full=T)
+occ.list <- list.files("species", full=T)
 ## list of occurence datasets for each species
   
 ## read in the dataset for each species, and concatenate into a single file of all species data
@@ -725,7 +720,7 @@ ext <- extract(bio, occ_thinned)  ## extract environmental variables at each poi
 occ_thinned <-cbind(occ_thinned,ext) ## add extracted values to each record
 
 
-abun_all <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
+abun_all <- read.table("edd_w_environmental.csv", header = T, sep = ",", quote= "\"", 
                        comment.char= "", stringsAsFactors = F, strip.white = T)
 ## call in abundance dataset, subset to relevant columns for mess analysis - species and location
 abun_all <- data.frame(cbind(abun_all$species,abun_all$longitude,abun_all$latitude), stringsAsFactors = F)
@@ -759,7 +754,7 @@ for (i in 1:length(spp)){
     occ <- data.frame(occ_thinned[occ_thinned$PLANT_CODE==spp[i],])
     occ_vars <- occ[,3:(NCOL(occ)-4)] ## make table of environ veriables for the occurence dataset
     
-    range <- raster(paste("C:/Users/Localadmin/Documents/Maxent_modeling/Binary_asciis/",spp[i],".asc",sep=""))
+    range <- raster(paste("MAXENT_OUTPUT/Binary_asciis/",spp[i],".asc",sep=""))
     names(range) <- "suitability"
     
     #################### get rid of cells outside study area (set to NA) #####
@@ -1001,7 +996,6 @@ for (i in 1:length(spp)){
 ordsums$MESS_abun2range_SEL[ordsums$MESS_abun2range_SEL== -99] <- NA
 summary(ordsums)
 
-# Line 1520
 
 ################################################
 ########### HOTSPOT ANALYSIS ###################
@@ -1012,10 +1006,6 @@ library(rgdal)
 library(ordinal)
 library(reshape2)
 
-
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5epv_up_5_7_2018.csv", header = T, sep = ",",  
-                      quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)
-
 head(ordsums)
 ordsums2 <- ordsums[ordsums$kappa > 0 & ordsums$kappaP < 0.05 & ordsums$AUC > 0.7 & ordsums$MESS_abun2range_SEL > 0.9,]
 ### filter out species for which the best-fit models did not meet th criteria
@@ -1025,17 +1015,18 @@ colnames(filenames) <- "x"
 
 ### Create map of number of overlapping abundance ranges per grid cell
 ######################################################################
-filenames$files <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL/HI_ABUN/", filenames$x,".asc")
+filenames$files <- paste0("ORDINAL/HI_ABUN/", filenames$x,".asc")
 ### Re-generate the filename for each species high abundance range map
 
 ldf=stack(filenames$files) #stack the abundance range maps
 overlap=calc(ldf, sum) #calculate the sum of overlapping abundance ranges for each grid cell
 plot(overlap)
 
-out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc"
+
+out_file="richness_map_HI_ABUN.asc"
 writeRaster(overlap, filename=out_file,overwrite=T) #Write out map with number of high abundance species in ach grid cell
 
-pdf(file="C:/Users/Localadmin/Documents/Maxent_modeling/summaries/figures/richness_map_HI_ABUN.pdf",width=11)
+pdf(file="richness_map_HI_ABUN.pdf",width=11)
 colors=rev(heat.colors(100))
 spplot(overlap, col.regions=colors)
 dev.off()## export pdf of abundance map
@@ -1043,16 +1034,16 @@ dev.off()## export pdf of abundance map
 
 ### Create map of number of overlapping establishment ranges per grid cell
 ######################################################################
-filenames$files2 <- paste0("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", filenames$x,".asc")
+filenames$files2 <- paste0("MAXENT_OUTPUT/Binary_asciis/", filenames$x,".asc")
 ### Re-generate the filename for each species establishment range map
 ldf=stack(filenames$files2)
 overlap=calc(ldf, sum) #calculate the sum of overlapping establishment ranges for each grid cell
 plot(overlap)
 
-out_file="C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_FULL.asc"
+out_file="richness_map_FULL.asc"
 writeRaster(overlap, filename=out_file, overwrite=T)
 
-pdf(file="C:/Users/Localadmin/Documents/Maxent_modeling/summaries/figures/richness_map_FULL.pdf",width=11,height=8.5)
+pdf(file="richness_map_FULL.pdf",width=11,height=8.5)
 colors=rev(heat.colors(100))
 spplot(overlap, col.regions=colors)
 dev.off()
@@ -1063,7 +1054,7 @@ dev.off()
 
 ## ABUNDANCE HOTSPOT
 ## load in map of the total overlapping abundance ranges per grid square
-current_rich=raster("C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc") 
+current_rich=raster("richness_map_HI_ABUN.asc") 
 quantile(current_rich$richness_map_HI_ABUN)
 
 rich <- as.data.frame(current_rich) # convert to data frame to perform hotspot calculation
@@ -1074,13 +1065,13 @@ rich$richness_map_HI_ABUN[rich$richness_map_HI_ABUN > quantile(current_rich$rich
 
 ## convert back into map and export
 hi_abun_hotspot <- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=rich$richness_map_HI_ABUN)
-writeRaster(hi_abun_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_HI_ABUN.asc",overwrite=T)
+writeRaster(hi_abun_hotspot, "hotspot_HI_ABUN.asc",overwrite=T)
 plot(hi_abun_hotspot)
 
 ########################################################################
 ## ESTABLISHMENT HOTSPOT
 ## load in map of the total overlapping abundance ranges per grid square
-current_rich=raster("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/richness_map_FULL.asc")
+current_rich=raster("richness_map_FULL.asc")
 quantile(current_rich$richness_map_FULL)
 
 rich$richness_map_FULL[rich$richness_map_FULL <= quantile(current_rich$richness_map_FULL, 0.75)] <- 0
@@ -1089,7 +1080,7 @@ rich$richness_map_FULL[rich$richness_map_FULL > quantile(current_rich$richness_m
 ## convert back into map and export
 full_hotspot<- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=rich$richness_map_FULL)
 plot(full_hotspot)
-writeRaster(full_hotspot, "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/hotspot_FULL.asc", overwrite=T)
+writeRaster(full_hotspot, "hotspot_FULL.asc", overwrite=T)
 
 #######################################################################
 ## HOTSPOT COMPARISON
@@ -1117,12 +1108,12 @@ comp_hotspot<- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=ex
 plot(comp_hotspot)
 spplot(comp_hotspot)
 
-writeRaster(comp_hotspot,"C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hotspot_compare.asc",overwrite=T)
+writeRaster(comp_hotspot,"hotspot_compare.asc",overwrite=T)
 # write out the hotspot comparison
 
 ################## proportion of abundant species
-abun_prop=stack("C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/richness_map_FULL.asc",
-                "C:/Users/Localadmin/Documents/MaxEnt_modeling/summaries/asciis/richness_map_HI_ABUN.asc")
+abun_prop=stack("richness_map_FULL.asc",
+                "richness_map_HI_ABUN.asc")
 abun_prop <- as.data.frame(abun_prop)
 abun_prop$abun_prop <- abun_prop$richness_map_HI_ABUN/abun_prop$richness_map_FULL
 
@@ -1132,7 +1123,7 @@ hist(abun_prop$abun_prop)
 abun_prop <- raster(nrows=nrow(current_rich), ncols=ncol(current_rich), ext=extent(current_rich), vals=abun_prop$abun_prop)#,
 
 
-writeRaster(abun_prop,"C:/Users/Localadmin/Documents/Maxent_modeling/summaries/asciis/hi_abun_proportion.asc",overwrite=T)
+writeRaster(abun_prop,"hi_abun_proportion.asc",overwrite=T)
 
 ###############################
 #### Calculate Range Sizes ####
@@ -1141,13 +1132,13 @@ library(raster)
 library(rgdal)
 library(rgeos)
 
-ordsums <- read.table("C:/Users/Localadmin/Google Drive/Invasive-plant-abundance-SDM-files/ordsums_5_4_2018.csv", header = T, sep = ",", quote= "\"", comment.char= "", stringsAsFactors = F, strip.white = T)  
 ordsums2 <- ordsums[ordsums$AUC > 0.7 & ordsums$MESS_abun2range_SEL > 0.9 & ordsums$kappa > 0 & ordsums$kappaP < 0.05,]  
+## filter to the models which meet the performance criteria
 head(ordsums)
 
 ### Do all 155 species
-ranges <- list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/Binary_asciis/", full.names = T)
-abuns  <- list.files("C:/Users/Localadmin/Documents/MaxEnt_modeling/ORDINAL_5epv_round_up/HI_ABUN/", full.names = T)
+ranges <- list.files("MAXENT_OUTPUT/Binary_asciis/", full.names = T)
+abuns  <- list.files("HI_ABUN/", full.names = T)
 
 
 
@@ -1177,9 +1168,7 @@ for (i in 1:length(ranges)){
     ordsums$hiAbunSQKM[ordsums$species.code==sp] <- 0   
   }
   print(i)
-  #write.csv(i,"C:/Users/Localadmin/Google Drive/AREAprogress.csv", row.names=F)
+
 }
 
 hist(ordsums$hiAbunSQKM/ordsums$areaSQKM)
-
-#1382
